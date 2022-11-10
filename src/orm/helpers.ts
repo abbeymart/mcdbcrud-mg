@@ -46,7 +46,7 @@ export function jsonToCrudSaveParams(model: ModelDescType, docValue: ValueParams
                     desc.fieldType
                     break;
                 default:
-                    result[name] = docValue[name];
+                    // result[name] = docValue[name];
                     throw new Error(`No model matching type found for ${name}: ${docValue[name]}`)
             }
 

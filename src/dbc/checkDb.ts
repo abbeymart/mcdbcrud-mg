@@ -9,7 +9,7 @@ import { Db, MongoClient } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 
 export function checkDb(dbConnect: Db): ResponseMessage {
-    if (dbConnect) {
+    if (dbConnect && dbConnect.databaseName !== "") {
         return getResMessage("success", {
             message: "valid database connection/handler",
         });

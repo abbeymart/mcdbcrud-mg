@@ -33,5 +33,32 @@ export interface DbParamsType {
     poolSize?: number;
     secureOption?: DbSecureType;
     uri?: string;
-    timezone?: string
+    timezone?: string;
+    replicaName?: string;
+    replicas?: Replicas;
 }
+
+export interface Replica {
+    port?: number;
+    host?: string;
+    hostUrl: string;   // "host":"port"
+    role: "Primary" | "Secondary";
+}
+
+export type Replicas = Array<Replica>
+
+
+export const defaultReplicas: Replicas = [
+    {
+        hostUrl: "localhost:27017",
+        role: "Primary",
+    },
+    {
+        hostUrl: "localhost:27018",
+        role: "Secondary",
+    },
+    {
+        hostUrl: "localhost:27019",
+        role: "Secondary",
+    }
+]

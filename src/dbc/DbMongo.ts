@@ -6,7 +6,7 @@
  */
 
 import { Db, MongoClient } from "mongodb";
-import { DbSecureType, DbOptionsType, DbParamsType } from "./types";
+import { DbSecureType, DbOptionsType, DbParamsType, Replicas, defaultReplicas, } from "./types";
 
 export class DbMongo {
     private readonly host: string;
@@ -24,6 +24,8 @@ export class DbMongo {
     private readonly user: string;
     private readonly pass: string;
     private dbConnect?: MongoClient;
+    private replicaName: string
+    private replicas: Replicas;
 
     constructor(dbConfig: DbParamsType, options?: DbOptionsType) {
         this.host = dbConfig?.host || "";
@@ -37,17 +39,52 @@ export class DbMongo {
         this.checkAccess = options?.checkAccess !== false;
         this.user = encodeURIComponent(this.username);
         this.pass = encodeURIComponent(this.password);
+        this.replicas = dbConfig.replicas || [];
+        this.replicaName = dbConfig.replicaName || "";
+        // set default dbUrl 
+        this.dbUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}` : 
+        `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
         // For a replica set, include the replica set name and a seedlist of the members in the URI string; e.g.
-        // const uri = 'mongodb://mongodb0.example.com:27017,mongodb1.example.com:27017/?replicaSet=myRepl'
-        // TODO: review and configure for replica-set
-        this.dbUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database},${this.user}:${this.pass}@${dbConfig.host}:27027/${dbConfig.database},${this.user}:${this.pass}@${dbConfig.host}:27037/${dbConfig.database}/?replicaSet=rs0` :
-            `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database},${dbConfig.host}:27027/${dbConfig.database},${dbConfig.host}:27037/${dbConfig.database}/?replicaSet=rs0`
-        // this.dbUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}` :
-        //     `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
-        this.serverUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database},${this.user}:${this.pass}@${dbConfig.host}:27027,${this.user}:${this.pass}@${dbConfig.host}:27037/?replicaSet=rs0` :
-            `mongodb://${dbConfig.host}:${dbConfig.port},${dbConfig.host}:27027,${dbConfig.host}:27037/?replicaSet=rs0`
-        // this.serverUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}` :
-        //     `mongodb://${dbConfig.host}:${dbConfig.port}`;
+        if (this.replicas.length > 0 && this.replicaName !== "") {
+            // check and set access
+            if (this.checkAccess) {
+                // this.dbUrl = `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database},`
+                this.dbUrl = `mongodb://`
+                this.serverUrl = `mongodb://`
+                // compute the
+                let repCount = 0;
+                const repLength = this.replicas.length
+                for (const rep of this.replicas) {
+                    repCount += 1
+                    this.dbUrl = `${this.dbUrl}${this.user}:${this.pass}@${rep.hostUrl}/${dbConfig.database}`
+                    this.serverUrl = `${this.serverUrl}${this.user}:${this.pass}@${rep.hostUrl}`
+                    if (repCount < repLength) {
+                        this.dbUrl = `${this.dbUrl},`
+                        this.serverUrl = `${this.serverUrl},`
+                    }
+                }
+                this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}`
+                this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}`
+            } else {
+                // this.dbUrl = `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database},`
+                this.dbUrl = `mongodb://`
+                this.serverUrl = `mongodb://`
+                // compute the
+                let repCount = 0;
+                const repLength = this.replicas.length
+                for (const rep of this.replicas) {
+                    repCount += 1
+                    this.dbUrl = `${this.dbUrl}${rep.hostUrl}/${dbConfig.database}`
+                    this.serverUrl = `${this.serverUrl}${rep.hostUrl}`
+                    if (repCount < repLength) {
+                        this.dbUrl = `${this.dbUrl},`
+                        this.serverUrl = `${this.serverUrl},`
+                    }
+                }
+                this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}`
+                this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}`
+            }
+        }
         this.options = {
             poolSize          : options?.poolSize || this.poolSize,
             useNewUrlParser   : options?.useNewUrlParser || true,
