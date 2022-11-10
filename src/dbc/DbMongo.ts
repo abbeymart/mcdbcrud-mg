@@ -6,7 +6,7 @@
  */
 
 import { Db, MongoClient } from "mongodb";
-import { DbSecureType, DbOptionsType, DbParamsType, Replicas, defaultReplicas, } from "./types";
+import { DbSecureType, DbOptionsType, DbParamsType, Replicas, } from "./types";
 
 export class DbMongo {
     private readonly host: string;
@@ -24,8 +24,8 @@ export class DbMongo {
     private readonly user: string;
     private readonly pass: string;
     private dbConnect?: MongoClient;
-    private replicaName: string
-    private replicas: Replicas;
+    private readonly replicaName: string
+    private readonly replicas: Replicas;
 
     constructor(dbConfig: DbParamsType, options?: DbOptionsType) {
         this.host = dbConfig?.host || "";
