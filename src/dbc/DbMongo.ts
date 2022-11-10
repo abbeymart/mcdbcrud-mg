@@ -41,17 +41,19 @@ export class DbMongo {
         this.pass = encodeURIComponent(this.password);
         this.replicas = dbConfig.replicas || [];
         this.replicaName = dbConfig.replicaName || "";
-        // set default dbUrl 
+        // set default dbUrl and serverUrl - standard standalone DB
         this.dbUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}` : 
         `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
-        // For a replica set, include the replica set name and a seedlist of the members in the URI string; e.g.
+        this.serverUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}` : 
+        `mongodb://${dbConfig.host}:${dbConfig.port}`;
+        // For replica set, include the replica set hostUrl/name and a seedlist of the members in the URI string
         if (this.replicas.length > 0 && this.replicaName !== "") {
             // check and set access
             if (this.checkAccess) {
                 // this.dbUrl = `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database},`
                 this.dbUrl = `mongodb://`
                 this.serverUrl = `mongodb://`
-                // compute the
+                // compute the replica-uris
                 let repCount = 0;
                 const repLength = this.replicas.length
                 for (const rep of this.replicas) {
@@ -63,13 +65,14 @@ export class DbMongo {
                         this.serverUrl = `${this.serverUrl},`
                     }
                 }
+                // include the replicaSet name
                 this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}`
                 this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}`
             } else {
                 // this.dbUrl = `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database},`
                 this.dbUrl = `mongodb://`
                 this.serverUrl = `mongodb://`
-                // compute the
+                // compute the replica-uris
                 let repCount = 0;
                 const repLength = this.replicas.length
                 for (const rep of this.replicas) {
@@ -81,6 +84,7 @@ export class DbMongo {
                         this.serverUrl = `${this.serverUrl},`
                     }
                 }
+                // include the replicaSet name
                 this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}`
                 this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}`
             }

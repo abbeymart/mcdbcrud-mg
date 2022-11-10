@@ -48,6 +48,7 @@ export interface Replica {
 export type Replicas = Array<Replica>
 
 
+// default replicas - development / localhost
 export const defaultReplicas: Replicas = [
     {
         hostUrl: "localhost:27017",
