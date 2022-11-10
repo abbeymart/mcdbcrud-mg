@@ -6,13 +6,14 @@
  */
 
 import { DataTypes, FieldDescType, ModelDescType, ValueParamsType } from "./types";
-import { ActionParamsType, FieldValueTypes } from "../crud";
+import { ActionParamsType, FieldValueTypes, ObjectType } from "../crud";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 
-export function isEmptyObject(val: object): boolean {
+export function isEmptyObject(val: ObjectType): boolean {
     return !(Object.keys(val).length > 0 && Object.values(val).length > 0);
 }
 
+// validateActionParams validates actParams for save (create or update) operation
 export function validateActionParams(actParams: ActionParamsType = []): ResponseMessage {
     // validate req-params: actionParams must be array or 1 or more item(s)
     if (actParams.length < 1) {
@@ -23,21 +24,13 @@ export function validateActionParams(actParams: ActionParamsType = []): Response
     return getResMessage("success")
 }
 
+// camelToUnderscore converts camelCase key/field to underscore key/field for SQL database tables
 export function camelToUnderscore(key: string): string {
     return key.replace(/([A-Z])/g, "_$1").toLowerCase();
 }
 
 export function jsonToCrudSaveParams(model: ModelDescType, docValue: ValueParamsType): ValueParamsType {
     try {
-        // error checking
-        let errorMsg = "";
-        let validField = false;
-        let defaultValue: FieldValueTypes;
-
-        // check the key type from userModel
-        // desc: FieldDescType | DataTypes | ModelDescType
-        let fieldName = name;
-        let fieldType, fieldDesc;
         let result: ValueParamsType = {};
 
         // for each field-item in docValue, validate against corresponding model field-desc =>
