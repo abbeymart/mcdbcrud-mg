@@ -5,7 +5,6 @@
  * @Description: CRUD types
  */
 
-import {AuditLog} from "../auditlog";
 import {Db, MongoClient, SortDirection} from "mongodb";
 import {ModelRelationType, ModelOptionsType, ValidateMethodResponseType, DocDescType} from "../orm";
 import {ResponseMessage} from "@mconnect/mcresponse";
@@ -14,13 +13,65 @@ export interface ObjectRefType {
     [key: string]: any;
 }
 
+
+// ModelValue will be validated based on the Model definition
+export interface ActionParamType {
+    [key: string]: any;         // fieldName: fieldValue, must match fieldType (re: validate) in model definition
+}
+
+export type ActionParamsType = Array<ActionParamType>;  // documents for create or update task/operation
+
+export interface QueryParamsType {
+    [key: string]: any;
+}
+
+export interface ExistParamItemType {
+    [key: string]: any;
+}
+
+export type ExistParamsType = Array<ExistParamItemType>;
+
+export interface ProjectParamsType {
+    [key: string]: number; // 1 for inclusion and 0 for exclusion
+}
+
+// export interface SortParamsType {
+//     [key: string]: number;          // 1 for "asc", -1 for "desc"
+// }
+
+export type SortParamsType = Map<string, SortDirection> // key:direction => 1 for "asc", -1 for "desc"
+
+
 export type ObjectType = ObjectRefType | object;
+
+export interface BaseModelType {
+    id?: string;
+    language?: string;
+    description?: string;
+    appId?: string;
+    isActive?: boolean;
+    createdBy?: string;
+    updatedBy?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+export interface RelationBaseModelType {
+    description?: string;
+    isActive?: boolean;
+    createdBy?: string;
+    updatedBy?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
 
 export interface GetRecordStats {
     skip?: number;
     limit?: number;
     recordsCount?: number;
     totalRecordsCount?: number;
+    queryParams?: QueryParamsType;
+    recordIds?: Array<string>;
     expire?: number;
 }
 
@@ -30,6 +81,7 @@ export interface GetResultType {
     records: GetRecords,
     stats: GetRecordStats,
     logRes?: ResponseMessage;
+    taskType?: string;
 }
 
 export enum TaskTypes {
@@ -40,6 +92,26 @@ export enum TaskTypes {
     DELETE = "delete",
     REMOVE = "remove",
     UNKNOWN = "unknown",
+}
+
+export interface EmailAddressType {
+    [key: string]: string,
+}
+
+export interface ProfileType extends BaseModelType {
+    userId?: string;
+    firstname: string;
+    lastname: string;
+    middlename?: string;
+    phone?: string;
+    emails?: Array<EmailAddressType>,
+    recEmail?: string;
+    roleId?: string | null;
+    dateOfBirth?: Date | string;
+    twoFactorAuth?: boolean;
+    authAgent?: string;
+    authPhone?: string;
+    postalCode?: string;
 }
 
 export interface UserInfoType {
@@ -95,8 +167,9 @@ export interface CheckAccessType {
     roleIds: Array<string>;
     isActive: boolean;
     isAdmin: boolean;
-    roleServices: Array<RoleServiceResponseType>;
-    collId: string;
+    roleServices?: Array<RoleServiceResponseType>;
+    collId?: string;
+    profile?: ProfileType;
 }
 
 export interface RoleServiceType {
@@ -133,33 +206,6 @@ export type PromiseResponseType = Promise<string>
     | Promise<Array<boolean>>
     | Promise<Array<object>>;
 
-// ModelValue will be validated based on the Model definition
-export interface ActionParamType {
-    [key: string]: any;         // fieldName: fieldValue, must match fieldType (re: validate) in model definition
-}
-
-export type ActionParamsType = Array<ActionParamType>;  // documents for create or update task/operation
-
-export interface QueryParamsType {
-    [key: string]: any;
-}
-
-export interface ExistParamItemType {
-    [key: string]: any;
-}
-
-export type ExistParamsType = Array<ExistParamItemType>;
-
-export interface ProjectParamsType {
-    [key: string]: number; // 1 for inclusion and 0 for exclusion
-}
-
-// export interface SortParamsType {
-//     [key: string]: number;          // 1 for "asc", -1 for "desc"
-// }
-
-export type SortParamsType = Map<string, SortDirection> // key:direction => 1 for "asc", -1 for "desc"
-
 export interface ActionParamTaskType {
     createItems: ActionParamsType;
     updateItems: ActionParamsType;
@@ -173,60 +219,6 @@ export interface AppParamsType {
     category?: string;
     serviceId?: string;
     serviceTag?: string;
-}
-
-export interface CrudParamType {
-    appDb: Db;
-    coll: string;
-    dbClient: MongoClient;
-    dbName: string;
-    token?: string;
-    userInfo?: UserInfoType;
-    userId?: string;
-    group?: string;
-    groups?: Array<string>;
-    role?: string;
-    roles?: Array<string>;
-    docIds?: Array<any>;
-    actionParams: ActionParamsType;
-    queryParams?: QueryParamsType;
-    existParams?: ExistParamsType;
-    projectParams?: ProjectParamsType;
-    sortParams?: SortParamsType;
-    skip?: number;
-    limit?: number;
-    parentColls?: Array<string>;
-    childColls?: Array<string>;
-    recursiveDelete?: boolean;
-    checkAccess?: boolean;
-    accessDb: Db;
-    auditDb: Db;
-    auditColl?: string;
-    serviceColl?: string;
-    userColl?: string;
-    roleColl?: string;
-    accessColl?: string;
-    maxQueryLimit?: number;
-    logCrud?: boolean;
-    logCreate?: boolean;
-    logUpdate?: boolean;
-    logRead?: boolean;
-    logDelete?: boolean;
-    transLog: AuditLog;
-    hashKey: string;
-    isRecExist?: boolean;
-    actionAuthorized?: boolean;
-    unAuthorizedMessage?: string;
-    recExistMessage?: string;
-    isAdmin?: boolean;
-    createItems?: Array<object>;
-    updateItems?: Array<object>;
-    currentRecs?: Array<object>;
-    roleServices?: Array<RoleServiceResponseType>;
-    subItems: Array<boolean>;
-    cacheExpire?: number;
-    params: CrudParamsType;
-    appParams?: AppParamsType;
 }
 
 export interface CrudParamsType {

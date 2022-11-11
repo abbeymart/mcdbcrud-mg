@@ -5,8 +5,8 @@
  */
 
 // Import required module/function(s)/types
-import { Db, MongoClient, ObjectId } from "mongodb";
-import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
+import {Db, MongoClient, ObjectId} from "mongodb";
+import {getResMessage, ResponseMessage} from "@mconnect/mcresponse";
 import {
     UserInfoType,
     CrudParamsType,
@@ -21,8 +21,8 @@ import {
     ExistParamsType,
     ProjectParamsType, SortParamsType, SubItemsType, ActionParamType, FieldValueTypes,
 } from "./types";
-import { AuditLog, newAuditLog } from "../auditlog";
-import { DataTypes, DefaultValueType, DocDescType, FieldDescType, ModelRelationType } from "../orm";
+import {AuditLog, newAuditLog} from "../auditlog";
+import {DataTypes, DefaultValueType, DocDescType, FieldDescType, ModelRelationType} from "../orm";
 
 export class Crud {
     protected params: CrudParamsType;
@@ -182,15 +182,19 @@ export class Crud {
         this.actionAuthorized = false;
         this.recExistMessage = "Save / update error or duplicate documents exist. ";
         this.unAuthorizedMessage = "Action / task not authorised or permitted. ";
-        this.usernameExistsMessage = options?.usernameExistsMessage ? options.usernameExistsMessage : "Username already exists. ";
+        this.usernameExistsMessage = options?.usernameExistsMessage ? options.usernameExistsMessage :
+            "Username already exists. ";
         this.emailExistsMessage = options?.emailExistsMessage ? options.emailExistsMessage : "Email already exists. ";
 
-        this.fieldSeparator = options?.fieldSeparator? options.fieldSeparator : "_";
-        this.queryFieldType = options?.queryFieldType? options.queryFieldType : "underscore";
-        this.appDbs = options?.appDbs? options.appDbs : ["database", "database-mcpa", "database-mcpay", "database-mcship", "database-mctrade", "database-mcproperty",
-            "database-mcinfo", "database-mcbc"];
-        this.appTables = options?.appTables? options.appTables : ["table", "table-mcpa", "table-mcpay", "table-mcship", "table-mctrade", "table-mcproperty",
-            "table-mcinfo", "table-mcbc"];
+        this.fieldSeparator = options?.fieldSeparator ? options.fieldSeparator : "_";
+        this.queryFieldType = options?.queryFieldType ? options.queryFieldType : "underscore";
+        this.appDbs = options?.appDbs ? options.appDbs :
+            ["database", "database-mcpa", "database-mcpay", "database-mcship", "database-mctrade",
+                "database-mcproperty",
+                "database-mcinfo", "database-mcbc"];
+        this.appTables = options?.appTables ? options.appTables :
+            ["table", "table-mcpa", "table-mcpay", "table-mcship", "table-mctrade", "table-mcproperty",
+                "table-mcinfo", "table-mcbc"];
     }
 
     // checkDb checks / validate appDb
@@ -222,6 +226,13 @@ export class Crud {
     // checkRecExist method checks if items/documents exist: document uniqueness
     async checkRecExist(): Promise<ResponseMessage> {
         try {
+            // check if existParams condition is specified
+            if (this.existParams.length < 1) {
+                return getResMessage("success", {
+                    message: "No data integrity condition specified",
+                });
+            }
+            // check record existence/uniqueness
             const appDbColl = this.appDb.collection(this.coll);
             let attributesMessage = "";
             for (const existItem of this.existParams) {
@@ -231,9 +242,10 @@ export class Crud {
                     // capture attributes for any duplicate-document
                     Object.entries(existItem)
                         .forEach(([key, value]) => {
-                            attributesMessage = attributesMessage ? `${attributesMessage} | ${key}: ${value}` : `${key}: ${value}`;
+                            attributesMessage = attributesMessage ? `${attributesMessage} | ${key}: ${value}` :
+                                `${key}: ${value}`;
                         });
-                    // stop the loop/iteration, once a duplicate-document was found
+                    // if a duplicate-document was found, break the for-loop
                     break;
                 } else {
                     this.isRecExist = false;
@@ -265,8 +277,8 @@ export class Crud {
                 return validDb;
             }
             let currentRecords: ActionParamsType;
-            switch (by) {
-                case"id":
+            switch (by.toLowerCase()) {
+                case "id":
                     const docIds = this.docIds.map(id => new ObjectId(id));
                     currentRecords = await this.appDb.collection(this.coll)
                         .find({_id: {$in: docIds}},)
@@ -274,7 +286,6 @@ export class Crud {
                         .limit(this.limit)
                         .toArray();
                     break;
-                case "queryParams":
                 case "queryparams":
                     currentRecords = await this.appDb.collection(this.coll)
                         .find(this.queryParams,)
@@ -290,19 +301,38 @@ export class Crud {
                         .toArray();
                     break;
             }
-            if (currentRecords.length > 0 && currentRecords.length === this.docIds.length) {
+            if (by.toLowerCase() === "id") {
+                if (currentRecords.length > 0 && currentRecords.length === this.docIds.length) {
+                    // update crud instance current-records value
+                    this.currentRecs = currentRecords;
+                    return getResMessage("success", {
+                        message: `${currentRecords.length} document/record(s) retrieved successfully.`,
+                        value: currentRecords,
+                    });
+                } else if (currentRecords.length < this.docIds.length) {
+                    return getResMessage("partialRecords", {
+                        message: `${currentRecords.length} out of ${this.docIds.length} document/record(s) found`,
+                        value: currentRecords,
+                    });
+                } else {
+                    return getResMessage("notFound", {
+                        message: "Document/record(s) not found.",
+                        value: currentRecords,
+                    });
+                }
+            }
+            // response for by queryParams or all-documents
+            if (currentRecords.length > 0) {
                 // update crud instance current-records value
                 this.currentRecs = currentRecords;
                 return getResMessage("success", {
-                    message: "Current document/record(s) retrieved successfully.",
-                });
-            } else if (currentRecords.length < this.docIds.length) {
-                return getResMessage("notFound", {
-                    message: `Only ${currentRecords.length} out of ${this.docIds.length} document/record(s) found`,
+                    message: `${currentRecords.length} document/record(s) retrieved successfully.`,
+                    value: currentRecords,
                 });
             } else {
                 return getResMessage("notFound", {
-                    message: "Current document/record(s) not found.",
+                    message: "Document/record(s) not found.",
+                    value: currentRecords,
                 });
             }
         } catch (e) {
@@ -312,6 +342,128 @@ export class Crud {
             });
         }
     }
+
+    // set null value by DataTypes
+    initializeValues(fieldTypeDesc: DataTypes): any {
+        switch (fieldTypeDesc) {
+            case DataTypes.STRING:
+            case DataTypes.POSTAL_CODE:
+            case DataTypes.MONGODB_ID:
+            case DataTypes.UUID:
+            case DataTypes.EMAIL:
+            case DataTypes.PORT:
+            case DataTypes.URL:
+            case DataTypes.JWT:
+            case DataTypes.MAC_ADDRESS:
+            case DataTypes.ISO2:
+            case DataTypes.ISO3:
+            case DataTypes.LAT_LONG:
+            case DataTypes.MIME:
+            case DataTypes.CREDIT_CARD:
+            case DataTypes.CURRENCY:
+            case DataTypes.IMEI:
+                return "";
+            case DataTypes.INTEGER:
+            case DataTypes.POSITIVE:
+            case DataTypes.BIGINT:
+                return 0;
+            case DataTypes.NUMBER:
+            case DataTypes.DECIMAL:
+            case DataTypes.FLOAT:
+            case DataTypes.BIGFLOAT:
+                return 0.00;
+            case DataTypes.ARRAY:
+            case DataTypes.ARRAY_NUMBER:
+            case DataTypes.ARRAY_STRING:
+            case DataTypes.ARRAY_OBJECT:
+            case DataTypes.ARRAY_BOOLEAN:
+            case DataTypes.ENUM:
+                return [];
+            case DataTypes.OBJECT:
+            case DataTypes.JSON:
+            case DataTypes.MAP:
+                return {};
+            case DataTypes.BOOLEAN:
+                return false;
+            case DataTypes.DATETIME:
+            case DataTypes.TIMESTAMP:
+            case DataTypes.TIMESTAMPZ:
+                return new Date("01-01-1970");
+            case DataTypes.IP:
+                return "0.0.0.0";
+            default:
+                return null;
+        }
+    }
+
+    // set default value based on FieldDescType
+    async setDefault(defaultValue: FieldValueTypes | DefaultValueType, fieldValue: FieldValueTypes = null): Promise<any> {
+        try {
+            switch (typeof defaultValue) {
+                // defaultValue may be of types: DefaultValueType(function) or FieldValueTypes(others)
+                case "function":
+                    const defValue = defaultValue as DefaultValueType;
+                    return await defValue(fieldValue);
+                default:
+                    return defaultValue || null;
+            }
+        } catch (e) {
+            return null
+        }
+
+    }
+
+    // computeInitializeValues set the null values for document/actionParam, for allowNull(true)
+    computeInitializeValues(docDesc: DocDescType): ActionParamType {
+        let nullValues: ActionParamType = {}
+        for (let [field, fieldDesc] of Object.entries(docDesc)) {
+            switch (typeof fieldDesc) {
+                case "string":
+                    fieldDesc = fieldDesc as DataTypes
+                    // allowNull = true
+                    // set null value for DataTypes
+                    nullValues[field] = this.initializeValues(fieldDesc);
+                    break;
+                case "object":
+                    fieldDesc = fieldDesc as FieldDescType
+                    // if !allowNull, skip setting null value
+                    if (Object.keys(fieldDesc).includes("allowNull") && !fieldDesc.allowNull) {
+                        continue;
+                    }
+                    // set null value for DataTypes
+                    nullValues[field] = this.initializeValues(fieldDesc.fieldType);
+                    break;
+            }
+        }
+        return nullValues;
+    }
+
+    async computeDefaultValues(docDesc: DocDescType): Promise<ActionParamType> {
+        let defaultValues: ActionParamType = {};
+        for (let [field, fieldDesc] of Object.entries(docDesc)) {
+            switch (typeof fieldDesc) {
+                case "string":
+                    fieldDesc = fieldDesc as DataTypes
+                    // set default-value (null value) for DataTypes
+                    defaultValues[field] = this.initializeValues(fieldDesc);
+                    break;
+                case "object":
+                    fieldDesc = fieldDesc as FieldDescType
+                    // if !defaultValue, skip setting default value
+                    if (!fieldDesc.defaultValue) {
+                        continue;
+                    }
+                    // set default value for FieldDescType
+                    defaultValues[field] = await this.setDefault(fieldDesc.defaultValue);
+                    break;
+                default:
+                    break;
+            }
+        }
+        return defaultValues;
+    }
+
+    // OPTIONAL access methods - review / leverage mcaccess [go-pg]
 
     // getRoleServices method process and returns the permission to user / user-group/role for the specified service items
     async getRoleServices(roleIds: Array<string>, serviceIds: Array<string>): Promise<Array<RoleServiceResponseType>> {
@@ -401,7 +553,7 @@ export class Crud {
             if (permittedRes.isActive && permittedRes.isAdmin) {
                 return getResMessage("success", {value: permittedRes});
             }
-            const recLen = permittedRes.roleServices.length;
+            const recLen = permittedRes.roleServices?.length || 0;
             if (permittedRes.isActive && recLen > 0 && recLen >= docIds.length) {
                 return getResMessage("success", {value: permittedRes});
             }
@@ -614,11 +766,7 @@ export class Crud {
     // checkLoginStatus method checks if the user exists and has active login status/token
     async checkLoginStatus(): Promise<ResponseMessage> {
         try {
-            // validate models
-            const validDb = await this.checkDb(this.appDb)
-            if (validDb.code !== "success") {
-                return validDb;
-            }
+            // validate db-handle
             const validAccessDb = await this.checkDb(this.accessDb)
             if (validAccessDb.code !== "success") {
                 return validAccessDb;
@@ -656,6 +804,15 @@ export class Crud {
                 });
             }
 
+            const resVal : CheckAccessType = {
+                userId  : validUser._id.toString(),
+                roleId  : validUser.profile.roleId,
+                roleIds : validUser.roleIds,
+                isActive: validUser.isActive,
+                isAdmin : validUser.isAdmin || false,
+                profile : validUser.profile,
+            }
+
             return getResMessage("success", {
                 message: "Access Permitted: ",
                 value  : {
@@ -675,120 +832,6 @@ export class Crud {
         }
     }
 
-    // set null value by DataTypes
-    initializeValues(fieldTypeDesc: DataTypes): any {
-        switch (fieldTypeDesc) {
-            case DataTypes.STRING:
-            case DataTypes.POSTAL_CODE:
-            case DataTypes.MONGODB_ID:
-            case DataTypes.UUID:
-            case DataTypes.EMAIL:
-            case DataTypes.PORT:
-            case DataTypes.URL:
-            case DataTypes.JWT:
-            case DataTypes.MAC_ADDRESS:
-            case DataTypes.ISO2:
-            case DataTypes.ISO3:
-            case DataTypes.LAT_LONG:
-            case DataTypes.MIME:
-            case DataTypes.CREDIT_CARD:
-            case DataTypes.CURRENCY:
-            case DataTypes.IMEI:
-                return "";
-            case DataTypes.INTEGER:
-            case DataTypes.POSITIVE:
-            case DataTypes.BIGINT:
-                return 0;
-            case DataTypes.NUMBER:
-            case DataTypes.DECIMAL:
-            case DataTypes.FLOAT:
-            case DataTypes.BIGFLOAT:
-                return 0.00;
-            case DataTypes.ARRAY:
-            case DataTypes.ARRAY_NUMBER:
-            case DataTypes.ARRAY_STRING:
-            case DataTypes.ARRAY_OBJECT:
-            case DataTypes.ARRAY_BOOLEAN:
-            case DataTypes.ENUM:
-                return [];
-            case DataTypes.OBJECT:
-            case DataTypes.JSON:
-            case DataTypes.MAP:
-                return {};
-            case DataTypes.BOOLEAN:
-                return false;
-            case DataTypes.DATETIME:
-            case DataTypes.TIMESTAMP:
-            case DataTypes.TIMESTAMPZ:
-                return new Date("01-01-1970");
-            case DataTypes.IP:
-                return "0.0.0.0";
-            default:
-                return null;
-        }
-    }
-
-    // set default value based on FieldDescType
-    async setDefault(defaultValue: FieldValueTypes | DefaultValueType, fieldValue: FieldValueTypes = null): Promise<any> {
-        switch (typeof defaultValue) {
-            // defaultValue may be of types: DefaultValueType(function) or FieldValueTypes(others)
-            case "function":
-                const defValue = defaultValue as DefaultValueType;
-                return await defValue(fieldValue);
-            default:
-                return defaultValue || null;
-        }
-    }
-
-    // computeInitializeValues set the null values for document/actionParam, for allowNull(true)
-    computeInitializeValues(docDesc: DocDescType): ActionParamType {
-        let nullValues: ActionParamType = {}
-        for (let [field, fieldDesc] of Object.entries(docDesc)) {
-            switch (typeof fieldDesc) {
-                case "string":
-                    fieldDesc = fieldDesc as DataTypes
-                    // allowNull = true
-                    // set null value for DataTypes
-                    nullValues[field] = this.initializeValues(fieldDesc);
-                    break;
-                case "object":
-                    fieldDesc = fieldDesc as FieldDescType
-                    // if !allowNull, skip setting null value
-                    if (Object.keys(fieldDesc).includes("allowNull") && !fieldDesc.allowNull) {
-                        continue;
-                    }
-                    // set null value for DataTypes
-                    nullValues[field] = this.initializeValues(fieldDesc.fieldType);
-                    break;
-            }
-        }
-        return nullValues;
-    }
-
-    async computeDefaultValues(docDesc: DocDescType): Promise<ActionParamType> {
-        let defaultValues: ActionParamType = {};
-        for (let [field, fieldDesc] of Object.entries(docDesc)) {
-            switch (typeof fieldDesc) {
-                case "string":
-                    fieldDesc = fieldDesc as DataTypes
-                    // set default-value (null value) for DataTypes
-                    defaultValues[field] = this.initializeValues(fieldDesc);
-                    break;
-                case "object":
-                    fieldDesc = fieldDesc as FieldDescType
-                    // if !defaultValue, skip setting default value
-                    if (!fieldDesc.defaultValue) {
-                        continue;
-                    }
-                    // set default value for FieldDescType
-                    defaultValues[field] = await this.setDefault(fieldDesc.defaultValue);
-                    break;
-                default:
-                    break;
-            }
-        }
-        return defaultValues;
-    }
 
 }
 
