@@ -89,6 +89,10 @@ export class Crud {
     protected readonly childColls: Array<string>;
     protected readonly parentRelations: Array<ModelRelationType>;
     protected readonly childRelations: Array<ModelRelationType>;
+    protected readonly fieldSeparator: string;
+    protected readonly queryFieldType: string;
+    protected readonly appDbs: Array<string>;
+    protected readonly appTables: Array<string>;
 
     constructor(params: CrudParamsType, options?: CrudOptionsType) {
         // crudParams
@@ -180,6 +184,13 @@ export class Crud {
         this.unAuthorizedMessage = "Action / task not authorised or permitted. ";
         this.usernameExistsMessage = options?.usernameExistsMessage ? options.usernameExistsMessage : "Username already exists. ";
         this.emailExistsMessage = options?.emailExistsMessage ? options.emailExistsMessage : "Email already exists. ";
+
+        this.fieldSeparator = options?.fieldSeparator? options.fieldSeparator : "_";
+        this.queryFieldType = options?.queryFieldType? options.queryFieldType : "underscore";
+        this.appDbs = options?.appDbs? options.appDbs : ["database", "database-mcpa", "database-mcpay", "database-mcship", "database-mctrade", "database-mcproperty",
+            "database-mcinfo", "database-mcbc"];
+        this.appTables = options?.appTables? options.appTables : ["table", "table-mcpa", "table-mcpay", "table-mcship", "table-mctrade", "table-mcproperty",
+            "table-mcinfo", "table-mcbc"];
     }
 
     // checkDb checks / validate appDb

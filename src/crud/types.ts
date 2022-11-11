@@ -5,10 +5,10 @@
  * @Description: CRUD types
  */
 
-import { AuditLog } from "../auditlog";
-import { Db, MongoClient, SortDirection} from "mongodb";
-import { ModelRelationType, ModelOptionsType, ValidateMethodResponseType, DocDescType } from "../orm";
-import { ResponseMessage } from "@mconnect/mcresponse";
+import {AuditLog} from "../auditlog";
+import {Db, MongoClient, SortDirection} from "mongodb";
+import {ModelRelationType, ModelOptionsType, ValidateMethodResponseType, DocDescType} from "../orm";
+import {ResponseMessage} from "@mconnect/mcresponse";
 
 export interface ObjectRefType {
     [key: string]: any;
@@ -166,6 +166,15 @@ export interface ActionParamTaskType {
     docIds: Array<string>;
 }
 
+export interface AppParamsType {
+    appId?: string;
+    accessKey?: string;
+    appName?: string;
+    category?: string;
+    serviceId?: string;
+    serviceTag?: string;
+}
+
 export interface CrudParamType {
     appDb: Db;
     coll: string;
@@ -217,6 +226,7 @@ export interface CrudParamType {
     subItems: Array<boolean>;
     cacheExpire?: number;
     params: CrudParamsType;
+    appParams?: AppParamsType;
 }
 
 export interface CrudParamsType {
@@ -240,6 +250,7 @@ export interface CrudParamsType {
     taskType?: TaskTypes | string;
     skip?: number;
     limit?: number;
+    appParams?: AppParamsType;
 }
 
 export interface CrudOptionsType {
@@ -282,6 +293,10 @@ export interface CrudOptionsType {
     usernameExistsMessage?: string;
     emailExistsMessage?: string
     msgFrom?: string;
-    validateFunc?: ValidateMethodResponseType
+    validateFunc?: ValidateMethodResponseType;
+    fieldSeparator?: string;
+    queryFieldType?: string;
+    appDbs?: Array<string>;
+    appTables?: Array<string>;
 }
 
