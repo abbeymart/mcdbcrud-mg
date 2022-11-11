@@ -82,7 +82,7 @@ class AuditLog {
                 logAt        : new Date(),
             });
 
-            if (result) {
+            if (result.acknowledged) {
                 return getResMessage("success", {
                     value: result,
                 });
@@ -143,7 +143,7 @@ class AuditLog {
                 logAt           : new Date(),
             });
 
-            if (result) {
+            if (result.acknowledged) {
                 return getResMessage("success", {
                     value: result,
                 });
@@ -191,7 +191,7 @@ class AuditLog {
                 logAt        : new Date(),
             });
 
-            if (result) {
+            if (result.acknowledged) {
                 return getResMessage("success", {
                     value: result,
                 });
@@ -243,7 +243,7 @@ class AuditLog {
                 logAt        : new Date(),
             });
 
-            if (result) {
+            if (result.acknowledged) {
                 return getResMessage("success", {
                     value: result,
                 });
@@ -284,7 +284,7 @@ class AuditLog {
                 logAt        : new Date(),
             });
 
-            if (result) {
+            if (result.acknowledged) {
                 return getResMessage("success", {
                     value: result,
                 });
@@ -329,7 +329,7 @@ class AuditLog {
                 logAt        : new Date(),
             });
 
-            if (result) {
+            if (result.acknowledged) {
                 return getResMessage("success", {
                     value: result,
                 });
@@ -355,7 +355,7 @@ class AuditLog {
             collDocuments = null,
             newCollDocuments = null,
             errorMessage = "",
-            queryParams = {};
+            actionParams = {};
 
         logType = logType.toLowerCase();
 
@@ -382,7 +382,7 @@ class AuditLog {
                         message: errorMessage,
                     });
                 }
-                queryParams = {
+                actionParams = {
                     collName     : collName,
                     collDocuments: collDocuments,
                     logType      : logType,
@@ -418,7 +418,7 @@ class AuditLog {
                     });
                 }
 
-                queryParams = {
+                actionParams = {
                     collName        : collName,
                     collDocuments   : collDocuments,
                     newCollDocuments: newCollDocuments,
@@ -452,7 +452,7 @@ class AuditLog {
                     });
                 }
 
-                queryParams = {
+                actionParams = {
                     collName     : collName,
                     collDocuments: collDocuments,
                     logType      : logType,
@@ -480,7 +480,7 @@ class AuditLog {
                     });
                 }
 
-                queryParams = {
+                actionParams = {
                     collName     : collName,
                     collDocuments: collDocuments,
                     logType      : logType,
@@ -501,7 +501,7 @@ class AuditLog {
                     });
                 }
 
-                queryParams = {
+                actionParams = {
                     collDocuments: collDocuments,
                     logType      : logType,
                     logBy        : userId,
@@ -523,7 +523,7 @@ class AuditLog {
                         message: errorMessage,
                     });
                 }
-                queryParams = {
+                actionParams = {
                     collDocuments: collDocuments,
                     logType      : logType,
                     logBy        : userId,
@@ -539,11 +539,11 @@ class AuditLog {
             // insert audit record
             const coll = this.dbHandle.collection(this.auditColl);
             const result = await coll.insertOne({
-                ...queryParams,
+                ...actionParams,
                 ...{logAt: new Date()},
             });
 
-            if (result) {
+            if (result.acknowledged) {
                 return getResMessage("success", {
                     value: result,
                 });
