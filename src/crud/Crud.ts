@@ -93,6 +93,7 @@ export class Crud {
     protected readonly queryFieldType: string;
     protected readonly appDbs: Array<string>;
     protected readonly appTables: Array<string>;
+    protected readonly cacheResult: boolean;
 
     constructor(params: CrudParamsType, options?: CrudOptionsType) {
         // crudParams
@@ -146,7 +147,7 @@ export class Crud {
         this.accessDbName = options && options.accessDbName ? options.accessDbName : this.dbName;
         this.auditDbName = options && options.auditDbName ? options.auditDbName : this.dbName;
         this.serviceDbName = options && options.serviceDbName ? options.serviceDbName : this.dbName;
-        this.maxQueryLimit = options && options.maxQueryLimit ? options.maxQueryLimit : 100000;
+        this.maxQueryLimit = options && options.maxQueryLimit ? options.maxQueryLimit : 10000;
         this.logCrud = options && options.logCrud ? options.logCrud : false;
         this.logCreate = options && options.logCreate ? options.logCreate : false;
         this.logUpdate = options && options.logUpdate ? options.logUpdate : false;
@@ -190,11 +191,11 @@ export class Crud {
         this.queryFieldType = options?.queryFieldType ? options.queryFieldType : "underscore";
         this.appDbs = options?.appDbs ? options.appDbs :
             ["database", "database-mcpa", "database-mcpay", "database-mcship", "database-mctrade",
-                "database-mcproperty",
-                "database-mcinfo", "database-mcbc"];
+                "database-mcproperty", "database-mcinfo", "database-mcbc", "database-mcproject",];
         this.appTables = options?.appTables ? options.appTables :
             ["table", "table-mcpa", "table-mcpay", "table-mcship", "table-mctrade", "table-mcproperty",
-                "table-mcinfo", "table-mcbc"];
+                "table-mcinfo", "table-mcbc", "table-mcproject",];
+        this.cacheResult = options?.cacheResult? options.cacheResult : false;
     }
 
     // checkDb checks / validate appDb
@@ -307,17 +308,17 @@ export class Crud {
                     this.currentRecs = currentRecords;
                     return getResMessage("success", {
                         message: `${currentRecords.length} document/record(s) retrieved successfully.`,
-                        value: currentRecords,
+                        value  : currentRecords,
                     });
-                } else if (currentRecords.length < this.docIds.length) {
+                } else if (currentRecords.length > 0 && currentRecords.length < this.docIds.length) {
                     return getResMessage("partialRecords", {
                         message: `${currentRecords.length} out of ${this.docIds.length} document/record(s) found`,
-                        value: currentRecords,
+                        value  : currentRecords,
                     });
                 } else {
                     return getResMessage("notFound", {
                         message: "Document/record(s) not found.",
-                        value: currentRecords,
+                        value  : currentRecords,
                     });
                 }
             }
@@ -327,12 +328,12 @@ export class Crud {
                 this.currentRecs = currentRecords;
                 return getResMessage("success", {
                     message: `${currentRecords.length} document/record(s) retrieved successfully.`,
-                    value: currentRecords,
+                    value  : currentRecords,
                 });
             } else {
                 return getResMessage("notFound", {
                     message: "Document/record(s) not found.",
-                    value: currentRecords,
+                    value  : currentRecords,
                 });
             }
         } catch (e) {
@@ -531,7 +532,7 @@ export class Crud {
             // if permitted, include collId and docIds in serviceIds
             let collId = "";
             let serviceIds = docIds;
-            if (serviceRes && (serviceRes.serviceCategory.toLowerCase() === "collection" || "table")) {
+            if (serviceRes && (serviceRes.serviceCategory.toLowerCase() === "collection" || serviceRes.serviceCategory.toLowerCase() === "table")) {
                 collId = serviceRes._id.toString();
                 serviceIds.push(collId);
             }
@@ -678,6 +679,8 @@ export class Crud {
 
             // wrapper function for the role<Type>Func
             const recFunc = (it1: string, roleFunc: RoleFuncType): boolean => {
+                // check if it2 includes it1 role assignment definition OR if it1 met any of the it2 role assignments
+                // i.e. every docIds must have at least a match in the roleDocs
                 return roleDocs.some((it2: RoleServiceResponseType) => roleFunc(it1, it2));
             }
 
@@ -797,14 +800,12 @@ export class Crud {
                 isActive: true,
                 $or     : [{email: this.userInfo.loginName}, {username: this.userInfo.loginName}],
             });
-
             if (!validUser) {
                 return getResMessage("notFound", {
                     message: `User-profile information not found or inactive for ${this.userInfo.loginName}. Register a new account or contact system administrator. `,
                 });
             }
-
-            const resVal : CheckAccessType = {
+            const resVal: CheckAccessType = {
                 userId  : validUser._id.toString(),
                 roleId  : validUser.profile.roleId,
                 roleIds : validUser.roleIds,
@@ -812,17 +813,9 @@ export class Crud {
                 isAdmin : validUser.isAdmin || false,
                 profile : validUser.profile,
             }
-
             return getResMessage("success", {
                 message: "Access Permitted: ",
-                value  : {
-                    userId  : validUser._id,
-                    roleId  : validUser.profile.roleId,
-                    roleIds : validUser.roleIds,
-                    isActive: validUser.isActive,
-                    isAdmin : validUser.isAdmin || false,
-                    profile : validUser.profile,
-                }
+                value  : resVal,
             });
         } catch (e) {
             console.error("check-login-status-error:", e);
@@ -831,8 +824,6 @@ export class Crud {
             });
         }
     }
-
-
 }
 
 export default Crud;

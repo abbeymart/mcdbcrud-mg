@@ -35,10 +35,6 @@ export interface ProjectParamsType {
     [key: string]: number; // 1 for inclusion and 0 for exclusion
 }
 
-// export interface SortParamsType {
-//     [key: string]: number;          // 1 for "asc", -1 for "desc"
-// }
-
 export type SortParamsType = Map<string, SortDirection> // key:direction => 1 for "asc", -1 for "desc"
 
 
@@ -92,6 +88,38 @@ export enum TaskTypes {
     DELETE = "delete",
     REMOVE = "remove",
     UNKNOWN = "unknown",
+}
+
+// auditLog types
+
+// auditLog types
+
+export interface LogDocumentsType {
+    logDocuments?: any;
+    queryParam?: QueryParamsType;
+    docIds?: Array<string>;
+    collFields?: Array<string>;
+    collDocuments?: Array<any>;
+}
+
+export interface AuditLogOptionsType {
+    auditColl?: string;
+    collName?: string;
+    collDocuments?: LogDocumentsType;
+    newCollDocuments?: LogDocumentsType;
+    recordParams?: LogDocumentsType;
+    newRecordParams?: LogDocumentsType;
+}
+
+export enum AuditLogTypes {
+    CREATE = "create",
+    UPDATE = "update",
+    DELETE = "delete",
+    REMOVE = "remove",
+    GET = "get",
+    READ = "read",
+    LOGIN = "login",
+    LOGOUT = "logout",
 }
 
 export interface EmailAddressType {
@@ -290,5 +318,6 @@ export interface CrudOptionsType {
     queryFieldType?: string;
     appDbs?: Array<string>;
     appTables?: Array<string>;
+    cacheResult?: boolean;
 }
 

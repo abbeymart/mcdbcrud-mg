@@ -6,30 +6,12 @@
  */
 
 // Import required module/function
-import { Db } from "mongodb";
-import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
-import { checkDb } from "../dbc";
+import {Db} from "mongodb";
+import {getResMessage, ResponseMessage} from "@mconnect/mcresponse";
+import {checkDb} from "../dbc";
+import {AuditLogTypes, AuditLogOptionsType, LogDocumentsType} from "../crud";
 
 //types
-export interface AuditLogOptionsType {
-    auditColl?: string;
-    collName?: string;
-    collDocuments?: any;
-    newCollDocuments?: any;
-    recordParams?: any;
-    newRecordParams?: any;
-}
-
-export enum AuditLogTypes {
-    CREATE = "create",
-    UPDATE = "update",
-    DELETE = "delete",
-    REMOVE = "remove",
-    GET = "get",
-    READ = "read",
-    LOGIN = "login",
-    LOGOUT = "logout",
-}
 
 class AuditLog {
     private readonly dbHandle: Db;
@@ -44,7 +26,7 @@ class AuditLog {
         return this.auditColl
     }
 
-    async createLog(collName: string, collDocuments: any, userId: string): Promise<ResponseMessage> {
+    async createLog(collName: string, collDocuments: LogDocumentsType, userId: string): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (dbCheck.code !== "success") {
             return dbCheck;
@@ -101,7 +83,7 @@ class AuditLog {
         }
     }
 
-    async updateLog(collName: string, collDocuments: any, newCollDocuments: any, userId: string): Promise<ResponseMessage> {
+    async updateLog(collName: string, collDocuments: LogDocumentsType, newCollDocuments: LogDocumentsType, userId: string): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -158,7 +140,7 @@ class AuditLog {
         }
     }
 
-    async readLog(collName: string, collDocuments: any, userId: string = ""): Promise<ResponseMessage> {
+    async readLog(collName: string, collDocuments: LogDocumentsType, userId: string = ""): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -171,7 +153,8 @@ class AuditLog {
                 "Table or Collection name is required.";
         }
         if (!collDocuments) {
-            errorMessage = errorMessage ? errorMessage + " | Search keywords or Read record(s) information is required." :
+            errorMessage = errorMessage ?
+                errorMessage + " | Search keywords or Read record(s) information is required." :
                 "Search keywords or Read record(s) information is required.";
         }
         if (errorMessage) {
@@ -206,7 +189,7 @@ class AuditLog {
         }
     }
 
-    async deleteLog(collName: string, collDocuments: any, userId: string): Promise<ResponseMessage> {
+    async deleteLog(collName: string, collDocuments: LogDocumentsType, userId: string): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -258,7 +241,7 @@ class AuditLog {
         }
     }
 
-    async loginLog(collDocuments: any, userId: string = ""): Promise<ResponseMessage> {
+    async loginLog(collDocuments: LogDocumentsType, userId: string = ""): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -299,7 +282,7 @@ class AuditLog {
         }
     }
 
-    async logoutLog(collDocuments: any, userId: string = ""): Promise<ResponseMessage> {
+    async logoutLog(collDocuments: LogDocumentsType, userId: string = ""): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -471,7 +454,8 @@ class AuditLog {
                         "Table or Collection name is required.";
                 }
                 if (!collDocuments) {
-                    errorMessage = errorMessage ? errorMessage + " | Search keywords or Read record(s) information is required." :
+                    errorMessage = errorMessage ?
+                        errorMessage + " | Search keywords or Read record(s) information is required." :
                         "Search keywords or Read record(s) information is required.";
                 }
                 if (errorMessage) {
@@ -563,4 +547,4 @@ function newAuditLog(auditDb: Db, options?: AuditLogOptionsType) {
     return new AuditLog(auditDb, options);
 }
 
-export { AuditLog, newAuditLog };
+export {AuditLog, newAuditLog};
