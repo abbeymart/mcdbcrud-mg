@@ -6,13 +6,14 @@
  */
 
 // Import required module/function(s)
-import { ObjectId, DeleteResult } from "mongodb";
-import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
-import { isEmptyObject } from "../orm";
-import { deleteHashCache } from "@mconnect/mccache";
+import {ObjectId, DeleteResult} from "mongodb";
+import {getResMessage, ResponseMessage} from "@mconnect/mcresponse";
+import {isEmptyObject} from "../orm";
+import {deleteHashCache} from "@mconnect/mccache";
 import Crud from "./Crud";
-import {CrudOptionsType, CrudParamsType, ObjectRefType, SubItemsType} from "./types";
-import { FieldDescType, RelationActionTypes } from "../orm";
+import {CrudOptionsType, CrudParamsType, LogDocumentsType, ObjectRefType, SubItemsType} from "./types";
+import {FieldDescType, RelationActionTypes} from "../orm";
+import {log} from "util";
 
 class DeleteRecord extends Crud {
     protected collRestrict: boolean;
@@ -358,8 +359,11 @@ class DeleteRecord extends Crud {
                 deleteHashCache(this.cacheKey, this.coll);
                 // check the audit-log settings - to perform audit-log
                 let logRes = {};
-                if (this.logDelete) {
-                    logRes = await this.transLog.deleteLog(this.coll, this.currentRecs, this.userId);
+                if (this.logDelete || this.logCrud) {
+                    const logDocuments: LogDocumentsType = {
+                        collDocuments: this.currentRecs,
+                    }
+                    logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
                 }
                 return getResMessage("success", {
                     message: "Document/record deleted successfully",
@@ -502,8 +506,11 @@ class DeleteRecord extends Crud {
                     await deleteHashCache(this.cacheKey, this.coll);
                     // check the audit-log settings - to perform audit-log
                     let logRes = {};
-                    if (this.logDelete) {
-                        logRes = await this.transLog.deleteLog(this.coll, this.currentRecs, this.userId);
+                    if (this.logDelete || this.logCrud) {
+                        const logDocuments: LogDocumentsType = {
+                            collDocuments: this.currentRecs,
+                        }
+                        logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
                     }
                     return getResMessage("success", {
                         message: "Document/record deleted successfully",
@@ -534,4 +541,4 @@ function newDeleteRecord(params: CrudParamsType, options: CrudOptionsType = {}) 
     return new DeleteRecord(params, options);
 }
 
-export { DeleteRecord, newDeleteRecord };
+export {DeleteRecord, newDeleteRecord};
