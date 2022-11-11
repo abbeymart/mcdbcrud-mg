@@ -43,11 +43,8 @@ class GetRecord extends Crud {
             this.skip = 0;
         }
 
-        // check read permission
-        // let roleServices: RoleServiceResponseType;
-
         // exclude _id, if present, from the queryParams
-        if (this.queryParams && Object.keys(this.queryParams).length > 0) {
+        if (this.queryParams && !isEmptyObject(this.queryParams)) {
             const qParams = this.queryParams;
             const {_id, ...otherParams} = qParams; // exclude _id, if present
             this.queryParams = otherParams;
@@ -55,14 +52,19 @@ class GetRecord extends Crud {
 
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
         let logRes = getResMessage("unknown");
-        if (this.logRead && this.queryParams && !isEmptyObject(this.queryParams)) {
+        if ((this.logRead || this.logCrud) && this.queryParams && !isEmptyObject(this.queryParams)) {
             const logDocuments: LogDocumentsType = {
                 queryParam: this.queryParams,
             }
             logRes = await this.transLog.readLog(this.coll, logDocuments, this.userId);
-        } else if (this.logRead && this.docIds && this.docIds.length > 0) {
+        } else if ((this.logRead || this.logCrud) && this.docIds && this.docIds.length > 0) {
             const logDocuments: LogDocumentsType = {
                 docIds: this.docIds,
+            }
+            logRes = await this.transLog.readLog(this.coll, logDocuments, this.userId);
+        } else if(this.logRead || this.logCrud) {
+            const logDocuments: LogDocumentsType = {
+                queryParam: {},
             }
             logRes = await this.transLog.readLog(this.coll, logDocuments, this.userId);
         }
@@ -83,7 +85,7 @@ class GetRecord extends Crud {
             }
         }
 
-        // Get the item(s) by docId(s), queryParams or all items
+        // Get the collection-documents by docId(s)
         if (this.docIds && this.docIds.length > 0) {
             try {
                 // id(s): convert string to ObjectId
@@ -110,7 +112,7 @@ class GetRecord extends Crud {
                         stats,
                         logRes,
                     }
-                    await setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
+                    setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
                     return getResMessage("success", {
                         value: resultValue,
                     });
@@ -122,7 +124,8 @@ class GetRecord extends Crud {
                 });
             }
         }
-        if (this.queryParams && Object.keys(this.queryParams).length > 0) {
+        // Get the collection-documents by queryParams
+        if (this.queryParams && !isEmptyObject(this.queryParams)) {
             try {
                 // use / activate database
                 const appDbColl = this.appDb.collection(this.coll);
@@ -146,7 +149,7 @@ class GetRecord extends Crud {
                         stats,
                         logRes,
                     }
-                    await setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
+                    setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
                     return getResMessage("success", {
                         value: resultValue,
                     });
@@ -158,7 +161,7 @@ class GetRecord extends Crud {
                 });
             }
         }
-        // get all records, up to the permissible limit
+        // get all the collection-documents, up to the permissible limit
         try {
             // use / activate database
             const appDbColl = this.appDb.collection(this.coll);
@@ -182,7 +185,7 @@ class GetRecord extends Crud {
                     stats,
                     logRes,
                 }
-                await setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
+                setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
                 return getResMessage("success", {
                     value: resultValue,
                 });
@@ -220,12 +223,9 @@ class GetRecord extends Crud {
             this.skip = 0;
         }
 
-        // check read permission
-        // let roleServices: RoleServiceResponseType;
-
         if (!this.docIds || this.docIds.length < 1) {
             return getResMessage("paramsError", {
-                message: "docIds required",
+                message: "docIds is required",
             });
         }
 
@@ -254,7 +254,7 @@ class GetRecord extends Crud {
             }
         }
 
-        // Get the item(s) by docId(s)
+        // Get the collection-documents by docId(s)
         try {
             // id(s): convert string to ObjectId
             const docIds = this.docIds.map(id => new ObjectId(id));
@@ -318,17 +318,14 @@ class GetRecord extends Crud {
             this.skip = 0;
         }
 
-        // check read permission
-        // let roleServices: RoleServiceResponseType;
-
-        if (!this.queryParams || Object.keys(this.queryParams).length < 1) {
+        if (!this.queryParams || isEmptyObject(this.queryParams)) {
             return getResMessage("paramsError", {
-                message: "docIds required",
+                message: "queryParams is required",
             });
         }
 
         // exclude _id, if present, from the queryParams
-        if (this.queryParams && Object.keys(this.queryParams).length > 0) {
+        if (this.queryParams && !isEmptyObject(this.queryParams)) {
             const qParams = this.queryParams;
             const {_id, ...otherParams} = qParams; // exclude _id, if present
             this.queryParams = otherParams;
@@ -336,7 +333,7 @@ class GetRecord extends Crud {
 
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
         let logRes = getResMessage("unknown");
-        if ((this.logRead || this.logCrud) && this.queryParams && !isEmptyObject(this.queryParams)) {
+        if (this.logRead || this.logCrud) {
             const logDocuments: LogDocumentsType = {
                 queryParam: this.queryParams,
             }
@@ -359,7 +356,7 @@ class GetRecord extends Crud {
             }
         }
 
-        // Get the item(s) by queryParams
+        // Get the collection-documents by queryParams
         try {
             // use / activate database
             const appDbColl = this.appDb.collection(this.coll);
@@ -394,7 +391,6 @@ class GetRecord extends Crud {
                 value: error,
             });
         }
-        // get all records, up to the permissible limit
     }
 
     async getAllRecords(): Promise<ResponseMessage> {
@@ -422,16 +418,6 @@ class GetRecord extends Crud {
             this.skip = 0;
         }
 
-        // check read permission
-        // let roleServices: RoleServiceResponseType;
-
-        // exclude _id, if present, from the queryParams
-        if (this.queryParams && Object.keys(this.queryParams).length > 0) {
-            const qParams = this.queryParams;
-            const {_id, ...otherParams} = qParams; // exclude _id, if present
-            this.queryParams = otherParams;
-        }
-
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
         let logRes = getResMessage("unknown");
         if (this.logRead || this.logCrud) {
@@ -455,7 +441,7 @@ class GetRecord extends Crud {
                 console.error("error from the cache: ", e.stack);
             }
         }
-        // get all records, up to the permissible limit
+        // get all collection-documents, up to the permissible limit
         try {
             // use / activate database
             const appDbColl = this.appDb.collection(this.coll);
