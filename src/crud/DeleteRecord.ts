@@ -157,7 +157,7 @@ class DeleteRecord extends Crud {
     async checkSubItemByParams(): Promise<ResponseMessage> {
         // check if any/some of the current records contain at least a sub-item
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
-            await this.getCurrentRecords()
+            await this.getCurrentRecords("queryParams")
             this.docIds = [];          // reset docIds instance value
             this.currentRecs.forEach((item: ObjectRefType) => {
                 this.docIds.push(item["_id"]);
@@ -172,7 +172,12 @@ class DeleteRecord extends Crud {
     // checkRefIntegrityById checks referential integrity for parent-child collections
     async checkRefIntegrityById(): Promise<ResponseMessage> {
         // required-inputs: parent/child-collections and current item-id/item-name
-        if (this.childRelations.length > 0 && this.docIds.length > 0) {
+        if (this.childRelations.length < 1) {
+            return getResMessage("success", {
+                message: "no data integrity condition specified or required",
+            });
+        }
+        if (this.docIds.length > 0) {
             // prevent item delete, if child-collection-items reference itemId
             let subItems: Array<SubItemsType> = []
             // docIds ref-check
@@ -187,11 +192,8 @@ class DeleteRecord extends Crud {
                         $in: this.docIds,
                     }
                 } else {
-                    // TODO: other source-fields besides _id
-                    const sourceRecords = this.currentRecs.map((item: ObjectRefType) => {
-                        return {sourceField: item[sourceField]}
-                    });
-                    const sourceFieldValues = sourceRecords.map((item: ObjectRefType) => item[sourceField]);
+                    // other source-fields besides _id
+                    const sourceFieldValues = this.currentRecs.map((item: ObjectRefType) => item[sourceField]);
                     query[targetField] = {
                         $in: sourceFieldValues,
                     }
@@ -225,7 +227,7 @@ class DeleteRecord extends Crud {
             }
         } else {
             return getResMessage("success", {
-                message: "no data integrity checking or issue",
+                message: "docIds is required for integrity check/validation",
             });
         }
     }
@@ -233,11 +235,17 @@ class DeleteRecord extends Crud {
     async checkRefIntegrityByParams(): Promise<ResponseMessage> {
         // parent-child referential integrity checks
         // required-inputs: parent/child-collections and current item-id/item-name
-        this.docIds = [];
-        this.currentRecs.forEach((item: ObjectRefType) => {
-            this.docIds.push(item["_id"]);
-        });
-        return await this.checkRefIntegrityById();
+        if (this.queryParams && !isEmptyObject(this.queryParams)) {
+            await this.getCurrentRecords("queryParams")
+            this.docIds = [];
+            this.currentRecs.forEach((item: ObjectRefType) => {
+                this.docIds.push(item["_id"]);
+            });
+            return await this.checkRefIntegrityById();
+        }
+        return getResMessage("paramsError", {
+            message: "queryParams is required",
+        })
     }
 
     async removeRecordById(): Promise<ResponseMessage> {

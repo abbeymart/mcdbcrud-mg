@@ -11,7 +11,9 @@ import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { deleteHashCache } from "@mconnect/mccache";
 import {isEmptyObject} from "../orm";
 import Crud from "./Crud";
-import { ActionParamsType, ActionParamTaskType, CrudOptionsType, CrudParamsType, TaskTypes } from "./types";
+import {
+    ActionParamsType, ActionParamTaskType, CrudOptionsType, CrudParamsType, LogDocumentsType, TaskTypes
+} from "./types";
 import { FieldDescType, ModelOptionsType, RelationActionTypes } from "../orm";
 
 class SaveRecord extends Crud {
@@ -262,8 +264,11 @@ class SaveRecord extends Crud {
                 deleteHashCache(this.cacheKey, this.coll, "key");
                 // check the audit-log settings - to perform audit-log
                 let logRes = {};
-                if (this.logCreate) {
-                    logRes = await this.transLog.createLog(this.coll, this.createItems, this.userId);
+                if (this.logCreate || this.logCrud) {
+                    const logDocuments: LogDocumentsType = {
+                        collDocuments: this.createItems,
+                    }
+                    logRes = await this.transLog.createLog(this.coll, logDocuments, this.userId);
                 }
                 return getResMessage("success", {
                     message: "Record(s) created successfully.",
@@ -631,8 +636,14 @@ class SaveRecord extends Crud {
                 await deleteHashCache(this.cacheKey, this.coll, "key");
                 // check the audit-log settings - to perform audit-log
                 let logRes = {};
-                if (this.logUpdate) {
-                    logRes = await this.transLog.updateLog(this.coll, this.currentRecs, this.updateItems, this.userId);
+                if (this.logUpdate || this.logCrud) {
+                    const logDocuments: LogDocumentsType = {
+                        collDocuments: this.currentRecs,
+                    }
+                    const newLogDocuments: LogDocumentsType = {
+                        collDocuments: this.updateItems,
+                    }
+                    logRes = await this.transLog.updateLog(this.coll, logDocuments, newLogDocuments, this.userId);
                 }
                 return getResMessage("success", {
                     message: "Record(s) updated successfully.",
@@ -682,8 +693,8 @@ class SaveRecord extends Crud {
             otherParams.updatedBy = this.userId;
             otherParams.updatedAt = new Date();
             let updateParams = otherParams;
-            // include update query-params for audit-log
-            updateParams.queryParams = this.queryParams;
+            // include update query-params for audit-log??
+            // updateParams.queryParams = this.queryParams;
 
             // transaction starts
             await session.withTransaction(async () => {
@@ -840,8 +851,14 @@ class SaveRecord extends Crud {
                 await deleteHashCache(this.cacheKey, this.coll, "key");
                 // check the audit-log settings - to perform audit-log
                 let logRes = {};
-                if (this.logUpdate) {
-                    logRes = await this.transLog.updateLog(this.coll, this.currentRecs, updateParams, this.userId);
+                if (this.logUpdate || this.logCrud) {
+                    const logDocuments: LogDocumentsType = {
+                        collDocuments: this.currentRecs,
+                    }
+                    const newLogDocuments: LogDocumentsType = {
+                        queryParam: updateParams,
+                    }
+                    logRes = await this.transLog.updateLog(this.coll, logDocuments, newLogDocuments, this.userId);
                 }
                 return getResMessage("success", {
                     message: "Requested action(s) performed successfully.",
