@@ -715,7 +715,7 @@ class SaveRecord extends Crud {
             // transaction starts
             await session.withTransaction(async () => {
                 const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
-                // current records prior to update OR use this.currentRecs?
+                // query current records prior to update
                 const currentRecs = await appDbColl.find(this.queryParams, {session}).toArray();
                 if (!currentRecs || currentRecs.length < 1) {
                     await session.abortTransaction();
