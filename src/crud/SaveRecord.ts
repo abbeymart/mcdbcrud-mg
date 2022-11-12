@@ -809,6 +809,7 @@ class SaveRecord extends Crud {
                             }
                             const targetDocDesc = cItem.targetModel?.docDesc || {};
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
+
                             const currentFieldValue = currentRec[sourceField];  // current value of the targetField
                             const newFieldValue = item[sourceField] || null; // new value (default-value) of the targetField
                             const nullValue = null;
