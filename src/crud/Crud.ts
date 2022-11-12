@@ -19,7 +19,7 @@ import {
     QueryParamsType,
     ActionParamsType,
     ExistParamsType,
-    ProjectParamsType, SortParamsType, SubItemsType, ActionParamType, FieldValueTypes,
+    ProjectParamsType, SortParamsType, SubItemsType, ActionParamType, FieldValueTypes, ObjectRefType,
 } from "./types";
 import {AuditLog, newAuditLog} from "../auditlog";
 import {DataTypes, DefaultValueType, DocDescType, FieldDescType, ModelRelationType} from "../orm";
@@ -75,7 +75,7 @@ export class Crud {
     protected defaultValues: ActionParamType;
     protected createItems: ActionParamsType;
     protected updateItems: ActionParamsType;
-    protected currentRecs: Array<object>;
+    protected currentRecs: Array<ObjectRefType>;
     protected roleServices: Array<RoleServiceResponseType>;
     protected isRecExist: boolean;
     protected actionAuthorized: boolean;
@@ -755,7 +755,7 @@ export class Crud {
                     this.currentRecs = currentRecRes.value;
                 }
             }
-            await this.currentRecs.forEach((item: any) => {
+            this.currentRecs.forEach((item: ObjectRefType) => {
                 docIds.push(item._id);
             });
             this.docIds = docIds;

@@ -11,7 +11,7 @@ import {getResMessage, ResponseMessage} from "@mconnect/mcresponse";
 import {isEmptyObject} from "../orm";
 import {deleteHashCache} from "@mconnect/mccache";
 import Crud from "./Crud";
-import {CrudOptionsType, CrudParamsType, LogDocumentsType, ObjectRefType, SubItemsType} from "./types";
+import {CrudOptionsType, CrudParamsType, LogDocumentsType, ObjectRefType, ObjectType, SubItemsType} from "./types";
 import {FieldDescType, RelationActionTypes} from "../orm";
 import {log} from "util";
 
@@ -156,11 +156,17 @@ class DeleteRecord extends Crud {
     // checkSubItemByParams checks referential integrity for same collection, by queryParam
     async checkSubItemByParams(): Promise<ResponseMessage> {
         // check if any/some of the current records contain at least a sub-item
-        this.docIds = [];          // reset docIds instance value
-        await this.currentRecs.forEach((item: any) => {
-            this.docIds.push(item._id);
-        });
-        return await this.checkSubItemById();
+        if (this.queryParams && !isEmptyObject(this.queryParams)) {
+            await this.getCurrentRecords()
+            this.docIds = [];          // reset docIds instance value
+            this.currentRecs.forEach((item: ObjectRefType) => {
+                this.docIds.push(item["_id"]);
+            });
+            return await this.checkSubItemById();
+        }
+        return getResMessage("paramsError", {
+            message: "queryParams is required",
+        })
     }
 
     // checkRefIntegrityById checks referential integrity for parent-child collections
@@ -175,7 +181,7 @@ class DeleteRecord extends Crud {
                 // include foreign-key/target as the query condition
                 const targetField = relation.targetField;
                 const sourceField = relation.sourceField;
-                const query: any = {}
+                const query: ObjectRefType = {}
                 if (sourceField === "_id") {
                     query[targetField] = {
                         $in: this.docIds,
@@ -185,7 +191,7 @@ class DeleteRecord extends Crud {
                     const sourceRecords = this.currentRecs.map((item: ObjectRefType) => {
                         return {sourceField: item[sourceField]}
                     });
-                    const sourceFieldValues = sourceRecords.map((item: any) => item[sourceField]);
+                    const sourceFieldValues = sourceRecords.map((item: ObjectRefType) => item[sourceField]);
                     query[targetField] = {
                         $in: sourceFieldValues,
                     }
@@ -228,8 +234,8 @@ class DeleteRecord extends Crud {
         // parent-child referential integrity checks
         // required-inputs: parent/child-collections and current item-id/item-name
         this.docIds = [];
-        await this.currentRecs.forEach((item: any) => {
-            this.docIds.push(item._id);
+        this.currentRecs.forEach((item: ObjectRefType) => {
+            this.docIds.push(item["_id"]);
         });
         return await this.checkRefIntegrityById();
     }
@@ -257,7 +263,7 @@ class DeleteRecord extends Crud {
                 // optional, update child-docs for setDefault and initializeValues, if this.deleteSetDefault or this.deleteSetNull
                 if (this.deleteSetDefault) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
-                    for await (const currentRec of (this.currentRecs as Array<any>)) {
+                    for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
                         for await (const cItem of childRelations) {
                             const sourceField = cItem.sourceField;
                             const targetField = cItem.targetField;
@@ -292,8 +298,8 @@ class DeleteRecord extends Crud {
                                 default:
                                     break;
                             }
-                            let updateQuery: any = {};
-                            let updateSet: any = {};
+                            let updateQuery: ObjectRefType = {};
+                            let updateSet: ObjectRefType = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = defaultValue;
                             const TargetColl = this.appDb.collection(targetColl);
@@ -306,7 +312,7 @@ class DeleteRecord extends Crud {
                     }
                 } else if (this.deleteSetNull) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL);
-                    for await (const currentRec of (this.currentRecs as Array<any>)) {
+                    for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
                         for await (const cItem of childRelations) {
                             const sourceField = cItem.sourceField;
                             const targetField = cItem.targetField;
@@ -338,8 +344,8 @@ class DeleteRecord extends Crud {
                                 default:
                                     break;
                             }
-                            let updateQuery: any = {};
-                            let updateSet: any = {};
+                            let updateQuery: ObjectRefType = {};
+                            let updateSet: ObjectRefType = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = nullValue;
                             const TargetColl = this.appDb.collection(targetColl);
@@ -405,7 +411,7 @@ class DeleteRecord extends Crud {
                     // optional, update child-docs for setDefault and setNull, if this.deleteSetDefault or this.deleteSetNull
                     if (this.deleteSetDefault) {
                         const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
-                        for await (const currentRec of (this.currentRecs as Array<any>)) {
+                        for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
                             for await (const cItem of childRelations) {
                                 const sourceField = cItem.sourceField;
                                 const targetField = cItem.targetField
@@ -439,8 +445,8 @@ class DeleteRecord extends Crud {
                                     default:
                                         break;
                                 }
-                                let updateQuery: any = {};
-                                let updateSet: any = {};
+                                let updateQuery: ObjectRefType = {};
+                                let updateSet: ObjectRefType = {};
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = defaultValue;
                                 const TargetColl = this.appDb.collection(targetColl);
@@ -453,7 +459,7 @@ class DeleteRecord extends Crud {
                         }
                     } else if (this.deleteSetNull) {
                         const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL);
-                        for await (const currentRec of (this.currentRecs as Array<any>)) {
+                        for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
                             for await (const cItem of childRelations) {
                                 const sourceField = cItem.sourceField;
                                 const targetField = cItem.targetField;
@@ -485,8 +491,8 @@ class DeleteRecord extends Crud {
                                     default:
                                         break;
                                 }
-                                let updateQuery: any = {};
-                                let updateSet: any = {};
+                                let updateQuery: ObjectRefType = {};
+                                let updateSet: ObjectRefType = {};
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = nullValue;
                                 const TargetColl = this.appDb.collection(targetColl);
