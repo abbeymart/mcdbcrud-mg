@@ -39,7 +39,7 @@ export class Crud {
     protected readonly existParams: ExistParamsType;
     protected readonly projectParams: ProjectParamsType;
     protected readonly sortParams: SortParamsType | {};
-    protected readonly taskType: TaskTypes | string;
+    protected taskType: TaskTypes | string;
     protected skip: number;
     protected limit: number;
     protected readonly recursiveDelete: boolean;

@@ -366,9 +366,14 @@ class DeleteRecord extends Crud {
                         }
                     }
                 }
-                await session.commitTransaction();
+                // commit or abort trx
+                if (removed.acknowledged && removed.deletedCount === docIds.length) {
+                    await session.commitTransaction();
+                } else {
+                    throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]`)
+                }
             });
-            // trx ends
+            // perform cache and audi-log tasks
             if (removed.acknowledged) {
                 // delete cache
                 deleteHashCache(this.cacheKey, this.coll);
@@ -388,12 +393,10 @@ class DeleteRecord extends Crud {
                     message: "Document/record deleted successfully",
                     value  : deleteResultValue,
                 });
-            } else {
-                return getResMessage("removeError", {
-                    message: "Error removing/deleting record(s): ",
-                });
             }
+            return getResMessage("deleteError", {message: "No record(s) deleted"});
         } catch (e) {
+            await session.abortTransaction()
             return getResMessage("removeError", {
                 message: `Error removing/deleting record(s): ${e.message ? e.message : ""}`,
                 value  : e,
@@ -515,14 +518,21 @@ class DeleteRecord extends Crud {
                             }
                         }
                     }
-                    await session.commitTransaction();
+                    // commit or abort trx
+                    if (removed.acknowledged && removed.deletedCount === this.currentRecs.length) {
+                        await session.commitTransaction();
+                    } else {
+                        throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]`)
+                    }
                 });
-                // trx ends
+                // perform cache and audi-log tasks
                 if (removed.acknowledged) {
                     // delete cache
                     await deleteHashCache(this.cacheKey, this.coll);
                     // check the audit-log settings - to perform audit-log
-                    let logRes = {code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null};
+                    let logRes = {
+                        code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null
+                    };
                     if (this.logDelete || this.logCrud) {
                         const logDocuments: LogDocumentsType = {
                             collDocuments: this.currentRecs,
@@ -544,6 +554,7 @@ class DeleteRecord extends Crud {
                 return getResMessage("deleteError", {message: "Unable to delete record(s), due to missing queryParams"});
             }
         } catch (e) {
+            await session.abortTransaction()
             return getResMessage("removeError", {
                 message: `Error removing/deleting record(s): ${e.message ? e.message : ""}`,
                 value  : e,
