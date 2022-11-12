@@ -6,12 +6,14 @@
  */
 
 // Import required module/function(s)
-import {ObjectId, DeleteResult} from "mongodb";
+import {ObjectId, DeleteResult, UpdateResult,} from "mongodb";
 import {getResMessage, ResponseMessage} from "@mconnect/mcresponse";
 import {isEmptyObject} from "../orm";
 import {deleteHashCache} from "@mconnect/mccache";
 import Crud from "./Crud";
-import {CrudOptionsType, CrudParamsType, LogDocumentsType, ObjectRefType, ObjectType, SubItemsType} from "./types";
+import {
+    CrudOptionsType, CrudParamsType, CrudResultType, LogDocumentsType, ObjectRefType, ObjectType, SubItemsType
+} from "./types";
 import {FieldDescType, RelationActionTypes} from "../orm";
 import {log} from "util";
 
@@ -268,7 +270,7 @@ class DeleteRecord extends Crud {
                     await session.abortTransaction();
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${docIds.length} set to be removed]. Transaction aborted.`)
                 }
-                // optional, update child-docs for setDefault and initializeValues, if this.deleteSetDefault or this.deleteSetNull
+                // optional, update child-docs for setDefault and initializeValues, i.e. if this.deleteSetDefault or this.deleteSetNull
                 if (this.deleteSetDefault) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                     for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
@@ -292,8 +294,7 @@ class DeleteRecord extends Crud {
                                 continue;
                             }
                             // validate targetField default value | check if setDefault is permissible for the targetField
-
-                            let targetFieldDesc = targetDocDesc[targetField];
+                            let targetFieldDesc = targetDocDesc[targetField];   // target-field-type
                             switch (typeof targetFieldDesc) {
                                 case "object":
                                     targetFieldDesc = targetFieldDesc as FieldDescType
@@ -306,13 +307,13 @@ class DeleteRecord extends Crud {
                                 default:
                                     break;
                             }
-                            let updateQuery: ObjectRefType = {};
-                            let updateSet: ObjectRefType = {};
+                            let updateQuery: ObjectRefType = {};    // to determine the current-value in the target-field
+                            let updateSet: ObjectRefType = {};      // to set the new-default-value in the target-field
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = fieldDefaultValue;
                             const TargetColl = this.appDb.collection(targetColl);
-                            const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
-                            if (updateRes.modifiedCount !== updateRes.matchedCount) {
+                            const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
+                            if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
                                 throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
@@ -330,14 +331,15 @@ class DeleteRecord extends Crud {
                                 await session.abortTransaction();
                                 throw new Error("Target model is required to complete the set-null-task");
                             }
+                            const targetDocDesc = cItem.targetModel.docDesc || {};
+                            const docInitializeValue = this.computeInitializeValues(targetDocDesc)
                             const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                            const nullValue = null; // new value (null-value) of the targetField
+                            const nullValue = docInitializeValue[targetField] || null; // new value (null-value) of the targetField
                             if (currentFieldValue === nullValue) {
                                 // skip update
                                 continue;
                             }
                             // validate targetField null value | check if allowNull is permissible for the targetField
-                            const targetDocDesc = cItem.targetModel.docDesc || {};
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
                             let targetFieldDesc = targetDocDesc[targetField];
                             switch (typeof targetFieldDesc) {
@@ -357,8 +359,8 @@ class DeleteRecord extends Crud {
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = nullValue;
                             const TargetColl = this.appDb.collection(targetColl);
-                            const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
-                            if (updateRes.modifiedCount !== updateRes.matchedCount) {
+                            const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
+                            if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
                                 throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
@@ -372,19 +374,20 @@ class DeleteRecord extends Crud {
                 // delete cache
                 deleteHashCache(this.cacheKey, this.coll);
                 // check the audit-log settings - to perform audit-log
-                let logRes = {};
+                let logRes = {code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null};
                 if (this.logDelete || this.logCrud) {
                     const logDocuments: LogDocumentsType = {
                         collDocuments: this.currentRecs,
                     }
                     logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
                 }
+                const deleteResultValue: CrudResultType = {
+                    recordsCount: removed.deletedCount,
+                    logRes,
+                }
                 return getResMessage("success", {
                     message: "Document/record deleted successfully",
-                    value  : {
-                        docId: Number(removed.deletedCount),
-                        logRes,
-                    }
+                    value  : deleteResultValue,
                 });
             } else {
                 return getResMessage("removeError", {
@@ -458,8 +461,8 @@ class DeleteRecord extends Crud {
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = fieldDefaultValue;
                                 const TargetColl = this.appDb.collection(targetColl);
-                                const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
-                                if (updateRes.modifiedCount !== updateRes.matchedCount) {
+                                const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
+                                if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                     await session.abortTransaction();
                                     throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                                 }
@@ -477,14 +480,15 @@ class DeleteRecord extends Crud {
                                     await session.abortTransaction();
                                     throw new Error("Target model is required to complete the set-null-task");
                                 }
+                                const targetDocDesc = cItem.targetModel.docDesc || {};
+                                const docInitializeValue = this.computeInitializeValues(targetDocDesc)
                                 const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                                const nullValue = null; // new value (null-value) of the targetField
+                                const nullValue = docInitializeValue[targetField] || null; // new value (null-value) of the targetField
                                 if (currentFieldValue === nullValue) {
                                     // skip update
                                     continue;
                                 }
                                 // validate targetField null value | check if allowNull is permissible for the targetField
-                                const targetDocDesc = cItem.targetModel.docDesc || {};
                                 const targetColl = cItem.targetModel.collName || cItem.targetColl;
                                 let targetFieldDesc = targetDocDesc[targetField];
                                 switch (typeof targetFieldDesc) {
@@ -504,8 +508,8 @@ class DeleteRecord extends Crud {
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = nullValue;
                                 const TargetColl = this.appDb.collection(targetColl);
-                                const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
-                                if (updateRes.modifiedCount !== updateRes.matchedCount) {
+                                const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
+                                if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                     await session.abortTransaction();
                                     throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                                 }
@@ -519,19 +523,20 @@ class DeleteRecord extends Crud {
                     // delete cache
                     await deleteHashCache(this.cacheKey, this.coll);
                     // check the audit-log settings - to perform audit-log
-                    let logRes = {};
+                    let logRes = {code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null};
                     if (this.logDelete || this.logCrud) {
                         const logDocuments: LogDocumentsType = {
                             collDocuments: this.currentRecs,
                         }
                         logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
                     }
+                    const deleteResultValue: CrudResultType = {
+                        recordsCount: removed.deletedCount,
+                        logRes,
+                    }
                     return getResMessage("success", {
                         message: "Document/record deleted successfully",
-                        value  : {
-                            docId: Number(removed.deletedCount),
-                            logRes,
-                        }
+                        value  : deleteResultValue,
                     });
                 } else {
                     return getResMessage("deleteError", {message: "No record(s) deleted"});

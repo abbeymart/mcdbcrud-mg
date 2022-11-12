@@ -80,6 +80,23 @@ export interface GetResultType {
     taskType?: string;
 }
 
+export interface CrudResultType {
+    queryParam?: QueryParamsType;
+    recordIds?: Array<string>;
+    recordsCount?: number;
+    records?: ActionParamsType;
+    taskType?: string;
+    logRes?: ResponseMessage;
+}
+
+export interface SaveResultType {
+    queryParam?: QueryParamsType;
+    recordIds?: Array<string>;
+    recordsCount?: number;
+    taskType?: string;
+    logRes?: ResponseMessage;
+}
+
 export enum TaskTypes {
     CREATE = "create",
     INSERT = "insert",
