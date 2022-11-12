@@ -284,10 +284,10 @@ class DeleteRecord extends Crud {
                             const targetDocDesc = cItem.targetModel.docDesc || {};
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
                             // compute default values for the targetFields
-                            const defaultValues = await this.computeDefaultValues(targetDocDesc);
+                            const docDefaultValue = await this.computeDefaultValues(targetDocDesc);
                             const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
-                            const defaultValue = defaultValues[targetField] || null; // new value (default-value) of the targetField
-                            if (currentFieldValue === defaultValue || !defaultValue) {
+                            const fieldDefaultValue = docDefaultValue[targetField] || null; // new value (default-value) of the targetField
+                            if (currentFieldValue === fieldDefaultValue || !fieldDefaultValue) {
                                 // skip update
                                 continue;
                             }
@@ -309,7 +309,7 @@ class DeleteRecord extends Crud {
                             let updateQuery: ObjectRefType = {};
                             let updateSet: ObjectRefType = {};
                             updateQuery[targetField] = currentFieldValue;
-                            updateSet[targetField] = defaultValue;
+                            updateSet[targetField] = fieldDefaultValue;
                             const TargetColl = this.appDb.collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
@@ -432,10 +432,10 @@ class DeleteRecord extends Crud {
                                 const targetDocDesc = cItem.targetModel.docDesc || {};
                                 const targetColl = cItem.targetModel.collName || cItem.targetColl;
                                 // compute default values for the targetFields
-                                const defaultValues = await this.computeDefaultValues(targetDocDesc);
+                                const docDefaultValue = await this.computeDefaultValues(targetDocDesc);
                                 const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
-                                const defaultValue = defaultValues[targetField] || null; // new value (default-value) of the targetField
-                                if (currentFieldValue === defaultValue || !defaultValue) {
+                                const fieldDefaultValue = docDefaultValue[targetField] || null; // new value (default-value) of the targetField
+                                if (currentFieldValue === fieldDefaultValue || !fieldDefaultValue) {
                                     // skip update
                                     continue;
                                 }
@@ -456,7 +456,7 @@ class DeleteRecord extends Crud {
                                 let updateQuery: ObjectRefType = {};
                                 let updateSet: ObjectRefType = {};
                                 updateQuery[targetField] = currentFieldValue;
-                                updateSet[targetField] = defaultValue;
+                                updateSet[targetField] = fieldDefaultValue;
                                 const TargetColl = this.appDb.collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                                 if (updateRes.modifiedCount !== updateRes.matchedCount) {
