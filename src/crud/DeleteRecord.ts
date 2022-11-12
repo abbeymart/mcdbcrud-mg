@@ -257,9 +257,9 @@ class DeleteRecord extends Crud {
             // trx starts
             let removed: DeleteResult = {deletedCount: 0, acknowledged: false};
             await session.withTransaction(async () => {
+                const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
                 // id(s): convert string to ObjectId
                 const docIds = this.docIds.map(id => new ObjectId(id));
-                const appDbColl = this.appDb.collection(this.coll);
                 removed = await appDbColl.deleteMany({
                     _id: {
                         $in: docIds,
@@ -270,7 +270,7 @@ class DeleteRecord extends Crud {
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${docIds.length} set to be removed]. Transaction aborted.`)
                 }
                 // optional, update child-collection-documents for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
-                if (this.deleteSetDefault) {
+                if (this.deleteSetDefault && this.childRelations.length > 0) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                     for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
                         for await (const cItem of childRelations) {
@@ -288,7 +288,7 @@ class DeleteRecord extends Crud {
                             const docDefaultValue = await this.computeDefaultValues(targetDocDesc);
                             const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
                             const fieldDefaultValue = docDefaultValue[targetField] || null; // new value (default-value) of the targetField
-                            if (currentFieldValue === fieldDefaultValue || !fieldDefaultValue) {
+                            if (currentFieldValue === fieldDefaultValue) {
                                 // skip update
                                 continue;
                             }
@@ -310,7 +310,7 @@ class DeleteRecord extends Crud {
                             let updateSet: ObjectRefType = {};      // to set the new-default-value in the target-field
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = fieldDefaultValue;
-                            const TargetColl = this.appDb.collection(targetColl);
+                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
@@ -318,7 +318,7 @@ class DeleteRecord extends Crud {
                             }
                         }
                     }
-                } else if (this.deleteSetNull) {
+                } else if (this.deleteSetNull && this.childRelations.length > 0) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL);
                     for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
                         for await (const cItem of childRelations) {
@@ -357,7 +357,7 @@ class DeleteRecord extends Crud {
                             let updateSet: ObjectRefType = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = nullValue;
-                            const TargetColl = this.appDb.collection(targetColl);
+                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
@@ -370,6 +370,7 @@ class DeleteRecord extends Crud {
                 if (removed.acknowledged && removed.deletedCount === docIds.length) {
                     await session.commitTransaction();
                 } else {
+                    await session.abortTransaction()
                     throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]`)
                 }
             });
@@ -415,14 +416,14 @@ class DeleteRecord extends Crud {
                 // trx starts
                 let removed: DeleteResult = {deletedCount: 0, acknowledged: false};
                 await session.withTransaction(async () => {
-                    const appDbColl = this.appDb.collection(this.coll);
+                    const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
                     removed = await appDbColl.deleteMany(this.queryParams, {session});
                     if (removed.deletedCount !== this.currentRecs.length) {
                         await session.abortTransaction();
                         throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]. Transaction aborted.`)
                     }
                     // optional, update child-collection-documents for setDefault and setNull/initialize-value?, if this.deleteSetDefault or this.deleteSetNull
-                    if (this.deleteSetDefault) {
+                    if (this.deleteSetDefault && this.childRelations.length > 0) {
                         const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                         for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
                             for await (const cItem of childRelations) {
@@ -440,7 +441,7 @@ class DeleteRecord extends Crud {
                                 const docDefaultValue = await this.computeDefaultValues(targetDocDesc);
                                 const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
                                 const fieldDefaultValue = docDefaultValue[targetField] || null; // new value (default-value) of the targetField
-                                if (currentFieldValue === fieldDefaultValue || !fieldDefaultValue) {
+                                if (currentFieldValue === fieldDefaultValue) {
                                     // skip update
                                     continue;
                                 }
@@ -462,7 +463,7 @@ class DeleteRecord extends Crud {
                                 let updateSet: ObjectRefType = {};
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = fieldDefaultValue;
-                                const TargetColl = this.appDb.collection(targetColl);
+                                const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
                                 if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                     await session.abortTransaction();
@@ -470,7 +471,7 @@ class DeleteRecord extends Crud {
                                 }
                             }
                         }
-                    } else if (this.deleteSetNull) {
+                    } else if (this.deleteSetNull && this.childRelations.length > 0) {
                         const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL);
                         for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
                             for await (const cItem of childRelations) {
@@ -509,7 +510,7 @@ class DeleteRecord extends Crud {
                                 let updateSet: ObjectRefType = {};
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = nullValue;
-                                const TargetColl = this.appDb.collection(targetColl);
+                                const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
                                 if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                     await session.abortTransaction();
@@ -522,6 +523,7 @@ class DeleteRecord extends Crud {
                     if (removed.acknowledged && removed.deletedCount === this.currentRecs.length) {
                         await session.commitTransaction();
                     } else {
+                        await session.abortTransaction()
                         throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]`)
                     }
                 });

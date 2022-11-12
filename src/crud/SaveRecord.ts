@@ -258,10 +258,11 @@ class SaveRecord extends Crud {
             let insertResult: InsertManyResult = {acknowledged: false, insertedCount: 0, insertedIds: {}};
             // trx starts
             await session.withTransaction(async () => {
-                const appDbColl = this.appDb.collection(this.coll);
+                const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
                 insertResult = await appDbColl.insertMany(this.createItems, {session});
                 // commit or abort trx
                 if (insertResult.insertedCount < 1 || !insertResult.acknowledged || insertResult.insertedCount < this.createItems.length) {
+                    await session.abortTransaction()
                     throw new Error(`Unable to create new record(s), database error [${insertResult.insertedCount} of ${this.createItems.length} set to be created]`)
                 }
                 await session.commitTransaction();
@@ -301,6 +302,12 @@ class SaveRecord extends Crud {
     }
 
     async updateRecordById(): Promise<ResponseMessage> {
+        // control access to security-sensitive collections - optional
+        if ((this.coll === this.userColl || this.coll === this.accessColl) && !this.isAdmin) {
+            return getResMessage("unAuthorized", {
+                message: "Access-security-sensitive collections update are not allowed - via crud package."
+            })
+        }
         if (this.isRecExist) {
             return getResMessage("recExist", {
                 message: this.recExistMessage,
@@ -310,12 +317,6 @@ class SaveRecord extends Crud {
             return getResMessage("insertError", {
                 message: "Unable to update record(s), due to incomplete/incorrect input-parameters. ",
             });
-        }
-        // control access to security-sensitive collections - optional
-        if ((this.coll === this.userColl || this.coll === this.accessColl) && !this.isAdmin) {
-            return getResMessage("unAuthorized", {
-                message: "Access-security-sensitive collections update are not allowed - via crud package."
-            })
         }
         // updated record(s)
         // create a transaction session
@@ -334,8 +335,7 @@ class SaveRecord extends Crud {
                 } = item;
                 // trx starts
                 await session.withTransaction(async () => {
-                    // perform update task
-                    const appDbColl = this.appDb.collection(this.coll);
+                    const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
                     // current record prior to update
                     const currentRec = await appDbColl.findOne({_id: new ObjectId(_id)}, {session,});
                     if (!currentRec || isEmptyObject(currentRec)) {
@@ -349,7 +349,7 @@ class SaveRecord extends Crud {
                     }, {session});
                     if (updateResult.modifiedCount !== updateResult.matchedCount) {
                         await session.abortTransaction();
-                        throw new Error("Error updating document(s).")
+                        throw new Error(`Error updating document(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
                     }
                     // optional step, update the child-collections (update-cascade) | from current and new update-field-values
                     if (this.updateCascade) {
@@ -367,7 +367,7 @@ class SaveRecord extends Crud {
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
                             const currentFieldValue = currentRec[sourceField] || null;   // current value
                             const newFieldValue = item[sourceField] || null;         // new value (set-value)
-                            if (currentFieldValue === newFieldValue || !newFieldValue) {
+                            if (currentFieldValue === newFieldValue) {
                                 // skip update
                                 continue;
                             }
@@ -375,7 +375,7 @@ class SaveRecord extends Crud {
                             let updateSet: any = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = newFieldValue;
-                            const TargetColl = this.appDb.collection(targetColl);
+                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
@@ -422,7 +422,7 @@ class SaveRecord extends Crud {
                             let updateSet: any = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = defaultValue;
-                            const TargetColl = this.appDb.collection(targetColl);
+                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
@@ -468,7 +468,7 @@ class SaveRecord extends Crud {
                             let updateSet: any = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = nullValue;
-                            const TargetColl = this.appDb.collection(targetColl);
+                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
@@ -480,6 +480,7 @@ class SaveRecord extends Crud {
                     updateMatchedCount += updateResult.matchedCount;
                     // commit or abort trx
                     if (updateCount < 1 || updateCount != updateMatchedCount) {
+                        await session.abortTransaction()
                         throw new Error("No records updated. Please retry.")
                     }
                     await session.abortTransaction()
@@ -490,14 +491,13 @@ class SaveRecord extends Crud {
             if (this.updateItems.length > 1) {
                 // trx starts
                 await session.withTransaction(async () => {
+                    const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
                     for await (const item of this.updateItems) {
                         // destruct _id /other attributes
                         const {
                             _id,
                             ...otherParams
                         } = item;
-                        // perform update task
-                        const appDbColl = this.appDb.collection(this.coll);
                         // current record prior to update
                         const currentRec = await appDbColl.findOne({_id: new Object(_id as string)}, {session,});
                         if (!currentRec || isEmptyObject(currentRec)) {
@@ -511,10 +511,10 @@ class SaveRecord extends Crud {
                         }, {session,});
                         if (updateResult.modifiedCount !== updateResult.matchedCount) {
                             await session.abortTransaction();
-                            throw new Error("Error updating document(s).")
+                            throw new Error(`Error updating document(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
                         }
                         // optional step, update the child-collections (update-cascade) | from current and new update-field-values
-                        if (this.updateCascade) {
+                        if (this.updateCascade && this.childRelations.length > 0) {
                             const childRelations = this.childRelations.filter(item => item.onUpdate === RelationActionTypes.CASCADE);
                             for await (const cItem of childRelations) {
                                 const sourceField = cItem.sourceField;
@@ -537,7 +537,7 @@ class SaveRecord extends Crud {
                                 let updateSet: any = {};
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = newFieldValue;
-                                const TargetColl = this.appDb.collection(targetColl);
+                                const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                                 if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                     await session.abortTransaction();
@@ -545,7 +545,7 @@ class SaveRecord extends Crud {
                                 }
                             }
                         } // optional, update child-docs for setDefault and initializeValues, if this.updateSetDefault or this.updateSetNull
-                        else if (this.updateSetDefault) {
+                        else if (this.updateSetDefault && this.childRelations.length > 0) {
                             const childRelations = this.childRelations.filter(item => item.onUpdate === RelationActionTypes.SET_DEFAULT);
                             for await (const cItem of childRelations) {
                                 const sourceField = cItem.sourceField;
@@ -585,14 +585,14 @@ class SaveRecord extends Crud {
                                 let updateSet: any = {};
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = defaultValue;
-                                const TargetColl = this.appDb.collection(targetColl);
+                                const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                                 if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                     await session.abortTransaction();
                                     throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                                 }
                             }
-                        } else if (this.updateSetNull) {
+                        } else if (this.updateSetNull && this.childRelations.length > 0) {
                             const childRelations = this.childRelations.filter(item => item.onUpdate === RelationActionTypes.SET_NULL);
                             for await (const cItem of childRelations) {
                                 const sourceField = cItem.sourceField;
@@ -630,7 +630,7 @@ class SaveRecord extends Crud {
                                 let updateSet: any = {};
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = nullValue;
-                                const TargetColl = this.appDb.collection(targetColl);
+                                const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                                 if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                     await session.abortTransaction();
@@ -643,6 +643,7 @@ class SaveRecord extends Crud {
                     }
                     // commit or abort trx
                     if (updateCount < 1 || updateCount != updateMatchedCount) {
+                        await session.abortTransaction()
                         throw new Error("No records updated. Please retry.")
                     }
                     await session.abortTransaction()
@@ -687,27 +688,24 @@ class SaveRecord extends Crud {
     }
 
     async updateRecordByParams(): Promise<ResponseMessage> {
-        if (this.isRecExist) {
-            return getResMessage("recExist", {
-                message: this.recExistMessage,
-            });
-        }
         // control access to security-sensitive collections - optional
         if ((this.coll === this.userColl || this.coll === this.accessColl) && !this.isAdmin) {
             return getResMessage("unAuthorized", {
                 message: "Access-security-sensitive collections update are not allowed - via crud package."
             })
         }
-        // updated record(s)
+        if (this.isRecExist) {
+            return getResMessage("recExist", {
+                message: this.recExistMessage,
+            });
+        }
         // create a transaction session
         const session = this.dbClient.startSession();
         let updateResult: UpdateResult;
         try {
             // destruct _id /other attributes
-            const item: any = this.actionParams[0];
+            const item = this.actionParams[0];
             const {_id, ...otherParams} = item;
-            // perform update task
-            const appDbColl = this.appDb.collection(this.coll);
             // include item stamps: userId and date
             otherParams.updatedBy = this.userId;
             otherParams.updatedAt = new Date();
@@ -716,6 +714,7 @@ class SaveRecord extends Crud {
             let updateMatchedCount = 0;
             // transaction starts
             await session.withTransaction(async () => {
+                const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
                 // current records prior to update OR use this.currentRecs?
                 const currentRecs = await appDbColl.find(this.queryParams, {session}).toArray();
                 if (!currentRecs || currentRecs.length < 1) {
@@ -727,11 +726,11 @@ class SaveRecord extends Crud {
                 }, {session,}) as UpdateResult;
                 if (updateResult.modifiedCount !== updateResult.matchedCount) {
                     await session.abortTransaction();
-                    throw new Error("Error updating document(s).")
+                    throw new Error(`Error updating document(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
                 }
                 // optional step, update the child-collections (for update-cascade) | from actionParams[0]-item
                 // update the child-collections (update-cascade) | from current and new update-field-values
-                if (this.updateCascade) {
+                if (this.updateCascade && this.childRelations.length > 0) {
                     const childRelations = this.childRelations.filter(item => item.onUpdate === RelationActionTypes.CASCADE);
                     for await (const currentRec of currentRecs) {
                         for await (const cItem of childRelations) {
@@ -755,7 +754,7 @@ class SaveRecord extends Crud {
                             let updateSet: any = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = newFieldValue;
-                            const TargetColl = this.appDb.collection(targetColl);
+                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
@@ -764,7 +763,7 @@ class SaveRecord extends Crud {
                         }
                     }
                 } // optional, update child-docs for setDefault and initializeValues, if this.updateSetDefault or this.updateSetNull
-                else if (this.updateSetDefault) {
+                else if (this.updateSetDefault && this.childRelations.length > 0) {
                     const childRelations = this.childRelations.filter(item => item.onUpdate === RelationActionTypes.SET_DEFAULT);
                     for await (const currentRec of currentRecs) {
                         for await (const cItem of childRelations) {
@@ -805,7 +804,7 @@ class SaveRecord extends Crud {
                             let updateSet: any = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = defaultValue;
-                            const TargetColl = this.appDb.collection(targetColl);
+                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
@@ -813,7 +812,7 @@ class SaveRecord extends Crud {
                             }
                         }
                     }
-                } else if (this.updateSetNull) {
+                } else if (this.updateSetNull && this.childRelations.length > 0) {
                     const childRelations = this.childRelations.filter(item => item.onUpdate === RelationActionTypes.SET_NULL);
                     for await (const currentRec of currentRecs) {
                         for await (const cItem of childRelations) {
@@ -853,7 +852,7 @@ class SaveRecord extends Crud {
                             let updateSet: any = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = nullValue;
-                            const TargetColl = this.appDb.collection(targetColl);
+                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
