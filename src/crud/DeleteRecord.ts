@@ -12,10 +12,9 @@ import {isEmptyObject} from "../orm";
 import {deleteHashCache} from "@mconnect/mccache";
 import Crud from "./Crud";
 import {
-    CrudOptionsType, CrudParamsType, CrudResultType, LogDocumentsType, ObjectRefType, ObjectType, SubItemsType
+    CrudOptionsType, CrudParamsType, CrudResultType, LogDocumentsType, ObjectRefType, SubItemsType
 } from "./types";
 import {FieldDescType, RelationActionTypes} from "../orm";
-import {log} from "util";
 
 class DeleteRecord extends Crud {
     protected collRestrict: boolean;
@@ -55,7 +54,7 @@ class DeleteRecord extends Crud {
             this.queryParams = otherParams;
         }
 
-        // delete / remove item(s) by docId(s)
+        // delete / remove item(s) by docId(s) | usually for owner, admin and by role-assignment on collection/collection-documents
         if (this.docIds && this.docIds.length > 0) {
             try {
                 this.deleteRestrict = this.childRelations.filter(item => item.onDelete === RelationActionTypes.RESTRICT).length > 0;
@@ -63,27 +62,27 @@ class DeleteRecord extends Crud {
                 this.deleteSetNull = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL).length > 0;
                 this.collRestrict = this.childRelations.filter(item => (item.onDelete === RelationActionTypes.RESTRICT && item.sourceColl === item.targetColl)).length > 0;
                 // check if records exist, for delete and audit-log
-                if (this.logUpdate || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull) {
+                if (this.logDelete || this.logCrud || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.collRestrict) {
                     const recExist = await this.getCurrentRecords("id");
                     if (recExist.code !== "success") {
                         return recExist;
                     }
                 }
+                // sub-items integrity check, same collection
                 if (this.collRestrict) {
-                    // sub-items integrity check, same collection
                     const subItem = await this.checkSubItemById();
                     if (subItem.code !== "success") {
                         return subItem;
                     }
                 }
+                // parent-child integrity check, multiple collections
                 if (this.deleteRestrict) {
-                    // parent-child integrity check, multiple collections
                     const refIntegrity = await this.checkRefIntegrityById();
                     if (refIntegrity.code !== "success") {
                         return refIntegrity;
                     }
                 }
-                // delete/remove records
+                // delete/remove records, and apply deleteSetDefault and deleteSetNull constraints
                 return await this.removeRecordById();
             } catch (error) {
                 return getResMessage("removeError", {
@@ -92,7 +91,7 @@ class DeleteRecord extends Crud {
             }
         }
 
-        // delete / remove item(s) by queryParams
+        // delete / remove item(s) by queryParams | usually for owner, admin and by role-assignment on collection/collection-documents
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             try {
                 this.deleteRestrict = this.childRelations.map(item => item.onDelete === RelationActionTypes.RESTRICT).length > 0;
@@ -100,27 +99,27 @@ class DeleteRecord extends Crud {
                 this.deleteSetNull = this.childRelations.map(item => item.onDelete === RelationActionTypes.SET_NULL).length > 0;
                 this.collRestrict = this.childRelations.map(item => (item.onDelete === RelationActionTypes.RESTRICT && item.sourceColl === item.targetColl)).length > 0;
                 // check if records exist, for delete and audit-log
-                if (this.logUpdate || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.collRestrict) {
+                if (this.logDelete || this.logCrud || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.collRestrict) {
                     const recExist = await this.getCurrentRecords("queryParams");
                     if (recExist.code !== "success") {
                         return recExist;
                     }
                 }
+                // sub-items integrity check, same collection
                 if (this.collRestrict) {
-                    // sub-items integrity check, same collection
                     const subItem = await this.checkSubItemByParams();
                     if (subItem.code !== "success") {
                         return subItem;
                     }
                 }
+                // parent-child integrity check, multiple collections
                 if (this.deleteRestrict) {
-                    // parent-child integrity check, multiple collections
                     const refIntegrity = await this.checkRefIntegrityByParams();
                     if (refIntegrity.code !== "success") {
                         return refIntegrity;
                     }
                 }
-                // delete/remove records
+                // delete/remove records, and apply deleteSetDefault and deleteSetNull constraints
                 return await this.removeRecordByParams();
             } catch (error) {
                 return getResMessage("removeError", {
@@ -137,7 +136,7 @@ class DeleteRecord extends Crud {
 
     // checkSubItemById checks referential integrity for same collection, by id
     async checkSubItemById(): Promise<ResponseMessage> {
-        // check if any/some of the current records contain at least a sub-item
+        // check if any/some of the collection contain at least a sub-item/document
         const appDbColl = this.appDb.collection(this.coll);
         const docWithSubItems = await appDbColl.findOne({
             parentId: {
@@ -157,7 +156,7 @@ class DeleteRecord extends Crud {
 
     // checkSubItemByParams checks referential integrity for same collection, by queryParam
     async checkSubItemByParams(): Promise<ResponseMessage> {
-        // check if any/some of the current records contain at least a sub-item
+        // check if any/some of the collection contain at least a sub-item/document
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             await this.getCurrentRecords("queryParams")
             this.docIds = [];          // reset docIds instance value
@@ -171,7 +170,7 @@ class DeleteRecord extends Crud {
         })
     }
 
-    // checkRefIntegrityById checks referential integrity for parent-child collections
+    // checkRefIntegrityById checks referential integrity for parent-child collections, by document-Id
     async checkRefIntegrityById(): Promise<ResponseMessage> {
         // required-inputs: parent/child-collections and current item-id/item-name
         if (this.childRelations.length < 1) {
@@ -234,8 +233,8 @@ class DeleteRecord extends Crud {
         }
     }
 
+    // checkRefIntegrityByParams checks referential integrity for parent-child collections, by queryParams
     async checkRefIntegrityByParams(): Promise<ResponseMessage> {
-        // parent-child referential integrity checks
         // required-inputs: parent/child-collections and current item-id/item-name
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             await this.getCurrentRecords("queryParams")
@@ -270,7 +269,7 @@ class DeleteRecord extends Crud {
                     await session.abortTransaction();
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${docIds.length} set to be removed]. Transaction aborted.`)
                 }
-                // optional, update child-docs for setDefault and initializeValues, i.e. if this.deleteSetDefault or this.deleteSetNull
+                // optional, update child-collection-documents for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
                 if (this.deleteSetDefault) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                     for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
@@ -419,7 +418,7 @@ class DeleteRecord extends Crud {
                         await session.abortTransaction();
                         throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]. Transaction aborted.`)
                     }
-                    // optional, update child-docs for setDefault and setNull, if this.deleteSetDefault or this.deleteSetNull
+                    // optional, update child-collection-documents for setDefault and setNull/initialize-value?, if this.deleteSetDefault or this.deleteSetNull
                     if (this.deleteSetDefault) {
                         const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                         for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
