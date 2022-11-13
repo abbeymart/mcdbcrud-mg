@@ -5,7 +5,7 @@
  * @Description: mc-orm types
  */
 
-import { FieldValueTypes } from "../crud";
+import {FieldValueTypes} from "../crud";
 
 export enum DataTypes {
     STRING = "string",
@@ -101,6 +101,12 @@ export interface FieldDescType {
     fieldType: DataTypes;
     fieldLength?: number;   // default: 255 for DataTypes.STRING
     fieldPattern?: string;  // "/^[0-9]{10}$/" => includes 10 digits, 0 to 9 | "/^[0-9]{6}.[0-9]{2}$/ => max 16 digits and 2 decimal places
+    startsWith?: string;
+    endsWith?: string;
+    notStartsWith?: string;
+    notEndsWith?: string;
+    includes?: string;
+    excludes?: string;
     allowNull?: boolean;    // default: true
     unique?: boolean;
     indexable?: boolean;

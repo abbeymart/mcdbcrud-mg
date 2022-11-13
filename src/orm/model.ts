@@ -470,25 +470,25 @@ export class Model {
                                 }
                             }
                         } else if (fieldValue && (docValueTypes[key] === DataTypes.STRING || docValueTypes[key] === DataTypes.DATETIME)) {
-                            // date value for comparison
-                            const dateFieldValue = new Date(fieldValue as string);
+                            // date value, excluding time portion, for comparison
+                            const dateFieldValue = (new Date(fieldValue as string)).setHours(0,0,0,0);
                             if (fieldDesc.minValue && fieldDesc.maxValue) {
-                                const dateMinValue = new Date(fieldDesc.minValue);
-                                const dateMaxValue = new Date(fieldDesc.maxValue);
+                                const dateMinValue = (new Date(fieldDesc.minValue)).setHours(0,0,0,0);
+                                const dateMaxValue = (new Date(fieldDesc.maxValue)).setHours(0,0,0,0);
                                 if ((dateFieldValue < dateMinValue || dateFieldValue > dateMaxValue)) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} must be greater than ${dateMinValue}, and less than ${dateMaxValue}` :
                                         `Value of: ${key} must be greater than ${dateMinValue}, and less than ${dateMaxValue}`;
                                 }
                             } else if (fieldDesc.minValue) {
-                                const dateMinValue = new Date(fieldDesc.minValue);
+                                const dateMinValue = (new Date(fieldDesc.minValue)).setHours(0,0,0,0);
                                 if (dateFieldValue < dateMinValue) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} cannot be less than ${dateMinValue}.` :
                                         `Value of: ${key} cannot be less than ${dateMinValue}.`;
                                 }
                             } else if (fieldDesc.maxValue) {
-                                const dateMaxValue = new Date(fieldDesc.maxValue);
+                                const dateMaxValue = (new Date(fieldDesc.maxValue)).setHours(0,0,0,0);
                                 if (dateFieldValue > dateMaxValue) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} cannot be greater than ${dateMaxValue}.` :
@@ -505,7 +505,60 @@ export class Model {
                                     `Value of: ${key} did not match the pattern ${fieldDesc.fieldPattern}.`;
                             }
                         }
-                        // TODO: starts/ends-with, include/exclude,
+                        // startsWith
+                        if (fieldValue && fieldDesc.startsWith) {
+                            const testPattern = fieldValue.toString().startsWith(fieldDesc.startsWith);
+                            if (!testPattern) {
+                                errors[`${key}-startsWithValidation`] = fieldDesc.validateMessage ?
+                                    fieldDesc.validateMessage + ` | Value of: ${key} must start with ${fieldDesc.startsWith}.` :
+                                    `Value of: ${key} must start with ${fieldDesc.startsWith}.`;
+                            }
+                        }
+                        // notStartsWith
+                        if (fieldValue && fieldDesc.notStartsWith) {
+                            const testPattern = fieldValue.toString().startsWith(fieldDesc.notStartsWith);
+                            if (!testPattern) {
+                                errors[`${key}-notStartsWithValidation`] = fieldDesc.validateMessage ?
+                                    fieldDesc.validateMessage + ` | Value of: ${key} must not start with ${fieldDesc.notStartsWith}.` :
+                                    `Value of: ${key} must not start with ${fieldDesc.notStartsWith}.`;
+                            }
+                        }
+                        // endsWith
+                        if (fieldValue && fieldDesc.endsWith) {
+                            const testPattern = fieldValue.toString().startsWith(fieldDesc.endsWith);
+                            if (!testPattern) {
+                                errors[`${key}-endsWithValidation`] = fieldDesc.validateMessage ?
+                                    fieldDesc.validateMessage + ` | Value of: ${key} must end with ${fieldDesc.endsWith}.` :
+                                    `Value of: ${key} must end with ${fieldDesc.endsWith}.`;
+                            }
+                        }
+                        // notEndsWith
+                        if (fieldValue && fieldDesc.notEndsWith) {
+                            const testPattern = fieldValue.toString().startsWith(fieldDesc.notEndsWith);
+                            if (!testPattern) {
+                                errors[`${key}-notEndsWithValidation`] = fieldDesc.validateMessage ?
+                                    fieldDesc.validateMessage + ` | Value of: ${key} must not end with ${fieldDesc.notEndsWith}.` :
+                                    `Value of: ${key} must not end with ${fieldDesc.notEndsWith}.`;
+                            }
+                        }
+                        // includes
+                        if (fieldValue && fieldDesc.includes) {
+                            const testPattern = fieldValue.toString().startsWith(fieldDesc.includes);
+                            if (!testPattern) {
+                                errors[`${key}-includeValidation`] = fieldDesc.validateMessage ?
+                                    fieldDesc.validateMessage + ` | Value of: ${key} must include ${fieldDesc.includes}.` :
+                                    `Value of: ${key} must include ${fieldDesc.includes}.`;
+                            }
+                        }
+                        // excludes
+                        if (fieldValue && fieldDesc.excludes) {
+                            const testPattern = fieldValue.toString().startsWith(fieldDesc.excludes);
+                            if (!testPattern) {
+                                errors[`${key}-includeValidation`] = fieldDesc.validateMessage ?
+                                    fieldDesc.validateMessage + ` | Value of: ${key} must exclude ${fieldDesc.excludes}.` :
+                                    `Value of: ${key} must exclude ${fieldDesc.excludes}.`;
+                            }
+                        }
                         break;
                     default:
                         errors[key] = `Unsupported field type: ${key} value, of type[${typeof val}], is not a supported type`;
