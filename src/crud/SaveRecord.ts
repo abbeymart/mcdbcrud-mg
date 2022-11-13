@@ -12,7 +12,8 @@ import {deleteHashCache} from "@mconnect/mccache";
 import {isEmptyObject} from "../orm";
 import Crud from "./Crud";
 import {
-    ActionParamsType, ActionParamTaskType, CrudOptionsType, CrudParamsType, LogDocumentsType, TaskTypes
+    ActionParamsType, ActionParamTaskType, ActionParamType, CrudOptionsType, CrudParamsType, LogDocumentsType,
+    QueryParamsType, TaskTypes
 } from "./types";
 import {FieldDescType, ModelOptionsType, RelationActionTypes} from "../orm";
 
@@ -371,8 +372,8 @@ class SaveRecord extends Crud {
                                 // skip update
                                 continue;
                             }
-                            let updateQuery: any = {};
-                            let updateSet: any = {};
+                            let updateQuery: QueryParamsType = {};
+                            let updateSet: ActionParamType = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = newFieldValue;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
@@ -396,11 +397,10 @@ class SaveRecord extends Crud {
                             const targetDocDesc = cItem.targetModel?.docDesc || {};
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
                             // compute default values for the targetFields
-                            const defaultValues = await this.computeDefaultValues(targetDocDesc);
+                            const defaultDocValue = await this.computeDefaultValues(targetDocDesc);
                             const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
-                            const newFieldValue = item[sourceField] || null; // new value (default-value) of the targetField
-                            const defaultValue = defaultValues[targetField] || null;
-                            if (currentFieldValue === newFieldValue || !newFieldValue || !defaultValue) {
+                            const defaultFieldValue = defaultDocValue[targetField] || null;
+                            if (currentFieldValue === defaultFieldValue) {
                                 // skip update
                                 continue;
                             }
@@ -418,10 +418,10 @@ class SaveRecord extends Crud {
                                 default:
                                     break;
                             }
-                            let updateQuery: any = {};
-                            let updateSet: any = {};
+                            let updateQuery: QueryParamsType = {};
+                            let updateSet: ActionParamType = {};
                             updateQuery[targetField] = currentFieldValue;
-                            updateSet[targetField] = defaultValue;
+                            updateSet[targetField] = defaultFieldValue;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
@@ -442,11 +442,10 @@ class SaveRecord extends Crud {
                             }
                             const targetDocDesc = cItem.targetModel?.docDesc || {};
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
-                            const docInitializeValue = this.computeInitializeValues(targetDocDesc)
+                            const initializeDocValue = this.computeInitializeValues(targetDocDesc)
                             const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                            const newFieldValue = item[sourceField] || null; // new value (default-value) of the targetField
-                            const nullValue = docInitializeValue[targetField] || null;
-                            if (currentFieldValue === newFieldValue || !newFieldValue) {
+                            const nullFieldValue = initializeDocValue[targetField] || null;
+                            if (currentFieldValue === nullFieldValue) {
                                 // skip update
                                 continue;
                             }
@@ -464,10 +463,10 @@ class SaveRecord extends Crud {
                                 default:
                                     break;
                             }
-                            let updateQuery: any = {};
-                            let updateSet: any = {};
+                            let updateQuery: QueryParamsType = {};
+                            let updateSet: ActionParamType = {};
                             updateQuery[targetField] = currentFieldValue;
-                            updateSet[targetField] = nullValue;
+                            updateSet[targetField] = nullFieldValue;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
@@ -529,12 +528,12 @@ class SaveRecord extends Crud {
                                 const targetColl = cItem.targetModel.collName || cItem.targetColl;
                                 const currentFieldValue = currentRec[sourceField] || null;   // current value
                                 const newFieldValue = item[sourceField] || null;         // new value (set-value)
-                                if (currentFieldValue === newFieldValue || !newFieldValue) {
+                                if (currentFieldValue === newFieldValue) {
                                     // skip update
                                     continue;
                                 }
-                                let updateQuery: any = {};
-                                let updateSet: any = {};
+                                let updateQuery: QueryParamsType = {};
+                                let updateSet: ActionParamType = {};
                                 updateQuery[targetField] = currentFieldValue;
                                 updateSet[targetField] = newFieldValue;
                                 const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
@@ -559,11 +558,10 @@ class SaveRecord extends Crud {
                                 const targetDocDesc = cItem.targetModel?.docDesc || {};
                                 const targetColl = cItem.targetModel.collName || cItem.targetColl;
                                 // compute default values for the targetFields
-                                const defaultValues = await this.computeDefaultValues(targetDocDesc);
+                                const defaultDocValue = await this.computeDefaultValues(targetDocDesc);
                                 const currentFieldValue = currentRec[sourceField];   // current value of the targetField
-                                const newFieldValue = item[sourceField] || null; // new value (default-value) of the targetField
-                                const defaultValue = defaultValues[targetField] || null;
-                                if (currentFieldValue === newFieldValue || !newFieldValue || !defaultValue) {
+                                const defaultFieldValue = defaultDocValue[targetField] || null;
+                                if (currentFieldValue === defaultFieldValue) {
                                     // skip update
                                     continue;
                                 }
@@ -581,10 +579,10 @@ class SaveRecord extends Crud {
                                     default:
                                         break;
                                 }
-                                let updateQuery: any = {};
-                                let updateSet: any = {};
+                                let updateQuery: QueryParamsType = {};
+                                let updateSet: ActionParamType = {};
                                 updateQuery[targetField] = currentFieldValue;
-                                updateSet[targetField] = defaultValue;
+                                updateSet[targetField] = defaultFieldValue;
                                 const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                                 if (updateRes.modifiedCount !== updateRes.matchedCount) {
@@ -606,9 +604,9 @@ class SaveRecord extends Crud {
                                 const targetDocDesc = cItem.targetModel?.docDesc || {};
                                 const targetColl = cItem.targetModel.collName || cItem.targetColl;
                                 const currentFieldValue = currentRec[sourceField];  // current value of the targetField
-                                const newFieldValue = item[sourceField] || null; // new value (default-value) of the targetField
-                                const nullValue = null;
-                                if (currentFieldValue === newFieldValue || !newFieldValue) {
+                                const initializeDocValue = this.computeInitializeValues(targetDocDesc)
+                                const nullFieldValue = initializeDocValue[targetField] || null;
+                                if (currentFieldValue === nullFieldValue) {
                                     // skip update
                                     continue;
                                 }
@@ -626,10 +624,10 @@ class SaveRecord extends Crud {
                                     default:
                                         break;
                                 }
-                                let updateQuery: any = {};
-                                let updateSet: any = {};
+                                let updateQuery: QueryParamsType = {};
+                                let updateSet: ActionParamType = {};
                                 updateQuery[targetField] = currentFieldValue;
-                                updateSet[targetField] = nullValue;
+                                updateSet[targetField] = nullFieldValue;
                                 const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                                 if (updateRes.modifiedCount !== updateRes.matchedCount) {
@@ -746,12 +744,12 @@ class SaveRecord extends Crud {
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
                             const currentFieldValue = currentRec[sourceField] || null;   // current value
                             const newFieldValue = item[sourceField] || null;         // new value (set-value)
-                            if (currentFieldValue === newFieldValue || !newFieldValue) {
+                            if (currentFieldValue === newFieldValue) {
                                 // skip update
                                 continue;
                             }
-                            let updateQuery: any = {};
-                            let updateSet: any = {};
+                            let updateQuery: QueryParamsType = {};
+                            let updateSet: ActionParamType = {};
                             updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = newFieldValue;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
@@ -778,11 +776,10 @@ class SaveRecord extends Crud {
                             const targetDocDesc = cItem.targetModel?.docDesc || {};
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
                             // compute default values for the targetFields
-                            const defaultValues = await this.computeDefaultValues(targetDocDesc);
+                            const defaultDocValue = await this.computeDefaultValues(targetDocDesc);
                             const currentFieldValue = currentRec[sourceField];   // current value of the targetField
-                            const newFieldValue = item[sourceField] || null; // new value (default-value) of the targetField
-                            const defaultValue = defaultValues[targetField] || null;
-                            if (currentFieldValue === newFieldValue || !newFieldValue || !defaultValue) {
+                            const defaultFieldValue = defaultDocValue[targetField] || null;    // new value (default-value) of the targetField
+                            if (currentFieldValue === defaultFieldValue ) {
                                 // skip update
                                 continue;
                             }
@@ -800,10 +797,10 @@ class SaveRecord extends Crud {
                                 default:
                                     break;
                             }
-                            let updateQuery: any = {};
-                            let updateSet: any = {};
+                            let updateQuery: QueryParamsType = {};
+                            let updateSet: ActionParamType = {};
                             updateQuery[targetField] = currentFieldValue;
-                            updateSet[targetField] = defaultValue;
+                            updateSet[targetField] = defaultFieldValue;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
@@ -826,11 +823,10 @@ class SaveRecord extends Crud {
                             }
                             const targetDocDesc = cItem.targetModel?.docDesc || {};
                             const targetColl = cItem.targetModel.collName || cItem.targetColl;
-                            const docInitializeValue = this.computeInitializeValues(targetDocDesc)
+                            const initializeDocValue = this.computeInitializeValues(targetDocDesc)
                             const currentFieldValue = currentRec[sourceField];  // current value of the targetField
-                            const newFieldValue = item[sourceField] || null; // new value (default-value) of the targetField
-                            const nullValue = docInitializeValue[targetField] || null;
-                            if (currentFieldValue === newFieldValue || !newFieldValue) {
+                            const nullFieldValue = initializeDocValue[targetField] || null; // new value (default-value) of the targetField
+                            if (currentFieldValue === nullFieldValue) {
                                 // skip update
                                 continue;
                             }
@@ -848,10 +844,10 @@ class SaveRecord extends Crud {
                                 default:
                                     break;
                             }
-                            let updateQuery: any = {};
-                            let updateSet: any = {};
+                            let updateQuery: QueryParamsType = {};
+                            let updateSet: ActionParamType = {};
                             updateQuery[targetField] = currentFieldValue;
-                            updateSet[targetField] = nullValue;
+                            updateSet[targetField] = nullFieldValue;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (updateRes.modifiedCount !== updateRes.matchedCount) {
