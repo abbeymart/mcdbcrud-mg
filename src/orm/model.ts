@@ -6,8 +6,8 @@
  */
 
 import validator from "validator";
-import { getParamsMessage, getResMessage, MessageObject, ResponseMessage } from "@mconnect/mcresponse";
-import { ObjectId } from "mongodb";
+import {getParamsMessage, getResMessage, MessageObject, ResponseMessage} from "@mconnect/mcresponse";
+import {ObjectId} from "mongodb";
 import {
     ComputedMethodsType,
     DataTypes,
@@ -59,12 +59,12 @@ export class Model {
     constructor(model: ModelDescType, options: ModelCrudOptionsType = {}) {
         this.collName = model.collName || "";
         this.docDesc = model.docDesc || {};
-        this.timeStamp = model.timeStamp || true;
-        this.actorStamp = model.actorStamp || true;
-        this.activeStamp = model.activeStamp || true;
+        this.timeStamp = model.timeStamp !== undefined ? model.timeStamp : true;
+        this.actorStamp = model.actorStamp !== undefined ? model.actorStamp : true;
+        this.activeStamp = model.activeStamp !== undefined ? model.activeStamp : true;
         this.computedMethods = model.computedMethods || {};
-        this.validateMethod = model.validateMethod? model.validateMethod : undefined;
-        this.alterSyncColl = model.alterSyncColl || false;
+        this.validateMethod = model.validateMethod ? model.validateMethod : undefined;
+        this.alterSyncColl = model.alterSyncColl !== undefined ? model.alterSyncColl : false;
         this.taskType = "";
         this.validateKey = "";
         this.relations = options.relations || [];
@@ -72,9 +72,12 @@ export class Model {
         this.primaryFields = options.primaryFields || [];
         this.requiredFields = options.requiredFields || [];
         this.modelOptions = {
-            timeStamp  : this.timeStamp || options.timeStamp ? options.timeStamp : true,
-            actorStamp : this.actorStamp || options.actorStamp ? options.actorStamp : true,
-            activeStamp: this.activeStamp || options.activeStamp ? options.activeStamp : true,
+            timeStamp  : this.timeStamp !== undefined ? this.timeStamp :
+                options.timeStamp !== undefined ? options.timeStamp : true,
+            actorStamp : this.actorStamp !== undefined ? this.actorStamp :
+                options.actorStamp !== undefined ? options.actorStamp : true,
+            activeStamp: this.activeStamp !== undefined ? this.activeStamp :
+                options.activeStamp !== undefined ? options.activeStamp : true,
         };
         this.checkAccess = true;
     }
@@ -555,7 +558,7 @@ export class Model {
                     (params.queryParams && !isEmptyObject(params.queryParams)))) {
                 params.taskType = TaskTypes.UPDATE;
                 this.taskType = params.taskType;
-            } else if (docIds.length === 0 && params.actionParams.length > 0 ) {
+            } else if (docIds.length === 0 && params.actionParams.length > 0) {
                 params.taskType = TaskTypes.CREATE;
                 this.taskType = params.taskType;
             } else {

@@ -131,8 +131,8 @@ export class Crud {
         this.childColls = options && options.childColls ? options.childColls : [];
         this.parentRelations = options && options.parentRelations ? options.parentRelations : [];
         this.childRelations = options && options.childRelations ? options.childRelations : [];
-        this.recursiveDelete = options && options.recursiveDelete || false;
-        this.checkAccess = options && options.checkAccess ? options.checkAccess : false;
+        this.recursiveDelete = options && options.recursiveDelete !== undefined ? options.recursiveDelete : false;
+        this.checkAccess = options && options.checkAccess !== undefined ? options.checkAccess : false;
         this.auditColl = options && options.auditColl ? options.auditColl : "audits";
         this.serviceColl = options && options.serviceColl ? options.serviceColl : "services";
         this.accessColl = options && options.accessColl ? options.accessColl : "accesses";
@@ -148,13 +148,13 @@ export class Crud {
         this.auditDbName = options && options.auditDbName ? options.auditDbName : this.dbName;
         this.serviceDbName = options && options.serviceDbName ? options.serviceDbName : this.dbName;
         this.maxQueryLimit = options && options.maxQueryLimit ? options.maxQueryLimit : 10000;
-        this.logCrud = options && options.logCrud ? options.logCrud : false;
-        this.logCreate = options && options.logCreate ? options.logCreate : false;
-        this.logUpdate = options && options.logUpdate ? options.logUpdate : false;
-        this.logRead = options && options.logRead ? options.logRead : false;
-        this.logDelete = options && options.logDelete ? options.logDelete : false;
-        this.logLogin = options && options.logLogin ? options.logLogin : false;
-        this.logLogout = options && options.logLogout ? options.logLogout : false;
+        this.logCrud = options && options.logCrud !== undefined ? options.logCrud : false;
+        this.logCreate = options && options.logCreate !== undefined ? options.logCreate : false;
+        this.logUpdate = options && options.logUpdate !== undefined ? options.logUpdate : false;
+        this.logRead = options && options.logRead !== undefined ? options.logRead : false;
+        this.logDelete = options && options.logDelete !== undefined ? options.logDelete : false;
+        this.logLogin = options && options.logLogin !== undefined ? options.logLogin : false;
+        this.logLogout = options && options.logLogout !== undefined ? options.logLogout : false;
         this.cacheExpire = options && options.cacheExpire ? options.cacheExpire : 300;
         // unique cache-key
         this.cacheKey = JSON.stringify({
@@ -195,7 +195,7 @@ export class Crud {
         this.appTables = options?.appTables ? options.appTables :
             ["table", "table-mcpa", "table-mcpay", "table-mcship", "table-mctrade", "table-mcproperty",
                 "table-mcinfo", "table-mcbc", "table-mcproject",];
-        this.cacheResult = options?.cacheResult? options.cacheResult : false;
+        this.cacheResult = options?.cacheResult ? options.cacheResult : false;
     }
 
     // checkDb checks / validate appDb
