@@ -393,10 +393,10 @@ export class Model {
         }
     }
 
+    // validateDocValue validates the docValue by model definition (this.modelDocDesc)
     async validateDocValue(docValue: ActionParamType, docValueTypes: ValueToDataTypes): Promise<ValidateResponseType> {
-        // validate model-docValue by model definition (this.modelDocDesc)
         try {
-            // use values from transform docValue, including default/set-values, prior to validation
+            // use values from transformed docValue, including default/set-values, prior to validation
             // model-description/definition
             const docDesc = this.modelDocDesc;
             // combine errors/messages
