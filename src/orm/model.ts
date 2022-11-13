@@ -405,7 +405,7 @@ export class Model {
             for (const [key, val] of Object.entries(docValue)) {
                 let fieldDesc = docDesc[key] || null;
                 const fieldValue = val || null
-                // check field description / definition
+                // check field description / definition in the model-field-description
                 if (!fieldDesc) {
                     errors[key] = `Invalid field: ${key} is not defined in the model`;
                     continue;
@@ -516,13 +516,12 @@ export class Model {
             }
 
             // check validateErrors
-            if (Object.keys(errors).length > 0) {
+            if (!isEmptyObject(errors)) {
                 return {
                     ok    : false,
                     errors: errors,
                 }
             }
-
             // perform user-defined docValue validation
             // get validate method for the docValue by taskType or taskName
             const modelValidateMethod = this.modelValidateMethod;
