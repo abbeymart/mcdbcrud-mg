@@ -331,10 +331,10 @@ class DeleteRecord extends Crud {
                                 throw new Error("Target model is required to complete the set-null-task");
                             }
                             const targetDocDesc = cItem.targetModel.docDesc || {};
-                            const docInitializeValue = this.computeInitializeValues(targetDocDesc)
+                            const initializeDocValue = this.computeInitializeValues(targetDocDesc)
                             const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                            const nullValue = docInitializeValue[targetField] || null; // new value (null-value) of the targetField
-                            if (currentFieldValue === nullValue) {
+                            const nullFieldValue = initializeDocValue[targetField] || null; // new value (null-value) of the targetField
+                            if (currentFieldValue === nullFieldValue) {
                                 // skip update
                                 continue;
                             }
@@ -356,7 +356,7 @@ class DeleteRecord extends Crud {
                             let updateQuery: ObjectRefType = {};
                             let updateSet: ObjectRefType = {};
                             updateQuery[targetField] = currentFieldValue;
-                            updateSet[targetField] = nullValue;
+                            updateSet[targetField] = nullFieldValue;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
@@ -484,10 +484,10 @@ class DeleteRecord extends Crud {
                                     throw new Error("Target model is required to complete the set-null-task");
                                 }
                                 const targetDocDesc = cItem.targetModel.docDesc || {};
-                                const docInitializeValue = this.computeInitializeValues(targetDocDesc)
+                                const initializeDocValue = this.computeInitializeValues(targetDocDesc)
                                 const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                                const nullValue = docInitializeValue[targetField] || null; // new value (null-value) of the targetField
-                                if (currentFieldValue === nullValue) {
+                                const nullFieldValue = initializeDocValue[targetField] || null; // new value (null-value) of the targetField
+                                if (currentFieldValue === nullFieldValue) {
                                     // skip update
                                     continue;
                                 }
@@ -509,7 +509,7 @@ class DeleteRecord extends Crud {
                                 let updateQuery: ObjectRefType = {};
                                 let updateSet: ObjectRefType = {};
                                 updateQuery[targetField] = currentFieldValue;
-                                updateSet[targetField] = nullValue;
+                                updateSet[targetField] = nullFieldValue;
                                 const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
                                 const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
                                 if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
