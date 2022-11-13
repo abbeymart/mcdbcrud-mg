@@ -18,8 +18,8 @@ import {
     OkResponse,
     QueryParamsType,
     ActionParamsType,
-    ExistParamsType,
     ProjectParamsType, SortParamsType, SubItemsType, ActionParamType, FieldValueTypes, ObjectRefType,
+    ActionExistParamsType,
 } from "./types";
 import {AuditLog, newAuditLog} from "../auditlog";
 import {DataTypes, DefaultValueType, DocDescType, FieldDescType, ModelRelationType} from "../orm";
@@ -36,7 +36,7 @@ export class Crud {
     protected docIds: Array<string>;       // to capture string-id | ObjectId
     protected actionParams: ActionParamsType;
     protected queryParams: QueryParamsType;
-    protected readonly existParams: ExistParamsType;
+    protected readonly existParams: ActionExistParamsType;
     protected readonly projectParams: ProjectParamsType;
     protected readonly sortParams: SortParamsType | {};
     protected taskType: TaskTypes | string;
@@ -233,23 +233,29 @@ export class Crud {
                     message: "No data integrity condition specified",
                 });
             }
-            // check record existence/uniqueness
+            // check record existence/uniqueness for the documents/actionParams
             const appDbColl = this.appDb.collection(this.coll);
             let attributesMessage = "";
-            for (const existItem of this.existParams) {
-                let recordExist = await appDbColl.findOne(existItem);
-                if (recordExist) {
-                    this.isRecExist = true;
-                    // capture attributes for any duplicate-document
-                    Object.entries(existItem)
-                        .forEach(([key, value]) => {
-                            attributesMessage = attributesMessage ? `${attributesMessage} | ${key}: ${value}` :
-                                `${key}: ${value}`;
-                        });
-                    // if a duplicate-document was found, break the for-loop
+            for (const actionExistParams of this.existParams) {
+                for (const existItem of actionExistParams) {
+                    let recordExist = await appDbColl.findOne(existItem);
+                    if (recordExist) {
+                        this.isRecExist = true;
+                        // capture attributes for any duplicate-document
+                        Object.entries(existItem)
+                            .forEach(([key, value]) => {
+                                attributesMessage = attributesMessage ? `${attributesMessage} | ${key}: ${value}` :
+                                    `${key}: ${value}`;
+                            });
+                        // if a duplicate-document was found, break the inner-for-loop
+                        break;
+                    } else {
+                        this.isRecExist = false;
+                    }
+                }
+                // if a duplicate-document was found, break the outer-for-loop
+                if (this.isRecExist) {
                     break;
-                } else {
-                    this.isRecExist = false;
                 }
             }
             if (this.isRecExist) {
@@ -411,7 +417,6 @@ export class Crud {
         } catch (e) {
             return null
         }
-
     }
 
     // computeInitializeValues set the null values for document/actionParam, for allowNull(true)

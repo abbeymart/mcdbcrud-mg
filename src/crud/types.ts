@@ -31,6 +31,8 @@ export interface ExistParamItemType {
 
 export type ExistParamsType = Array<ExistParamItemType>;
 
+export type ActionExistParamsType = Array<ExistParamsType>
+
 export interface ProjectParamsType {
     [key: string]: number; // 1 for inclusion and 0 for exclusion
 }
@@ -276,7 +278,7 @@ export interface CrudParamsType {
     nullValues?: ActionParamType;
     defaultValues?: ActionParamType;
     actionParams?: ActionParamsType;
-    existParams?: ExistParamsType;
+    existParams?: ActionExistParamsType;
     queryParams?: QueryParamsType;
     docIds?: Array<string>;
     projectParams?: ProjectParamsType;

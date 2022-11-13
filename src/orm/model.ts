@@ -24,10 +24,11 @@ import {
     ValueToDataTypes,
 } from "./types";
 import {
+    ActionExistParamsType,
     ActionParamsType,
     ActionParamType,
     CrudOptionsType,
-    CrudParamsType,
+    CrudParamsType, ExistParamItemType,
     ExistParamsType,
     newDeleteRecord,
     newGetRecord,
@@ -79,7 +80,7 @@ export class Model {
             activeStamp: this.activeStamp !== undefined ? this.activeStamp :
                 options.activeStamp !== undefined ? options.activeStamp : true,
         };
-        this.checkAccess = true;
+        this.checkAccess = false;
     }
 
     // ***** instance methods: getters | setters *****
@@ -116,79 +117,94 @@ export class Model {
     }
 
     // instance methods
+
+    // getParentRelations method retrieves/extracts parent relations/collections for the this.collName (as targetColl).
+    // sourceColl is the parentColl of this.collName(target/child).
     getParentRelations(): Array<ModelRelationType> {
-        // extract relations/collections where targetColl === this.collName
-        // sourceColl is the parentColl of this.collName(target/child)
-        let parentRelations: Array<ModelRelationType> = [];
-        if (this.modelRelations.length <= 0) {
-            return parentRelations;
+        const parentRelations: Array<ModelRelationType> = [];
+        if (this.modelRelations.length < 1) {
+            return [];
         }
         for (const item of this.modelRelations) {
-            if (item.targetColl === this.modelCollName) {
+            if (this.modelCollName === item.targetColl) {
                 parentRelations.push(item);
             }
         }
         return parentRelations;
     }
 
+    // getChildRelations method retrieves/extracts child-relations/collections for the this.collName (as sourceColl).
+    // targetColl is the childColl of this.collName(source/parent).
     getChildRelations(): Array<ModelRelationType> {
-        // extract relations/collections where sourceColl === this.collName
-        // targetColl is the childColl of this.collName(source/parent)
-        let childRelations: Array<ModelRelationType> = [];
-        if (this.modelRelations.length <= 0) {
-            return childRelations;
+        const childRelations: Array<ModelRelationType> = [];
+        if (this.modelRelations.length < 1) {
+            return [];
         }
         for (const item of this.modelRelations) {
-            if (item.sourceColl === this.modelCollName) {
+            if (this.modelCollName === item.sourceColl) {
                 childRelations.push(item);
             }
         }
         return childRelations;
     }
 
+    // getParentColls retrieves the parent/source-collections from parentRelations
     getParentColls(): Array<string> {
-        let parentColls: Array<string>;
         const parentRelations = this.getParentRelations();
-        parentColls = parentRelations.map(rel => rel.sourceColl);
-        return parentColls;
+        return parentRelations.length > 0 ? parentRelations.map(rel => rel.sourceColl) : [];
     }
 
+    // getChildColls retrieves the child/target-collections from childRelations
     getChildColls(): Array<string> {
-        let childColls: Array<string>;
         const childRelations = this.getChildRelations();
-        childColls = childRelations.map(rel => rel.targetColl);
-        return childColls;
+        return childRelations.length > 0 ? childRelations.map(rel => rel.targetColl) : [];
     }
 
-    computeExistParams(actionParams: ActionParamsType): ExistParamsType {
-        // set the existParams for create or update action to determine record(s) uniqueness
-        let existParams: ExistParamsType = [];
-        actionParams.forEach((item) => {
-            this.modelUniqueFields.forEach(fields => {
-                // compute the uniqueness object
-                let uniqueObj: any = {};
-                fields.forEach(field => {
-                    uniqueObj[field] = item[field]
-                })
-                if (item._id || item["_id"]) {
-                    // add profile uniqueness object to the existParams
-                    const idValue = new ObjectId((item._id || item["_id"]) as string)
-                    existParams.push({
-                        _id: {
-                            $ne: idValue,
-                        },
-                        ...uniqueObj,
-                    });
-                } else {
-                    existParams.push({
-                        ...uniqueObj,
-                    });
+    // computeExistParam compute the query-object(s) for checking document uniqueness based on model-unique-fields constraints.
+    computeExistParam(actionParam: ActionParamType): ExistParamsType {
+        // set the existParams for create or update action to determine document uniqueness
+        const existParam: ExistParamsType = [];
+        const item = actionParam;
+        for (const fields of this.modelUniqueFields) {
+            // compute the uniqueness object
+            const uniqueObj: ExistParamItemType = {};
+            for (const field of fields) {
+                // exclude primary/unique _id field/key
+                if (field === "_id") {
+                    continue
                 }
-            })
-        });
+                // set item value
+                uniqueObj[field] = item[field]
+            }
+            // append the uniqueObj
+            existParam.push({
+                ...uniqueObj,
+            });
+            // add uniqueness object to the existParams, to exclude the existing document(update-task)
+            if (item["_id"] || item["_id"] !== "") {
+                existParam.push({
+                    _id: {
+                        $ne: new ObjectId(item["_id"] as string),
+                    },
+                    ...uniqueObj,
+                });
+            }
+        }
+        return existParam;
+    }
+
+    // computeExistParams compute the query-object(s) for checking documents uniqueness based on model-unique-fields constraints.
+    computeExistParams(actionParams: ActionParamsType): ActionExistParamsType {
+        // set the existParams for create or update action to determine documents uniqueness
+        const existParams: ActionExistParamsType = [];
+        for (const item of actionParams) {
+            const existParam = this.computeExistParam(item)
+            existParams.push(existParam)
+        }
         return existParams;
     }
 
+    // computeRequiredFields computes the non-null fields, i.e. allowNull === false.
     computeRequiredFields(): Array<string> {
         let requiredFields: Array<string> = [];
         for (let [field, fieldDesc] of Object.entries(this.modelDocDesc)) {
@@ -207,7 +223,38 @@ export class Model {
         return requiredFields;
     }
 
+    // validateRequiredFields validates the non-null field-values, i.e. allowNull === false.
+    validateRequiredFields(actionParam: ActionParamType): ValidateResponseType {
+        const errors: MessageObject = {};
+        const reqFields = this.computeRequiredFields()
+        if (reqFields.length < 1) {
+            errors["message"] = "No field validation requirements specified"
+            return {
+                ok: true,
+                errors,
+            };
+        }
+        // validate required field-values
+        for (const field of reqFields) {
+            if (!actionParam[field]) {
+                errors[field] = `Field: ${field} is required (not-null)`;
+            }
+        }
+        if (!isEmptyObject(errors)) {
+            return {
+                ok: false,
+                errors,
+            }
+        }
+        return {
+            ok: true,
+            errors,
+        }
+    }
+
     // ***** helper methods *****
+
+    // computeDocValueType computes the document-field-value-types (DataTypes).
     computeDocValueType(docValue: ActionParamType): ValueToDataTypes {
         let computedTypes: ValueToDataTypes = {};
         try {
@@ -289,8 +336,8 @@ export class Model {
         }
     }
 
+    // setDefaultValue set the default document-field-values for null fields and if specified, setValue (transform).
     async setDefaultValues(docValue: ActionParamType): Promise<ActionParamType> {
-        // set default values, for null fields | then setValue (transform), if specified
         try {
             // set base docValue
             const setDocValue = docValue;
@@ -305,18 +352,10 @@ export class Model {
                         case "object":
                             docFieldDesc = docFieldDesc as FieldDescType;
                             let defaultValue = docFieldDesc?.defaultValue ? docFieldDesc.defaultValue : null;
-                            // console.log("doc-default-value: ", defaultValue)
                             // type of defaultValue and docFieldValue must be equivalent (re: validateMethod)
                             if (defaultValue) {
                                 switch (typeof defaultValue) {
                                     // defaultValue may be of types: FieldValueTypes or DefaultValueType
-                                    case "string":
-                                    case "number":
-                                    case "boolean":
-                                    case "object":
-                                        // defaultValue = defaultValue as FieldValueTypes
-                                        setDocValue[key] = defaultValue;
-                                        break;
                                     case "function":
                                         defaultValue = defaultValue as DefaultValueType;
                                         if (typeof defaultValue === "function") {
@@ -324,6 +363,8 @@ export class Model {
                                         }
                                         break;
                                     default:
+                                        // defaultValue = defaultValue as FieldValueTypes
+                                        setDocValue[key] = defaultValue;
                                         break;
                                 }
                             }
@@ -523,10 +564,8 @@ export class Model {
             for (const docValue of params.actionParams) {
                 // set defaultValues, prior to save
                 const modelDocValue = await this.setDefaultValues(docValue);
-                // console.log("model-doc-value: ", modelDocValue)
                 // validate actionParam-item (docValue) field-values
                 const validateRes = await this.validateDocValue(modelDocValue, docValueTypes);
-                // console.log("validate-res: ", validateRes)
                 if (!validateRes.ok || !isEmptyObject(validateRes.errors)) {
                     return getParamsMessage(validateRes.errors as MessageObject);
                 }
@@ -537,7 +576,6 @@ export class Model {
             params.actionParams = actParams
             // update unique-fields
             params.existParams = this.computeExistParams(params.actionParams);
-            // console.log("exist-params: ", params.existParams)
             options = {
                 ...options, ...this.modelOptionValues,
             };
