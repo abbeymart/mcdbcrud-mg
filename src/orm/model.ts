@@ -395,13 +395,13 @@ export class Model {
 
     // validateDocValue validates the docValue by model definition (this.modelDocDesc)
     async validateDocValue(docValue: ActionParamType, docValueTypes: ValueToDataTypes): Promise<ValidateResponseType> {
+        let errors: MessageObject = {};
         try {
             // use values from transformed docValue, including default/set-values, prior to validation
             // model-description/definition
             const docDesc = this.modelDocDesc;
             // combine errors/messages
-            let errors: MessageObject = {};
-            // perform model-defined docValue validation
+            // perform model-defined docValue (document-field-values) validation
             for (const [key, val] of Object.entries(docValue)) {
                 let fieldDesc = docDesc[key] || null;
                 const fieldValue = val || null
@@ -413,7 +413,6 @@ export class Model {
                 switch (typeof fieldDesc) {
                     case "string":
                         // validate field-value-type
-                        // console.log("field-desc-1: ", fieldDesc)
                         if (fieldValue && docValueTypes[key] !== fieldDesc) {
                             errors[key] = `Invalid type for: ${key}. Expected ${fieldDesc}. Got ${docValueTypes[key]}.`;
                         }
@@ -421,7 +420,6 @@ export class Model {
                     case "object":
                         // validate field-value-type,
                         fieldDesc = fieldDesc as FieldDescType;
-                        // console.log("field-desc-2: ", fieldDesc.fieldType)
                         if (fieldValue && docValueTypes[key] !== fieldDesc.fieldType) {
                             errors[key] = fieldDesc.validateMessage ? fieldDesc.validateMessage :
                                 `Invalid Type for: ${key}. Expected ${fieldDesc.fieldType}, Got ${docValueTypes[key]}`;
@@ -434,7 +432,7 @@ export class Model {
                                 `Value is required for: ${key}.}`;
                         }
                         // fieldLength-validation
-                        if (fieldValue && docValueTypes[key] === DataTypes.STRING && fieldDesc.fieldLength) {
+                        if (fieldValue && fieldDesc.fieldLength && fieldDesc.fieldLength > 0) {
                             const fieldLength = (fieldValue as string).length;
                             if (fieldLength > fieldDesc.fieldLength) {
                                 errors[`${key}-lengthValidation`] = fieldDesc.validateMessage ?
@@ -442,29 +440,29 @@ export class Model {
                                     `Size of ${key} cannot be longer than ${fieldDesc.fieldLength}`;
                             }
                         }
-                        // min/maxValues-validation for numbers
+                        // min/maxValues-validation for number-types and date-type field-values
                         if (fieldValue && (docValueTypes[key] === DataTypes.NUMBER || docValueTypes[key] === DataTypes.INTEGER ||
                             docValueTypes[key] === DataTypes.FLOAT || docValueTypes[key] === DataTypes.BIGFLOAT ||
                             docValueTypes[key] === DataTypes.DECIMAL)) {
                             // number value for comparison
                             const numFieldValue = Number(fieldValue);
                             if (fieldDesc.minValue && fieldDesc.maxValue) {
-                                const numMinValue = Number(fieldDesc.minValue);
-                                const numMaxValue = Number(fieldDesc.maxValue);
+                                const numMinValue = fieldDesc.minValue;
+                                const numMaxValue = fieldDesc.maxValue;
                                 if (numFieldValue < numMinValue || numFieldValue > numMaxValue) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} must be greater than ${numMinValue}, and less than ${numMaxValue}` :
                                         `Value of: ${key} must be greater than ${numMinValue}, and less than ${numMaxValue}`;
                                 }
                             } else if (fieldDesc.minValue) {
-                                const numMinValue = Number(fieldDesc.minValue);
+                                const numMinValue = fieldDesc.minValue;
                                 if (numFieldValue < numMinValue) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} cannot be less than ${numMinValue}.` :
                                         `Value of: ${key} cannot be less than ${numMinValue}.`;
                                 }
                             } else if (fieldDesc.maxValue) {
-                                const numMaxValue = Number(fieldDesc.maxValue);
+                                const numMaxValue = fieldDesc.maxValue;
                                 if (numFieldValue > numMaxValue) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} cannot be greater than ${numMaxValue}.` :
@@ -510,32 +508,32 @@ export class Model {
                         // TODO: starts/ends-with, include/exclude,
                         break;
                     default:
-                        errors[key] = `Unknown field: ${key} value is not a supported type`;
+                        errors[key] = `Unsupported field type: ${key} value, of type[${typeof val}], is not a supported type`;
                         break;
                 }
             }
-
-            // check validateErrors
+            // perform user-defined document validation
+            const modelValidateMethod = this.modelValidateMethod || null;
+            if (modelValidateMethod) {
+                const valRes = modelValidateMethod(docValue);
+                if (!isEmptyObject(valRes.errors) || !valRes.ok) {
+                    // update docValue validation errors object
+                    errors = {...errors, ...valRes.errors}
+                }
+            }
+            // check validation errors
             if (!isEmptyObject(errors)) {
                 return {
                     ok    : false,
                     errors: errors,
                 }
             }
-            // perform user-defined docValue validation
-            // get validate method for the docValue by taskType or taskName
-            const modelValidateMethod = this.modelValidateMethod;
-            if (modelValidateMethod) {
-                const valRes = modelValidateMethod(docValue);
-                if (!valRes.ok || (valRes.errors && !isEmptyObject(valRes.errors))) {
-                    return valRes
-                }
-            }
             // return success
             return {ok: true, errors: {}};
         } catch (e) {
             // throw new Error(e.message);
-            return {ok: true, errors: e};
+            errors["message"] = e.message? e.message : "error validating the document-field-value";
+            return {ok: false, errors};
         }
     }
 
