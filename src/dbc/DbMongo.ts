@@ -5,8 +5,8 @@
  * @Description: mcdbcrud-mg db-server-connect & db-handle for mongoDB
  */
 
-import { Db, MongoClient } from "mongodb";
-import { DbSecureType, DbOptionsType, DbParamsType, Replicas, } from "./types";
+import {Db, MongoClient, MongoClientOptions} from "mongodb";
+import {DbSecureType, DbOptionsType, DbParamsType, Replicas,} from "./types";
 
 export class DbMongo {
     private readonly host: string;
@@ -15,11 +15,11 @@ export class DbMongo {
     private readonly database: string;
     private readonly location: string;
     private readonly port: number;
-    private readonly poolSize: number;
+    private readonly minPoolSize: number;
     private readonly secureOption: DbSecureType;
     private serverUrl: string;
     private readonly dbUrl: string;
-    private readonly options: DbOptionsType;
+    private readonly options: MongoClientOptions;
     private readonly checkAccess: boolean;
     private readonly user: string;
     private readonly pass: string;
@@ -34,7 +34,7 @@ export class DbMongo {
         this.database = dbConfig?.database || "";
         this.location = dbConfig?.location || "";
         this.port = Number(dbConfig?.port) || Number.NEGATIVE_INFINITY;
-        this.poolSize = dbConfig?.poolSize || 20;
+        this.minPoolSize = dbConfig?.poolSize || 20;
         this.secureOption = dbConfig?.secureOption || {secureAccess: false, secureCert: "", secureKey: ""};
         this.checkAccess = options?.checkAccess !== false;
         this.user = encodeURIComponent(this.username);
@@ -42,10 +42,11 @@ export class DbMongo {
         this.replicas = dbConfig.replicas || [];
         this.replicaName = dbConfig.replicaName || "";
         // set default dbUrl and serverUrl - standard standalone DB
-        this.dbUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}` : 
-        `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
-        this.serverUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}` : 
-        `mongodb://${dbConfig.host}:${dbConfig.port}`;
+        this.dbUrl = this.checkAccess ?
+            `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}` :
+            `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
+        this.serverUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}` :
+            `mongodb://${dbConfig.host}:${dbConfig.port}`;
         // For replica set, include the replica set hostUrl/name and a seedlist of the members in the URI string
         if (this.replicas.length > 0 && this.replicaName !== "") {
             // check and set access
@@ -90,11 +91,9 @@ export class DbMongo {
             }
         }
         this.options = {
-            poolSize          : options?.poolSize || this.poolSize,
-            useNewUrlParser   : options?.useNewUrlParser || true,
-            useUnifiedTopology: options?.useUnifiedTopology || true,
-            // reconnectTries    : options?.reconnectTries || Number.MAX_VALUE,
-            // reconnectInterval : options?.reconnectInterval || 1000,
+            replicaSet : this.replicaName,
+            minPoolSize: options?.minPoolSize || this.minPoolSize,
+            maxPoolSize: (options?.minPoolSize || this.minPoolSize) * 6,
         };
     }
 
