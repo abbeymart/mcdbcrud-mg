@@ -33,7 +33,7 @@ import {
     newDeleteRecord,
     newGetRecord,
     newGetRecordStream,
-    newSaveRecord,
+    newSaveRecord, ObjectRefType,
     TaskTypes,
     UserInfoType,
 } from "../crud";
@@ -336,7 +336,7 @@ export class Model {
         }
     }
 
-    // setDefaultValue set the default document-field-values for null fields and if specified, setValue (transform).
+    // setDefaultValue set the default document-field-values for no-value fields and if specified, setValue (transform).
     async setDefaultValues(docValue: ActionParamType): Promise<ActionParamType> {
         try {
             // set base docValue
@@ -346,7 +346,7 @@ export class Model {
                 // defaultValue setting applies to FieldDescType only | otherwise, the value is null (by default, i.e. allowNull=>true)
                 let docFieldDesc = this.modelDocDesc[key];
                 const docFieldValue = val || null;
-                // set default values for null field only
+                // set default values for no-value field only
                 if (!docFieldValue) {
                     switch (typeof docFieldDesc) {
                         case "object":
@@ -471,24 +471,24 @@ export class Model {
                             }
                         } else if (fieldValue && (docValueTypes[key] === DataTypes.STRING || docValueTypes[key] === DataTypes.DATETIME)) {
                             // date value, excluding time portion, for comparison
-                            const dateFieldValue = (new Date(fieldValue as string)).setHours(0,0,0,0);
+                            const dateFieldValue = (new Date(fieldValue as string)).setHours(0, 0, 0, 0);
                             if (fieldDesc.minValue && fieldDesc.maxValue) {
-                                const dateMinValue = (new Date(fieldDesc.minValue)).setHours(0,0,0,0);
-                                const dateMaxValue = (new Date(fieldDesc.maxValue)).setHours(0,0,0,0);
+                                const dateMinValue = (new Date(fieldDesc.minValue)).setHours(0, 0, 0, 0);
+                                const dateMaxValue = (new Date(fieldDesc.maxValue)).setHours(0, 0, 0, 0);
                                 if ((dateFieldValue < dateMinValue || dateFieldValue > dateMaxValue)) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} must be greater than ${dateMinValue}, and less than ${dateMaxValue}` :
                                         `Value of: ${key} must be greater than ${dateMinValue}, and less than ${dateMaxValue}`;
                                 }
                             } else if (fieldDesc.minValue) {
-                                const dateMinValue = (new Date(fieldDesc.minValue)).setHours(0,0,0,0);
+                                const dateMinValue = (new Date(fieldDesc.minValue)).setHours(0, 0, 0, 0);
                                 if (dateFieldValue < dateMinValue) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} cannot be less than ${dateMinValue}.` :
                                         `Value of: ${key} cannot be less than ${dateMinValue}.`;
                                 }
                             } else if (fieldDesc.maxValue) {
-                                const dateMaxValue = (new Date(fieldDesc.maxValue)).setHours(0,0,0,0);
+                                const dateMaxValue = (new Date(fieldDesc.maxValue)).setHours(0, 0, 0, 0);
                                 if (dateFieldValue > dateMaxValue) {
                                     errors[`${key}-minMaxValidation`] = fieldDesc.validateMessage ?
                                         fieldDesc.validateMessage + ` | Value of: ${key} cannot be greater than ${dateMaxValue}.` :
@@ -585,7 +585,7 @@ export class Model {
             return {ok: true, errors: {}};
         } catch (e) {
             // throw new Error(e.message);
-            errors["message"] = e.message? e.message : "error validating the document-field-value";
+            errors["message"] = e.message ? e.message : "error validating the document-field-value";
             return {ok: false, errors};
         }
     }
@@ -599,7 +599,7 @@ export class Model {
             params.docDesc = this.modelDocDesc;
             this.taskType = TaskTypes.UNKNOWN;
             // set checkAccess status for crud-task-permission control
-            options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : true;
+            options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : false;
             this.checkAccess = options.checkAccess;
             // validate task/action-params
             if (!params.actionParams || params.actionParams.length < 1) {
@@ -607,7 +607,7 @@ export class Model {
                     message: "actionParams(record-inputs) must be an array of object values [ActionParamsType].",
                 });
             }
-            // get docValue transformed types | one iteration only for actionParams[0]
+            // get docValue transformed types (as DataTypes) | one iteration only for actionParams[0]
             const docValueTypes = this.computeDocValueType(params.actionParams[0]);
             // validate actionParams (docValues), prior to saving, via this.validateDocValue
             let actParams: ActionParamsType = []
@@ -617,18 +617,20 @@ export class Model {
                 // validate actionParam-item (docValue) field-values
                 const validateRes = await this.validateDocValue(modelDocValue, docValueTypes);
                 if (!validateRes.ok || !isEmptyObject(validateRes.errors)) {
-                    return getParamsMessage(validateRes.errors as MessageObject);
+                    return getParamsMessage(validateRes.errors);
                 }
-                // update actParams
+                // update actParams, with the model-transformed document-value
                 actParams.push(modelDocValue)
             }
             // update CRUD params and options
             params.actionParams = actParams
-            // update unique-fields
+            // update unique-fields query-parameters
             params.existParams = this.computeExistParams(params.actionParams);
             options = {
                 ...options, ...this.modelOptionValues,
             };
+            // instantiate CRUD-save class & perform save-crud task (create or update)
+            const crud = newSaveRecord(params, options);
             // determine / set taskType (CREATE/INSERT or UPDATE) | permission (if checkAccess: true)
             // determine taskType - create or update (not both):
             let docIds: Array<string> = [];
@@ -646,7 +648,8 @@ export class Model {
                     (params.queryParams && !isEmptyObject(params.queryParams)))) {
                 params.taskType = TaskTypes.UPDATE;
                 this.taskType = params.taskType;
-            } else if (docIds.length === 0 && params.actionParams.length > 0) {
+            } else if (docIds.length === 0 && isEmptyObject(params.queryParams as MessageObject) &&
+                params.actionParams.length > 0) {
                 params.taskType = TaskTypes.CREATE;
                 this.taskType = params.taskType;
             } else {
@@ -654,8 +657,6 @@ export class Model {
                     message: "Only Create or Update tasks, not both, may be performed exclusively",
                 });
             }
-            // instantiate CRUD-save class & perform save-crud task (create or update)
-            const crud = newSaveRecord(params, options);
 
             // check access permission
             let loginStatusRes = getResMessage("unknown");
@@ -665,7 +666,6 @@ export class Model {
                     return loginStatusRes;
                 }
             }
-
             let accessRes: ResponseMessage;
             if (this.checkAccess && !loginStatusRes.value.isAdmin) {
                 if (params.taskType === TaskTypes.UPDATE) {
@@ -693,10 +693,11 @@ export class Model {
                     }
                 }
             }
+
             return await crud.saveRecord();
         } catch (e) {
             console.error(e);
-            return getResMessage("saveError", {message: e.message});
+            return getResMessage("saveError", {message: `${e.message ? e.message : "Unable to complete save tasks"}`});
         }
     }
 
@@ -708,9 +709,8 @@ export class Model {
             params.taskType = params.taskType || TaskTypes.READ;
             this.taskType = params.taskType;
             // set access:
-            options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : true;
+            options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
             this.checkAccess = options.checkAccess;
-            // console.log("check-access: ", options.checkAccess);
             const crud = newGetRecord(params, options);
             // check access permission
             let loginStatusRes: ResponseMessage = getResMessage("unknown");
@@ -742,7 +742,7 @@ export class Model {
             return await crud.getRecord();
         } catch (e) {
             console.error(e);
-            return getResMessage("readError");
+            return getResMessage(`readError ${e.message ? "=> " + e.message : ""}`);
         }
     }
 
@@ -755,7 +755,7 @@ export class Model {
             params.taskType = params.taskType || TaskTypes.READ;
             this.taskType = params.taskType;
             // set access:
-            options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : true;
+            options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
             this.checkAccess = options.checkAccess;
             const crud = newGetRecordStream(params, options);
             // check access permission
@@ -788,26 +788,7 @@ export class Model {
             return await crud.getRecordStream();
         } catch (e) {
             console.error(e);
-            throw new Error(`notFound: ${e.message}`);
-        }
-    }
-
-    async gets(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage> {
-        // TODO: get composite/aggregate docs based on queryParams and model-relations definition
-        try {
-            // model specific params
-            params.coll = this.modelCollName;
-            params.docDesc = this.modelDocDesc;
-            params.taskType = TaskTypes.READ;
-            this.taskType = params.taskType;
-            // set access:
-            options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : true;
-            this.checkAccess = options.checkAccess;
-            const crud = newGetRecord(params, options);
-            return await crud.getRecord();
-        } catch (e) {
-            console.error(e);
-            return getResMessage("readError");
+            throw new Error(`notFound ${e.message ? "=> " + e.message : ""}`);
         }
     }
 
@@ -820,13 +801,15 @@ export class Model {
             params.taskType = params.taskType || TaskTypes.READ;
             this.taskType = params.taskType;
             // set access
-            options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : true;
+            options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
             this.checkAccess = options.checkAccess;
             const crud = newGetRecord(params, options);
             return await crud.getRecord();
         } catch (e) {
             console.error(e);
-            return getResMessage("readError", {message: "Document(s) lookup fetch-error. "});
+            return getResMessage("readError", {
+                message: `Document(s) lookup fetch-error ${e.message ? "=> " + e.message : ""}`
+            });
         }
     }
 
@@ -839,7 +822,7 @@ export class Model {
             params.taskType = TaskTypes.DELETE;
             this.taskType = params.taskType;
             // set access:
-            options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : true;
+            options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
             this.checkAccess = options.checkAccess;
             // update options
             options = {
@@ -880,7 +863,7 @@ export class Model {
             return await crud.deleteRecord();
         } catch (e) {
             console.error(e);
-            return getResMessage("deleteError");
+            return getResMessage(`deleteError ${e.message ? "=> " + e.message : ""}`);
         }
     }
 }

@@ -79,9 +79,9 @@ export function getParamsMessage(msgObject: MessageObject): ResponseMessage {
         });
     }
     let messages = "";
-    Object.entries(msgObject).forEach(([key, msg]) => {
+    for (const [key, msg] of Object.entries(msgObject)) {
         messages = messages ? `${messages} | ${key} : ${msg}` : `${key} : ${msg}`;
-    });
+    }
     return getResMessage("validateError", {
         message: messages,
     });

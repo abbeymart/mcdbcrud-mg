@@ -6,11 +6,11 @@
  */
 
 import { DataTypes, FieldDescType, ModelDescType, ValueParamsType } from "./types";
-import { ActionParamsType, FieldValueTypes, ObjectType } from "../crud";
+import {ActionParamsType, FieldValueTypes, ObjectRefType, ObjectType} from "../crud";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 
 // isEmptyObject validates is an object contains no keys and/or values
-export function isEmptyObject(val: ObjectType): boolean {
+export function isEmptyObject(val: ObjectRefType): boolean {
     return !(Object.keys(val).length > 0 && Object.values(val).length > 0);
 }
 
