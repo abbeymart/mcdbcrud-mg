@@ -41,12 +41,18 @@ let auditDbClient: MongoClient;
         auditDbClient: auditDbClient,
         auditDbName  : appDb.database,
         auditColl    : AuditTable,
+        checkAccess  : false,
+        logCrud      : true,
+        logRead      : true,
+        logCreate    : true,
+        logDelete    : true,
+        logUpdate    : true,
+        cacheResult  : false,
     }
 
     await mcTest({
         name    : 'should create two new records [groups] and return success:',
         testFunc: async () => {
-            crudParams.coll = UpdateTable
             crudParams.actionParams = AuditCreateActionParams
             crudParams.docIds = []
             crudParams.queryParams = {}

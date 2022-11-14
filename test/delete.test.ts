@@ -39,6 +39,13 @@ let auditDbClient: MongoClient;
         auditDbClient: auditDbClient,
         auditDbName  : appDb.database,
         auditColl    : AuditTable,
+        checkAccess  : false,
+        logCrud      : true,
+        logRead      : true,
+        logCreate    : true,
+        logDelete    : true,
+        logUpdate    : true,
+        cacheResult  : false,
     }
     
     await mcTest({

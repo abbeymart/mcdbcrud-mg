@@ -154,6 +154,9 @@ export const DeleteTable = "audits_delete"
 export const DeleteAllTable = "audits_delete_all"
 export const UpdateTable = "audits_update"
 
+export const GroupTable = collections.GROUPS
+export const CategoryTable = collections.CATEGORIES
+
 export const UserId = "c85509ac-7373-464d-b667-425bb59b5738" // TODO: review/update
 
 export const TestUserInfo: UserInfoType = {
