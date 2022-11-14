@@ -1,18 +1,18 @@
 import {assertEquals, mcTest, postTestResult} from '@mconnect/mctest';
 import {
     CrudOptionsType,
-    CrudParamsType, CrudResultType, newSaveRecord
+    CrudParamsType, CrudResultType, newDbMongo, newSaveRecord
 } from "../src";
 import {
     AuditCreateActionParams, AuditTable, AuditUpdateActionParams, AuditUpdateRecordById, AuditUpdateRecordByParam,
     CrudParamOptions,
     GetTable, GroupModel, TestUserInfo, UpdateAuditById, UpdateAuditByIds, UpdateAuditByParams, UpdateTable
 } from "./testData";
-import {appDb, appDbMongo, auditDbMongo} from "./config";
+import {appDb, auditDb, dbOptions} from "./config";
 import {Db, MongoClient} from "mongodb";
 
-const appDbInstance = appDbMongo;
-const auditDbInstance = auditDbMongo;
+const appDbInstance = newDbMongo(appDb, dbOptions);
+const auditDbInstance = newDbMongo(auditDb, dbOptions);
 
 let appDbHandle: Db;
 let appDbClient: MongoClient;

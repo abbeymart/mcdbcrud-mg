@@ -1,16 +1,16 @@
 import { assertEquals, mcTest, postTestResult } from '@mconnect/mctest';
-import {CrudOptionsType, CrudParamsType, newDeleteRecord,} from "../src";
+import {CrudOptionsType, CrudParamsType, newDbMongo, newDeleteRecord,} from "../src";
 import {
     AuditTable, CrudParamOptions, DeleteAllTable, DeleteAuditById, DeleteAuditByIds, DeleteAuditByParams, DeleteTable,
     GetTable,
     TestUserInfo
 } from "./testData";
-import {appDb, appDbMongo, auditDbMongo} from "./config";
+import {appDb, auditDb, dbOptions} from "./config";
 import {Db, MongoClient} from "mongodb";
 
 
-const appDbInstance = appDbMongo;
-const auditDbInstance = auditDbMongo;
+const appDbInstance = newDbMongo(appDb, dbOptions);
+const auditDbInstance = newDbMongo(auditDb, dbOptions);
 
 let appDbHandle: Db;
 let appDbClient: MongoClient;

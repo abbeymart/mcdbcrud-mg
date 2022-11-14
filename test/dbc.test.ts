@@ -1,12 +1,15 @@
 import {assertEquals, mcTest, postTestResult} from "@mconnect/mctest";
-import {appDb, appDbMongo, auditDbMongo} from "./config";
+import {appDb, dbOptions} from "./config";
+import {newDbMongo} from "../src";
 
 (async () => {
     await mcTest({
         name    : "should successfully connect to the MongoDB - Client",
         testFunc: async () => {
             let pResult = false
-            const dbInstance = appDbMongo;
+            const dbInstance = newDbMongo(appDb, dbOptions);
+            console.log("db-URI: ", dbInstance.dbUri)
+            console.log("server-URI: ", dbInstance.serverUri)
             try {
                 const dbClient = await dbInstance.mgServer()
                 const db = await dbClient.db(appDb.database)
@@ -27,7 +30,7 @@ import {appDb, appDbMongo, auditDbMongo} from "./config";
         name    : "should successfully connect to the MongoDB - Handle",
         testFunc: async () => {
             let pResult = false
-            const dbInstance = appDbMongo
+            const dbInstance = newDbMongo(appDb, dbOptions);
             try {
                 const db = await dbInstance.openDb()
                 if (db.databaseName === appDb.database) {
@@ -47,7 +50,7 @@ import {appDb, appDbMongo, auditDbMongo} from "./config";
         name    : "should successfully connect to the Audit MongoDB - Client",
         testFunc: async () => {
             let pResult = false
-            const dbInstance = auditDbMongo;
+            const dbInstance = newDbMongo(appDb, dbOptions);
             try {
                 const dbClient = await dbInstance.mgServer()
                 const db = await dbClient.db(appDb.database)
@@ -68,7 +71,7 @@ import {appDb, appDbMongo, auditDbMongo} from "./config";
         name    : "should successfully connect to the Audit MongoDB - Handle",
         testFunc: async () => {
             let pResult = false
-            const dbInstance = auditDbMongo
+            const dbInstance = newDbMongo(appDb, dbOptions);
             try {
                 const db = await dbInstance.openDb()
                 if (db.databaseName === appDb.database) {

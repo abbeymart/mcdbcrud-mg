@@ -13,7 +13,7 @@ export interface DbSecureType {
     secureKey?: string;
 }
 
-export interface DbOptionsType extends MongoClientOptions{
+export interface DbOptionsType extends MongoClientOptions {
     checkAccess?: boolean;
     poolSize?: number;
     reconnectTries?: number;
@@ -53,14 +53,14 @@ export type Replicas = Array<Replica>
 export const defaultReplicas: Replicas = [
     {
         hostUrl: "localhost:27017",
-        role: "Primary",
+        role   : "Primary",
     },
     {
         hostUrl: "localhost:27018",
-        role: "Secondary",
+        role   : "Secondary",
     },
     {
         hostUrl: "localhost:27019",
-        role: "Secondary",
+        role   : "Secondary",
     }
 ]
