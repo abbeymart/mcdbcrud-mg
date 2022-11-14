@@ -23,6 +23,7 @@ export interface DbOptionsType extends MongoClientOptions{
 }
 
 export interface DbParamsType {
+    dbType?: string;
     host?: string;
     username?: string;
     password?: string;

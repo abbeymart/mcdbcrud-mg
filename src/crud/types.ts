@@ -163,8 +163,8 @@ export interface ProfileType extends BaseModelType {
 
 export interface UserInfoType {
     userId: string;
-    firstName: string;
-    lastName: string;
+    firstname: string;
+    lastname: string;
     language: string;
     loginName: string;
     token: string;

@@ -1,73 +1,89 @@
 import {assertEquals, mcTest, postTestResult} from "@mconnect/mctest";
-import {newDbPg,} from "../src";
-import {MyDb} from "./config";
-
-// test-data: db-configuration settings
-let myDb = MyDb
-myDb.options = {}
-
-const dbc = newDbPg(myDb, myDb.options);
-
-// const sqliteDb = {
-//     dbType  : "sqlite3",
-//     filename: "testdb.db",
-// } as DbConfigType;
+import {appDb, appDbMongo, auditDbMongo} from "./config";
 
 (async () => {
     await mcTest({
-        name    : "should successfully connect to the PostgresDB - Client",
+        name    : "should successfully connect to the MongoDB - Client",
         testFunc: async () => {
             let pResult = false
+            const dbInstance = appDbMongo;
             try {
-                await dbc.pgClient().connect()
-                console.log("dbc-client-connected: ")
-                pResult = true
+                const dbClient = await dbInstance.mgServer()
+                const db = await dbClient.db(appDb.database)
+                if (db.databaseName === appDb.database) {
+                    pResult = true
+                }
             } catch (e) {
                 console.log("dbc-client-connection-error: ", e)
                 pResult = false
             } finally {
-                await dbc.closePgClient()
+                await dbInstance.closeDb()
             }
             assertEquals(pResult, true, `client-result-connected: true`);
         }
     });
 
     await mcTest({
-        name    : "should successfully connect to the PostgresDB - Pool-Client",
+        name    : "should successfully connect to the MongoDB - Handle",
         testFunc: async () => {
             let pResult = false
+            const dbInstance = appDbMongo
             try {
-                console.log("dbc-client-connected: ")
-                const client = await dbc.pgPool().connect()
-                client.release()
-                pResult = true
+                const db = await dbInstance.openDb()
+                if (db.databaseName === appDb.database) {
+                    pResult = true
+                }
             } catch (e) {
                 console.log("dbc-client-connection-error: ", e)
                 pResult = false
             } finally {
-                await dbc.closePgPool()
+                await dbInstance.closeDb()
             }
             assertEquals(pResult, true, `client-result-connected: true`);
         }
     });
 
     await mcTest({
-        name    : "should successfully connect to the PostgresDB - Pool",
+        name    : "should successfully connect to the Audit MongoDB - Client",
         testFunc: async () => {
             let pResult = false
+            const dbInstance = auditDbMongo;
             try {
-                await dbc.pgPool().connect()
-                console.log("pool-client--connected: ")
-                pResult = true
+                const dbClient = await dbInstance.mgServer()
+                const db = await dbClient.db(appDb.database)
+                if (db.databaseName === appDb.database) {
+                    pResult = true
+                }
             } catch (e) {
-                console.log("pool-client-connect-error: ", e)
+                console.log("dbc-client-connection-error: ", e)
                 pResult = false
             } finally {
-                await dbc.closePgPool()
+                await dbInstance.closeDb()
             }
-            assertEquals(pResult, true, `pool-result-connected: true`);
+            assertEquals(pResult, true, `client-result-connected: true`);
         }
     });
+
+    await mcTest({
+        name    : "should successfully connect to the Audit MongoDB - Handle",
+        testFunc: async () => {
+            let pResult = false
+            const dbInstance = auditDbMongo
+            try {
+                const db = await dbInstance.openDb()
+                if (db.databaseName === appDb.database) {
+                    pResult = true
+                }
+            } catch (e) {
+                console.log("dbc-client-connection-error: ", e)
+                pResult = false
+            } finally {
+                await dbInstance.closeDb()
+            }
+            assertEquals(pResult, true, `client-result-connected: true`);
+        }
+    });
+
 
     await postTestResult();
 
