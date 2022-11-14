@@ -1,46 +1,59 @@
 import {assertEquals, mcTest, postTestResult} from '@mconnect/mctest';
-import {AuditDb, MyDb} from "./config";
 import {
-    CrudParamsType, CrudResultType, newDbPg, newSaveRecord
+    CrudOptionsType,
+    CrudParamsType, CrudResultType, newSaveRecord
 } from "../src";
 import {
-    AuditCreateActionParams,
-    AuditModel, AuditTable, AuditUpdateActionParams, AuditUpdateRecordById, AuditUpdateRecordByParam, CrudParamOptions,
-    TestUserInfo, UpdateAuditById, UpdateAuditByIds, UpdateAuditByParams, UpdateTable
+    AuditCreateActionParams, AuditTable, AuditUpdateActionParams, AuditUpdateRecordById, AuditUpdateRecordByParam,
+    CrudParamOptions,
+    GetTable, GroupModel, TestUserInfo, UpdateAuditById, UpdateAuditByIds, UpdateAuditByParams, UpdateTable
 } from "./testData";
+import {appDb, appDbMongo, auditDbMongo} from "./config";
+import {Db, MongoClient} from "mongodb";
 
-let myDb = MyDb
-myDb.options = {}
+const appDbInstance = appDbMongo;
+const auditDbInstance = auditDbMongo;
 
-let aDb = AuditDb
-aDb.options = {}
-
-const dbc = newDbPg(myDb, myDb.options);
-const auditDbc = newDbPg(aDb, aDb.options)
-CrudParamOptions.auditDb = auditDbc.pgPool()
-
-const crudParams: CrudParamsType = {
-    appDb      : dbc.pgPool(),
-    modelRef   : AuditModel,
-    table      : AuditTable,
-    userInfo   : TestUserInfo,
-    recordIds  : [],
-    queryParams: {},
-};
-
+let appDbHandle: Db;
+let appDbClient: MongoClient;
+let auditDbHandle: Db;
+let auditDbClient: MongoClient;
 
 (async () => {
+    // DB clients/handles
+    appDbHandle = await appDbInstance.openDb()
+    appDbClient = await appDbInstance.mgServer()
+    auditDbHandle = await auditDbInstance.openDb()
+    auditDbClient = await auditDbInstance.mgServer()
+
+    const crudParams: CrudParamsType = {
+        appDb      : appDbHandle,
+        dbClient   : appDbClient,
+        dbName     : appDb.database,
+        coll       : GetTable,
+        userInfo   : TestUserInfo,
+        docIds     : [],
+        queryParams: {},
+    };
+
+    const crudOptions: CrudOptionsType = {
+        auditDb      : auditDbHandle,
+        auditDbClient: auditDbClient,
+        auditDbName  : appDb.database,
+        auditColl    : AuditTable,
+    }
+
     await mcTest({
-        name    : 'should create two new records and return success:',
+        name    : 'should create two new records [groups] and return success:',
         testFunc: async () => {
-            crudParams.table = UpdateTable
+            crudParams.coll = UpdateTable
             crudParams.actionParams = AuditCreateActionParams
-            crudParams.recordIds = []
+            crudParams.docIds = []
             crudParams.queryParams = {}
             const recLen = crudParams.actionParams.length
-            const crud = newSaveRecord(crudParams, CrudParamOptions);
-            const res = await crud.saveRecord()
-            // console.log("create-result: ", res, res.code, res.value.recordIds, res.value.recordCount)
+            // const crud = newSaveRecord(crudParams, CrudParamOptions);
+            const res = await GroupModel.save(crudParams, crudOptions)
+            // console.log("create-result: ", res, res.code, res.value.docIds, res.value.recordCount)
             const resValue = res.value as CrudResultType
             const idLen = resValue.recordIds?.length || 0
             const recCount = resValue.recordsCount || 0
@@ -53,9 +66,9 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should update two existing records and return success:',
         testFunc: async () => {
-            crudParams.table = UpdateTable
+            crudParams.coll = UpdateTable
             crudParams.actionParams = AuditUpdateActionParams
-            crudParams.recordIds = []
+            crudParams.docIds = []
             crudParams.queryParams = {}
             const recLen = crudParams.actionParams.length
             const crud = newSaveRecord(crudParams, CrudParamOptions);
@@ -72,11 +85,11 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should update a record by Id and return success:',
         testFunc: async () => {
-            crudParams.table = UpdateTable
+            crudParams.coll = UpdateTable
             crudParams.actionParams = [AuditUpdateRecordById]
-            crudParams.recordIds = [UpdateAuditById]
+            crudParams.docIds = [UpdateAuditById]
             crudParams.queryParams = {}
-            const recLen = crudParams.recordIds.length
+            const recLen = crudParams.docIds.length
             const crud = newSaveRecord(crudParams, CrudParamOptions);
             const res = await crud.saveRecord()
             const resValue = res.value as CrudResultType
@@ -91,11 +104,11 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should update records by Ids and return success:',
         testFunc: async () => {
-            crudParams.table = UpdateTable
+            crudParams.coll = UpdateTable
             crudParams.actionParams = [AuditUpdateRecordById]
-            crudParams.recordIds = UpdateAuditByIds
+            crudParams.docIds = UpdateAuditByIds
             crudParams.queryParams = {}
-            const recLen = crudParams.recordIds.length
+            const recLen = crudParams.docIds.length
             const crud = newSaveRecord(crudParams, CrudParamOptions);
             const res = await crud.saveRecord()
             const resValue = res.value as CrudResultType
@@ -110,9 +123,9 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should update records by query-params and return success:',
         testFunc: async () => {
-            crudParams.table = UpdateTable
+            crudParams.coll = UpdateTable
             crudParams.actionParams = [AuditUpdateRecordByParam]
-            crudParams.recordIds = []
+            crudParams.docIds = []
             crudParams.queryParams = UpdateAuditByParams
             const recLen = 0
             const crud = newSaveRecord(crudParams, CrudParamOptions);
@@ -125,6 +138,7 @@ const crudParams: CrudParamsType = {
     });
 
     await postTestResult();
-    await dbc.closePgPool()
+    await appDbInstance.closeDb();
+    await auditDbInstance.closeDb();
 
 })();

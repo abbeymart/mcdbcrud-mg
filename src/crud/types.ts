@@ -338,5 +338,6 @@ export interface CrudOptionsType {
     appDbs?: Array<string>;
     appTables?: Array<string>;
     cacheResult?: boolean;
+    getAllRecords?: boolean;
 }
 

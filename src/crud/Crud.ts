@@ -94,6 +94,7 @@ export class Crud {
     protected readonly appDbs: Array<string>;
     protected readonly appTables: Array<string>;
     protected readonly cacheResult: boolean;
+    protected getAllResults?: boolean;
 
     constructor(params: CrudParamsType, options?: CrudOptionsType) {
         // crudParams
@@ -116,8 +117,8 @@ export class Crud {
             {
                 token    : "",
                 userId   : "",
-                firstName: "",
-                lastName : "",
+                firstname: "",
+                lastname : "",
                 language : "",
                 loginName: "",
                 expire   : 0,
@@ -196,6 +197,7 @@ export class Crud {
             ["table", "table-mcpa", "table-mcpay", "table-mcship", "table-mctrade", "table-mcproperty",
                 "table-mcinfo", "table-mcbc", "table-mcproject",];
         this.cacheResult = options?.cacheResult ? options.cacheResult : false;
+        this.getAllResults = options?.getAllRecords || false;
     }
 
     // checkDb checks / validate appDb

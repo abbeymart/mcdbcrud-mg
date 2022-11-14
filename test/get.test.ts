@@ -1,22 +1,49 @@
 import {assertEquals, assertNotEquals, mcTest, postTestResult} from '@mconnect/mctest';
-import {appDbMongo, auditDbMongo} from "./config";
-import {CrudParamsType, GetResultType, newGetRecord} from "../src";
+import {appDb, appDbMongo, auditDbMongo} from "./config";
+import {CrudOptionsType, CrudParamsType, GetResultType, newGetRecord} from "../src";
 import {
-    CrudParamOptions, GetTable, TestUserInfo, AuditModel, GetAuditById, GetAuditByIds, GetAuditByParams
+    CrudParamOptions, GetTable, TestUserInfo, AuditModel, GetAuditById, GetAuditByIds, GetAuditByParams, AuditTable
 } from "./testData";
+import {Db, MongoClient} from "mongodb";
 
-const crudParams: CrudParamsType = {
-    collName      : GetTable,
-    userInfo   : TestUserInfo,
-    recordIds  : [],
-    queryParams: {},
-};
+const appDbInstance = appDbMongo;
+const auditDbInstance = auditDbMongo;
+
+let appDbHandle: Db;
+let appDbClient: MongoClient;
+let auditDbHandle: Db;
+let auditDbClient: MongoClient;
+
 
 (async () => {
+    // DB clients/handles
+    appDbHandle = await appDbInstance.openDb()
+    appDbClient = await appDbInstance.mgServer()
+    auditDbHandle = await auditDbInstance.openDb()
+    auditDbClient = await auditDbInstance.mgServer()
+
+    const crudParams: CrudParamsType = {
+        appDb      : appDbHandle,
+        dbClient   : appDbClient,
+        dbName     : appDb.database,
+        coll       : GetTable,
+        userInfo   : TestUserInfo,
+        docIds     : [],
+        queryParams: {},
+    };
+
+    const crudOptions: CrudOptionsType = {
+        auditDb      : auditDbHandle,
+        auditDbClient: auditDbClient,
+        auditDbName  : appDb.database,
+        auditColl    : AuditTable,
+        checkAccess  : false,
+    }
+
     await mcTest({
         name    : 'should get records by Id and return success:',
         testFunc: async () => {
-            crudParams.recordIds = [GetAuditById]
+            crudParams.docIds = [GetAuditById]
             crudParams.queryParams = {}
             const crud = newGetRecord(crudParams, CrudParamOptions);
             const res = await crud.getRecord()
@@ -33,7 +60,7 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should get records by Ids and return success:',
         testFunc: async () => {
-            crudParams.recordIds = GetAuditByIds
+            crudParams.docIds = GetAuditByIds
             crudParams.queryParams = {}
             const crud = newGetRecord(crudParams, CrudParamOptions);
             const res = await crud.getRecord()
@@ -47,11 +74,10 @@ const crudParams: CrudParamsType = {
         }
     });
 
-    //
     await mcTest({
         name    : 'should get records by query-params and return success:',
         testFunc: async () => {
-            crudParams.recordIds = []
+            crudParams.docIds = []
             crudParams.queryParams = GetAuditByParams
             const crud = newGetRecord(crudParams, CrudParamOptions);
             const res = await crud.getRecord()
@@ -68,8 +94,8 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should get all records and return success:',
         testFunc: async () => {
-            crudParams.table = GetTable
-            crudParams.recordIds = []
+            crudParams.coll = GetTable
+            crudParams.docIds = []
             crudParams.queryParams = {}
             CrudParamOptions.getAllRecords = true
             const crud = newGetRecord(crudParams, CrudParamOptions);
@@ -87,8 +113,8 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should get all records by limit/skip(offset) and return success:',
         testFunc: async () => {
-            crudParams.table = GetTable
-            crudParams.recordIds = []
+            crudParams.coll = GetTable
+            crudParams.docIds = []
             crudParams.queryParams = {}
             crudParams.skip = 0
             crudParams.limit = 20
@@ -106,6 +132,7 @@ const crudParams: CrudParamsType = {
     });
 
     await postTestResult();
-    await dbc.closePgPool()
+    await appDbInstance.closeDb();
+    await auditDbInstance.closeDb();
 
 })();

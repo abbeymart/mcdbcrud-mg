@@ -1,36 +1,51 @@
 import { assertEquals, mcTest, postTestResult } from '@mconnect/mctest';
-import {AuditDb, MyDb} from "./config";
-import {CrudParamsType, newDbPg, newDeleteRecord,} from "../src";
+import {CrudOptionsType, CrudParamsType, newDeleteRecord,} from "../src";
 import {
-    AuditModel, CrudParamOptions, DeleteAllTable, DeleteAuditById, DeleteAuditByIds, DeleteAuditByParams, DeleteTable,
+    AuditTable, CrudParamOptions, DeleteAllTable, DeleteAuditById, DeleteAuditByIds, DeleteAuditByParams, DeleteTable,
+    GetTable,
     TestUserInfo
 } from "./testData";
+import {appDb, appDbMongo, auditDbMongo} from "./config";
+import {Db, MongoClient} from "mongodb";
 
-let myDb = MyDb
-myDb.options = {}
 
-let aDb = AuditDb
-aDb.options = {}
+const appDbInstance = appDbMongo;
+const auditDbInstance = auditDbMongo;
 
-const dbc = newDbPg(myDb, myDb.options);
-const auditDbc = newDbPg(aDb, aDb.options)
-CrudParamOptions.auditDb = auditDbc.pgPool()
-
-const crudParams: CrudParamsType = {
-    appDb      : dbc.pgPool(),
-    modelRef   : AuditModel,
-    table      : DeleteTable,
-    userInfo   : TestUserInfo,
-    recordIds  : [],
-    queryParams: {},
-};
+let appDbHandle: Db;
+let appDbClient: MongoClient;
+let auditDbHandle: Db;
+let auditDbClient: MongoClient;
 
 (async () => {
+    // DB clients/handles
+    appDbHandle = await appDbInstance.openDb()
+    appDbClient = await appDbInstance.mgServer()
+    auditDbHandle = await auditDbInstance.openDb()
+    auditDbClient = await auditDbInstance.mgServer()
+
+    const crudParams: CrudParamsType = {
+        appDb      : appDbHandle,
+        dbClient   : appDbClient,
+        dbName     : appDb.database,
+        coll       : GetTable,
+        userInfo   : TestUserInfo,
+        docIds     : [],
+        queryParams: {},
+    };
+
+    const crudOptions: CrudOptionsType = {
+        auditDb      : auditDbHandle,
+        auditDbClient: auditDbClient,
+        auditDbName  : appDb.database,
+        auditColl    : AuditTable,
+    }
+    
     await mcTest({
         name    : 'should prevent the delete of all table records and return removeError:',
         testFunc: async () => {
-            crudParams.table = DeleteAllTable
-            crudParams.recordIds = []
+            crudParams.coll = DeleteAllTable
+            crudParams.docIds = []
             crudParams.queryParams = {}
             const crud = newDeleteRecord(crudParams, CrudParamOptions);
             const res = await crud.deleteRecord()
@@ -42,8 +57,8 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should delete record by Id and return success or notFound[delete-record-method]:',
         testFunc: async () => {
-            crudParams.table = DeleteTable
-            crudParams.recordIds = [DeleteAuditById]
+            crudParams.coll = DeleteTable
+            crudParams.docIds = [DeleteAuditById]
             crudParams.queryParams = {}
             const crud = newDeleteRecord(crudParams, CrudParamOptions);
             const res = await crud.deleteRecord()
@@ -56,8 +71,8 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should delete record by Ids and return success or notFound[delete-record-method]:',
         testFunc: async () => {
-            crudParams.table = DeleteTable
-            crudParams.recordIds = DeleteAuditByIds
+            crudParams.coll = DeleteTable
+            crudParams.docIds = DeleteAuditByIds
             crudParams.queryParams = {}
             const crud = newDeleteRecord(crudParams, CrudParamOptions);
             const res = await crud.deleteRecord()
@@ -70,8 +85,8 @@ const crudParams: CrudParamsType = {
     await mcTest({
         name    : 'should delete records by query-params and return success or notFound[delete-record-method]:',
         testFunc: async () => {
-            crudParams.table = DeleteTable
-            crudParams.recordIds = []
+            crudParams.coll = DeleteTable
+            crudParams.docIds = []
             crudParams.queryParams = DeleteAuditByParams
             const crud = newDeleteRecord(crudParams, CrudParamOptions);
             const res = await crud.deleteRecord()
@@ -82,6 +97,7 @@ const crudParams: CrudParamsType = {
     });
 
     await postTestResult();
-    await dbc.closePgPool()
+    await appDbInstance.closeDb();
+    await auditDbInstance.closeDb();
 
 })();
