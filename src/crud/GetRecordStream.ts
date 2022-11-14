@@ -8,7 +8,7 @@
 import { ObjectId } from 'mongodb';
 import { isEmptyObject } from "../orm";
 import Crud from './Crud';
-import { CrudOptionsType, CrudParamsType, } from "./types";
+import {CrudOptionsType, CrudParamsType, LogDocumentsType,} from "./types";
 
 class GetRecordStream extends Crud {
     constructor(params: CrudParamsType, options: CrudOptionsType = {}) {
@@ -45,10 +45,22 @@ class GetRecordStream extends Crud {
         }
 
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
-        if (this.logRead && this.queryParams && !isEmptyObject(this.queryParams)) {
-            await this.transLog.readLog(this.coll, this.queryParams, this.userId);
-        } else if (this.logRead && this.docIds && this.docIds.length > 0) {
-            await this.transLog.readLog(this.coll, this.docIds, this.userId);
+        // let logRes = getResMessage("unknown");
+        if ((this.logRead || this.logCrud) && this.queryParams && !isEmptyObject(this.queryParams)) {
+            const logDocuments: LogDocumentsType = {
+                queryParam: this.queryParams,
+            }
+            await this.transLog.readLog(this.coll, logDocuments, this.userId);
+        } else if ((this.logRead || this.logCrud) && this.docIds && this.docIds.length > 0) {
+            const logDocuments: LogDocumentsType = {
+                docIds: this.docIds,
+            }
+            await this.transLog.readLog(this.coll, logDocuments, this.userId);
+        } else if(this.logRead || this.logCrud) {
+            const logDocuments: LogDocumentsType = {
+                queryParam: {},
+            }
+            await this.transLog.readLog(this.coll, logDocuments, this.userId);
         }
 
         // exclude _id, if present, from the queryParams

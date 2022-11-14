@@ -31,8 +31,8 @@ class LoadRecord {
             {
                 token    : "",
                 userId   : "",
-                firstName: "",
-                lastName : "",
+                firstname: "",
+                lastname : "",
                 language : "",
                 loginName: "",
                 expire   : 0,
