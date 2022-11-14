@@ -1,15 +1,131 @@
 // @Description: test-cases data: for get, delete and save record(s)
 
-
 import {
     UserInfoType, CrudOptionsType, ActionParamType,
-    TaskTypes, QueryParamsType, ActionParamsType,
+    TaskTypes, QueryParamsType, ActionParamsType, ModelRelationType, RelationTypes, RelationActionTypes, ModelDescType,
+    BaseModel, DataTypes, ModelCrudOptionsType, newModel,
 } from "../src"
+import {collections} from "./collections";
 
 // Models
 
 // TODO: include groups and categories collections, with relations-specs
 
+export const groupModel: ModelDescType = {
+    collName   : collections.GROUPS,
+    docDesc    : {
+        ...BaseModel,
+        name   : {
+            fieldType  : DataTypes.STRING,
+            fieldLength: 100,
+            allowNull  : false,
+        },
+        ownerId: DataTypes.STRING,
+    },
+    timeStamp  : true,
+    activeStamp: true,
+    actorStamp : true,
+}
+
+export const categoryModel: ModelDescType = {
+    collName   : collections.CATEGORIES,
+    docDesc    : {
+        ...BaseModel,
+        name     : {
+            fieldType  : DataTypes.STRING,
+            fieldLength: 100,
+            allowNull  : false,
+        },
+        groupId  : {
+            fieldType: DataTypes.MONGODB_ID,
+            allowNull: false,
+        },
+        groupName: {
+            fieldType: DataTypes.STRING,
+            allowNull: false,
+        },
+        priority : {
+            fieldType   : DataTypes.INTEGER,
+            allowNull   : false,
+            defaultValue: 100,
+        },
+        iconStyle: {
+            fieldType   : DataTypes.STRING,
+            allowNull   : false,
+            defaultValue: "fa fa-briefcase",
+        },
+        parentId : DataTypes.MONGODB_ID,
+        path     : DataTypes.STRING,
+
+    },
+    timeStamp  : true,
+    activeStamp: true,
+    actorStamp : true,
+}
+
+export const groupRelations: Array<ModelRelationType> = [
+    {
+        sourceColl  : collections.GROUPS,
+        targetColl  : collections.CATEGORIES,
+        sourceField : "_id",
+        targetField : "groupId",
+        targetModel : categoryModel,
+        relationType: RelationTypes.ONE_TO_MANY,
+        foreignField: "groupId",
+        onDelete    : RelationActionTypes.RESTRICT,
+        onUpdate    : RelationActionTypes.NO_ACTION,
+    },
+    {
+        sourceColl  : collections.GROUPS,
+        targetColl  : collections.CATEGORIES,
+        sourceField : "name",
+        targetField : "groupName",
+        targetModel : categoryModel,
+        relationType: RelationTypes.ONE_TO_MANY,
+        foreignField: "groupName",
+        onDelete    : RelationActionTypes.RESTRICT,
+        onUpdate    : RelationActionTypes.CASCADE,
+    },
+];
+
+export const categoryRelations: Array<ModelRelationType> = [
+    {
+        sourceColl  : collections.CATEGORIES,
+        targetColl  : collections.CATEGORIES,
+        sourceField : "_id",
+        targetField : "parentId",
+        targetModel : categoryModel,
+        relationType: RelationTypes.ONE_TO_MANY,
+        foreignField: "parentId",
+        onDelete    : RelationActionTypes.RESTRICT,
+        onUpdate    : RelationActionTypes.NO_ACTION,
+    },
+]
+
+export const centralRelations: Array<ModelRelationType> = [
+    ...groupRelations,
+    ...categoryRelations,
+]
+
+const options: ModelCrudOptionsType = {
+    relations   : centralRelations,
+    uniqueFields: [
+        ["name"],
+    ],
+}
+
+// instantiate model
+export const GroupModel = newModel(groupModel, options);
+
+const categoryOptions: ModelCrudOptionsType = {
+    relations   : centralRelations,
+    uniqueFields: [
+        ["name", "groupId",],
+        ["name", "groupName",],
+    ]
+}
+// instantiate model
+export const CategoryModel = newModel(categoryModel, categoryOptions);
 
 
 export interface AuditType {

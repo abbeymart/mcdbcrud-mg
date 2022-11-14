@@ -140,31 +140,31 @@ export interface DocDescType {
 }
 
 export const BaseModel: DocDescType = {
-    _id      : DataTypes.MONGODB_ID,
-    language : {
+    _id        : DataTypes.MONGODB_ID,
+    language   : {
         fieldType   : DataTypes.STRING,
         fieldLength : 12,
         allowNull   : false,
         defaultValue: "en-US",
     },
-    desc     : DataTypes.STRING,
-    isActive : {
+    description: DataTypes.STRING,
+    isActive   : {
         fieldType   : DataTypes.BOOLEAN,
         allowNull   : false,
         defaultValue: true,
     },
-    createdBy: DataTypes.MONGODB_ID,
-    updatedBy: DataTypes.MONGODB_ID,
-    createdAt: {
+    createdBy  : DataTypes.STRING,
+    updatedBy  : DataTypes.STRING,
+    createdAt  : {
         fieldType   : DataTypes.DATETIME,
         defaultValue: new Date(),
     },
-    updatedAt: {
+    updatedAt  : {
         fieldType   : DataTypes.DATETIME,
         defaultValue: new Date(),
     },
-    deletedAt: DataTypes.DATETIME,
-    appId    : DataTypes.MONGODB_ID,  // application-id in a multi-hosted apps environment (e.g. cloud-env)
+    deletedAt  : DataTypes.DATETIME,
+    appId      : DataTypes.STRING,  // application-id in a multi-hosted apps environment (e.g. cloud-env)
 }
 
 export interface ModelDescType {
