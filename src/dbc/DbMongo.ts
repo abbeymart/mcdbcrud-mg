@@ -41,7 +41,7 @@ export class DbMongo {
         this.pass = encodeURIComponent(this.password);
         this.replicas = dbConfig.replicas || [];
         this.replicaName = dbConfig.replicaName || "";
-        // set default dbUrl and serverUrl - standard standalone DB
+        // set default dbUrl and serverUrl - standard standalone DB | TODO: include ?directConnection=true for remote DB access
         this.dbUrl = this.checkAccess ?
             `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?directConnection=true` :
             `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?directConnection=true`;
