@@ -18,7 +18,7 @@ export class DbMongo {
     private readonly minPoolSize: number;
     private readonly secureOption: DbSecureType;
     private serverUrl: string;
-    private readonly dbUrl: string;
+    private dbUrl: string;
     private readonly options: MongoClientOptions;
     private readonly checkAccess: boolean;
     private readonly user: string;
@@ -43,10 +43,10 @@ export class DbMongo {
         this.replicaName = dbConfig.replicaName || "";
         // set default dbUrl and serverUrl - standard standalone DB
         this.dbUrl = this.checkAccess ?
-            `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}` :
-            `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
-        this.serverUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}` :
-            `mongodb://${dbConfig.host}:${dbConfig.port}`;
+            `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?directConnection=true` :
+            `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?directConnection=true`;
+        this.serverUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}?directConnection=true` :
+            `mongodb://${dbConfig.host}:${dbConfig.port}?directConnection=true`;
         // For replica set, include the replica set hostUrl/name and a seedlist of the members in the URI string
         if (this.replicas.length > 0 && this.replicaName !== "") {
             // check and set access
@@ -67,8 +67,8 @@ export class DbMongo {
                     }
                 }
                 // include the replicaSet name
-                this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}`
-                this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}`
+                this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}?directConnection=true`
+                this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}?directConnection=true`
             } else {
                 // this.dbUrl = `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database},`
                 this.dbUrl = `mongodb://`
@@ -86,8 +86,8 @@ export class DbMongo {
                     }
                 }
                 // include the replicaSet name
-                this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}`
-                this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}`
+                this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}?directConnection=true`
+                this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}?directConnection=true`
             }
         }
         this.options = {
@@ -129,9 +129,10 @@ export class DbMongo {
         const dbenv = process.env.NODE_ENV || "development";
         if (dbenv === "production" && process.env.MONGODB_URI) {
             this.serverUrl = process.env.MONGODB_URI;
+            this.dbUrl = process.env.MONGODB_URI;
         }
         try {
-            const client = new MongoClient(this.serverUrl, this.options);
+            const client = new MongoClient(this.dbUrl, this.options);
             this.dbConnect = await client.connect();
             return this.dbConnect;
         } catch (err) {
