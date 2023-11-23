@@ -12,8 +12,8 @@ import {collections} from "./collections";
 // TODO: include groups and categories collections, with relations-specs
 
 export const groupModel: ModelDescType = {
-    collName   : collections.GROUPS,
-    docDesc    : {
+    tableName: collections.GROUPS,
+    docDesc  : {
         ...BaseModel,
         name   : {
             fieldType  : DataTypes.STRING,
@@ -22,14 +22,14 @@ export const groupModel: ModelDescType = {
         },
         ownerId: DataTypes.STRING,
     },
-    timeStamp  : true,
+    timeStamp: true,
     activeStamp: true,
     actorStamp : true,
 }
 
 export const categoryModel: ModelDescType = {
-    collName   : collections.CATEGORIES,
-    docDesc    : {
+    tableName: collections.CATEGORIES,
+    docDesc  : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -139,13 +139,13 @@ export interface AuditType {
 }
 
 export const AuditModel: AuditType = {
-    id              : "",
-    collName        : "",
-    collDocuments   : null,
-    newCollDocuments: null,
-    logType         : "",
-    logBy           : "",
-    logAt           : new Date(),
+    id           : "",
+    tableName    : "",
+    logRecords   : null,
+    newLogRecords: null,
+    logType      : "",
+    logBy        : "",
+    logAt        : new Date(),
 }
 
 export const AuditTable = "audits"

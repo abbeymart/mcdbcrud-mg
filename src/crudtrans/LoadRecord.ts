@@ -1,5 +1,5 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2018-11-19 | @Updated: 2019-06-15, 2023-11-22
+ * @Author: abbeymart | Abi Akindele | @Created: 2018-11-19 | @Updated: 2019-06-15
  * @Company: mConnect.biz | @License: MIT
  * @Description: bulk load records / documents, strictly for server-side(admin) ETL tasks
  */
@@ -10,13 +10,16 @@ import { getResMessage, getParamsMessage, ResponseMessage } from "@mconnect/mcre
 import { isEmptyObject } from "../orm";
 import { validateLoadParams } from "./ValidateCrudParam";
 import { checkDb } from "../dbc";
-import { ActionParamsType, CrudOptionsType, CrudParamsType, } from "./types";
+import { ActionParamsType, CrudOptionsType, CrudParamsType, UserInfoType } from "./types";
 
 class LoadRecord {
     protected params: CrudParamsType;
     protected appDb: Db;
     protected coll: string;
+    protected token: string;
+    protected userInfo: UserInfoType;
     protected actionParams: ActionParamsType;
+    protected userId: string;
     protected maxQueryLimit: number;
 
     constructor(params: CrudParamsType, options: CrudOptionsType = {}) {
@@ -24,6 +27,18 @@ class LoadRecord {
         this.appDb = params.appDb;
         this.coll = params.coll;
         this.actionParams = params && params.actionParams ? params.actionParams : [];
+        this.userInfo = params && params.userInfo ? params.userInfo :
+            {
+                token    : "",
+                userId   : "",
+                firstname: "",
+                lastname : "",
+                language : "",
+                loginName: "",
+                expire   : 0,
+            };
+        this.token = params && params.token ? params.token : this.userInfo.token || "";
+        this.userId = this.userInfo.userId || "";
         this.maxQueryLimit = options && options.maxQueryLimit ? options.maxQueryLimit : 10000;
     }
 

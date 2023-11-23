@@ -6,7 +6,7 @@
  */
 
 import { DataTypes, FieldDescType, ModelDescType, ValueParamsType } from "./types";
-import {ActionParamsType, FieldValueTypes, ObjectRefType, ObjectType} from "../crud";
+import {ActionParamsType, ObjectRefType,} from "../crud";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 
 // isEmptyObject validates is an object contains no keys and/or values
@@ -62,6 +62,9 @@ export function jsonToCrudSaveParams(model: ModelDescType, docValue: ValueParams
 
 export function dataTypesETL(desc: DataTypes, docValue: ValueParamsType): ValueParamsType {
     let result: ValueParamsType = {};
+    if (result) {
+
+    }
 
     return result;
 
@@ -69,6 +72,8 @@ export function dataTypesETL(desc: DataTypes, docValue: ValueParamsType): ValueP
 
 export function fieldDescTypeETL(desc: FieldDescType, docValue: ValueParamsType): ValueParamsType {
     let result: ValueParamsType = {};
+    if (result) {
 
+    }
     return result;
 }

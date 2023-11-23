@@ -1,5 +1,5 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16, 2023-11-22
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16
  * @Company: mConnect.biz | @License: MIT
  * @Description: get aggregate records, by docIds, queryParams, all | cache-in-memory
  */
@@ -10,7 +10,7 @@ import { getHashCache, setHashCache, } from "@mconnect/mccache";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { isEmptyObject } from "../orm";
 import Crud from "./Crud";
-import { CrudOptionsType, CrudParamsType, GetResultType, LogDocumentsType } from "./types";
+import { CrudOptionsType, CrudParamsType, GetResultType } from "./types";
 
 class GetRecord extends Crud {
     constructor(params: CrudParamsType, options: CrudOptionsType = {}) {
@@ -27,6 +27,10 @@ class GetRecord extends Crud {
         const auditDbCheck = this.checkDb(this.auditDb);
         if (auditDbCheck.code !== "success") {
             return auditDbCheck;
+        }
+        const accessDbCheck = this.checkDb(this.accessDb);
+        if (accessDbCheck.code !== "success") {
+            return accessDbCheck;
         }
 
         // set maximum limit and default values per query
@@ -46,15 +50,12 @@ class GetRecord extends Crud {
         if (this.logRead && this.queryParams && !isEmptyObject(this.queryParams)) {
             await this.transLog.readLog(this.coll, this.queryParams, this.userId);
         } else if (this.logRead && this.docIds && this.docIds.length > 0) {
-            const collDocs: LogDocumentsType = {
-                docIds: this.docIds
-            }
-            await this.transLog.readLog(this.coll, collDocs, this.userId);
+            await this.transLog.readLog(this.coll, this.docIds, this.userId);
         }
 
         // check cache for matching record(s), and return if exist
         try {
-            const cacheRes = getHashCache(this.cacheKey, this.coll);
+            const cacheRes = await getHashCache(this.cacheKey, this.coll);
             if (cacheRes && cacheRes.value) {
                 console.log("cache-items-before-query: ", cacheRes.value[0]);
                 return getResMessage("success", {
@@ -102,7 +103,7 @@ class GetRecord extends Crud {
                             totalRecordsCount: totalDocsCount,
                         }
                     }
-                    setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
+                    await setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
                     return getResMessage("success", {
                         value: resultValue,
                     });
@@ -138,7 +139,7 @@ class GetRecord extends Crud {
                             totalRecordsCount: totalDocsCount,
                         }
                     }
-                    setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
+                    await setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
                     return getResMessage("success", {
                         value: resultValue,
                     });
@@ -174,7 +175,7 @@ class GetRecord extends Crud {
                         totalRecordsCount: totalDocsCount,
                     }
                 }
-                setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
+                await setHashCache(this.cacheKey, this.coll, resultValue, this.cacheExpire);
                 return getResMessage("success", {
                     value: resultValue,
                 });

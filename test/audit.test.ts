@@ -36,8 +36,8 @@ const dbc = newDbMongo(myDb, myDb.options);
         name    : 'should store create-transaction log and return success:',
         testFunc: async () => {
             const res = await mcLog.auditLog(AuditLogTypes.CREATE, userId, {
-                collName : collName,
-                collDocuments: recs,
+                tableName : collName,
+                logRecords: recs,
             })
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
@@ -48,9 +48,9 @@ const dbc = newDbMongo(myDb, myDb.options);
         name    : 'should store update-transaction log and return success:',
         testFunc: async () => {
             const res = await mcLog.auditLog(AuditLogTypes.UPDATE, userId, {
-                collName    : collName,
-                collDocuments   : recs,
-                newCollDocuments: newRecs,
+                tableName    : collName,
+                logRecords   : recs,
+                newLogRecords: newRecs,
             })
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
@@ -60,8 +60,8 @@ const dbc = newDbMongo(myDb, myDb.options);
         name    : 'should store read-transaction log and return success:',
         testFunc: async () => {
             const res = await mcLog.auditLog(AuditLogTypes.READ, userId, {
-                collName : collName,
-                collDocuments: readP,
+                tableName : collName,
+                logRecords: readP,
             })
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
@@ -71,8 +71,8 @@ const dbc = newDbMongo(myDb, myDb.options);
         name    : 'should store delete-transaction log and return success:',
         testFunc: async () => {
             const res = await mcLog.auditLog(AuditLogTypes.DELETE, userId, {
-                collName : collName,
-                collDocuments: recs,
+                tableName : collName,
+                logRecords: recs,
             })
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
@@ -82,8 +82,8 @@ const dbc = newDbMongo(myDb, myDb.options);
         name    : 'should store login-transaction log and return success:',
         testFunc: async () => {
             const res = await mcLog.auditLog(AuditLogTypes.LOGIN, userId, {
-                collName : collName,
-                collDocuments: recs,
+                tableName : collName,
+                logRecords: recs,
             })
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
@@ -94,8 +94,8 @@ const dbc = newDbMongo(myDb, myDb.options);
         name    : 'should store logout-transaction log and return success:',
         testFunc: async () => {
             const res = await mcLog.auditLog(AuditLogTypes.LOGOUT, userId, {
-                collName : collName,
-                collDocuments: recs,
+                tableName : collName,
+                logRecords: recs,
             })
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
@@ -106,8 +106,8 @@ const dbc = newDbMongo(myDb, myDb.options);
         name    : 'should return paramsError for incomplete/undefined inputs:',
         testFunc: async () => {
             const res = await mcLog.auditLog(AuditLogTypes.CREATE, userId, {
-                collName : "",
-                collDocuments: recs,
+                tableName : "",
+                logRecords: recs,
             })
             assertEquals(res.code, "paramsError", `res.Code should be: paramsError`);
             assertEquals(res.message.includes("Table or Collection name is required"), true, `res-message should include: Table or Collection name is required`);

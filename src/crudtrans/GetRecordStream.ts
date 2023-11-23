@@ -1,5 +1,5 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16, 2023-11-22
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16
  * @Company: mConnect.biz | @License: MIT
  * @Description: get stream of records, by docIds, queryParams, all | cache-in-memory
  */
@@ -27,6 +27,11 @@ class GetRecordStream extends Crud {
         if (auditDbCheck.code !== "success") {
             // return auditDbCheck;
             throw new Error(auditDbCheck.message);
+        }
+        const accessDbCheck = this.checkDb(this.accessDb);
+        if (accessDbCheck.code !== "success") {
+            // return accessDbCheck;
+            throw new Error(accessDbCheck.message);
         }
 
         // set maximum limit and default values per query

@@ -6,17 +6,13 @@
  */
 
 import {Db, MongoClient, MongoClientOptions} from "mongodb";
-import {DbSecureType, DbOptionsType, DbParamsType, Replicas,} from "./types";
+import {DbOptionsType, DbParamsType, Replicas,} from "./types";
 
 export class DbMongo {
-    private readonly host: string;
     private readonly username: string;
     private readonly password: string;
     private readonly database: string;
-    private readonly location: string;
-    private readonly port: number;
     private readonly minPoolSize: number;
-    private readonly secureOption: DbSecureType;
     private serverUrl: string;
     private dbUrl: string;
     private readonly options: MongoClientOptions;
@@ -28,14 +24,10 @@ export class DbMongo {
     private readonly replicas: Replicas;
 
     constructor(dbConfig: DbParamsType, options?: DbOptionsType) {
-        this.host = dbConfig?.host || "";
         this.username = dbConfig?.username || "";
         this.password = dbConfig?.password || "";
         this.database = dbConfig?.database || "";
-        this.location = dbConfig?.location || "";
-        this.port = Number(dbConfig?.port) || Number.NEGATIVE_INFINITY;
         this.minPoolSize = dbConfig?.poolSize || 20;
-        this.secureOption = dbConfig?.secureOption || {secureAccess: false, secureCert: "", secureKey: ""};
         this.checkAccess = options?.checkAccess !== false;
         this.user = encodeURIComponent(this.username);
         this.pass = encodeURIComponent(this.password);

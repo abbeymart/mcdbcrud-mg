@@ -1,12 +1,12 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-08-01
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-08-01, 2023-11-22
  * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: relations-db store
  */
 
 import * as fs from "fs";
-import { ModelRelationType } from "./modelTypes";
+import {ModelRelationType} from "./types";
 
 export function saveDbRelations(relations: Array<ModelRelationType>): Set<ModelRelationType> {
     let relationsDb: Set<ModelRelationType>;

@@ -1,20 +1,20 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16, 2023-11-23
  * Updated 2018-04-08, prototype-to-class
  * @Company: mConnect.biz | @License: MIT
  * @Description: delete one or more records / documents by docIds or queryParams
  */
 
 // Import required module/function(s)
-import {ObjectId, DeleteResult, UpdateResult,} from "mongodb";
-import {getResMessage, ResponseMessage} from "@mconnect/mcresponse";
-import {isEmptyObject} from "../orm";
-import {deleteHashCache} from "@mconnect/mccache";
+import { ObjectId, } from "mongodb";
+import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
+import { isEmptyObject } from "../orm";
+import { deleteHashCache } from "@mconnect/mccache";
 import Crud from "./Crud";
 import {
     CrudOptionsType, CrudParamsType, CrudResultType, LogDocumentsType, ObjectRefType, SubItemsType
 } from "./types";
-import {FieldDescType, RelationActionTypes} from "../orm";
+import { RelationActionTypes } from "../orm";
 
 class DeleteRecord extends Crud {
     protected collRestrict: boolean;
@@ -41,10 +41,6 @@ class DeleteRecord extends Crud {
         const auditDbCheck = this.checkDb(this.auditDb);
         if (auditDbCheck.code !== "success") {
             return auditDbCheck;
-        }
-        const accessDbCheck = this.checkDb(this.accessDb);
-        if (accessDbCheck.code !== "success") {
-            return accessDbCheck;
         }
 
         // for queryParams, exclude _id, if present
@@ -127,7 +123,6 @@ class DeleteRecord extends Crud {
                 });
             }
         }
-
         // could not remove document
         return getResMessage("removeError", {
             message: "Unable to perform the requested action(s), due to incomplete/incorrect delete conditions. ",
@@ -250,319 +245,82 @@ class DeleteRecord extends Crud {
     }
 
     async removeRecordById(): Promise<ResponseMessage> {
+        if (this.docIds.length < 1) {
+            return getResMessage("deleteError", {message: "Valid document-ID(s) required"});
+        }
         // delete/remove records and log in audit-collection
-        // create a transaction session
-        const session = this.dbClient.startSession();
         try {
-            // trx starts
-            let removed: DeleteResult = {deletedCount: 0, acknowledged: false};
-            await session.withTransaction(async () => {
-                const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
-                // id(s): convert string to ObjectId
-                const docIds = this.docIds.map(id => new ObjectId(id));
-                removed = await appDbColl.deleteMany({
-                    _id: {
-                        $in: docIds,
-                    }
-                }, {session});
-                if (removed.deletedCount !== docIds.length) {
-                    await session.abortTransaction();
-                    throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${docIds.length} set to be removed]. Transaction aborted.`)
+            const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
+            // id(s): convert string to ObjectId
+            const docIds = this.docIds.map(id => new ObjectId(id));
+            const removed = await appDbColl.deleteMany({
+                _id: {
+                    $in: docIds,
                 }
-                // optional, update child-collection-documents for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
-                if (this.deleteSetDefault && this.childRelations.length > 0) {
-                    const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
-                    for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
-                        for await (const cItem of childRelations) {
-                            const sourceField = cItem.sourceField;
-                            const targetField = cItem.targetField;
-                            // check if targetModel is defined/specified, required to determine default-action
-                            if (!cItem.targetModel) {
-                                // handle as error
-                                await session.abortTransaction();
-                                throw new Error("Target model is required to complete the set-default-task");
-                            }
-                            const targetDocDesc = cItem.targetModel.docDesc || {};
-                            const targetColl = cItem.targetModel.collName || cItem.targetColl;
-                            // compute default values for the targetFields
-                            const docDefaultValue = await this.computeDefaultValues(targetDocDesc);
-                            const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
-                            const fieldDefaultValue = docDefaultValue[targetField] || null; // new value (default-value) of the targetField
-                            if (currentFieldValue === fieldDefaultValue) {
-                                // skip update
-                                continue;
-                            }
-                            // validate targetField default value | check if setDefault is permissible for the targetField
-                            let targetFieldDesc = targetDocDesc[targetField];   // target-field-type
-                            switch (typeof targetFieldDesc) {
-                                case "object":
-                                    targetFieldDesc = targetFieldDesc as FieldDescType
-                                    // handle non-default-field
-                                    if (!targetFieldDesc.defaultValue || !Object.keys(targetFieldDesc).includes("defaultValue")) {
-                                        await session.abortTransaction();
-                                        throw new Error("Target/foreignKey default-value is required to complete the set-default task");
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            let updateQuery: ObjectRefType = {};    // to determine the current-value in the target-field
-                            let updateSet: ObjectRefType = {};      // to set the new-default-value in the target-field
-                            updateQuery[targetField] = currentFieldValue;
-                            updateSet[targetField] = fieldDefaultValue;
-                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
-                            const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
-                            if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
-                                throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
-                            }
-                        }
-                    }
-                } else if (this.deleteSetNull && this.childRelations.length > 0) {
-                    const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL);
-                    for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
-                        for await (const cItem of childRelations) {
-                            const sourceField = cItem.sourceField;
-                            const targetField = cItem.targetField;
-                            // check if targetModel is defined/specified, required to determine allowNull-action
-                            if (!cItem.targetModel) {
-                                // handle as error
-                                await session.abortTransaction();
-                                throw new Error("Target model is required to complete the set-null-task");
-                            }
-                            const targetDocDesc = cItem.targetModel.docDesc || {};
-                            const initializeDocValue = this.computeInitializeValues(targetDocDesc)
-                            const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                            const nullFieldValue = initializeDocValue[targetField] || null; // new value (null-value) of the targetField
-                            if (currentFieldValue === nullFieldValue) {
-                                // skip update
-                                continue;
-                            }
-                            // validate targetField null value | check if allowNull is permissible for the targetField
-                            const targetColl = cItem.targetModel.collName || cItem.targetColl;
-                            let targetFieldDesc = targetDocDesc[targetField];
-                            switch (typeof targetFieldDesc) {
-                                case "object":
-                                    targetFieldDesc = targetFieldDesc as FieldDescType
-                                    // handle non-null-field
-                                    if (!targetFieldDesc.allowNull || !Object.keys(targetFieldDesc).includes("allowNull")) {
-                                        await session.abortTransaction();
-                                        throw new Error("Target/foreignKey allowNull is required to complete the set-null task");
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            let updateQuery: ObjectRefType = {};
-                            let updateSet: ObjectRefType = {};
-                            updateQuery[targetField] = currentFieldValue;
-                            updateSet[targetField] = nullFieldValue;
-                            const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
-                            const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
-                            if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
-                                throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
-                            }
-                        }
-                    }
-                }
-                // commit or abort trx
-                if (removed.acknowledged && removed.deletedCount === docIds.length) {
-                    await session.commitTransaction();
-                } else {
-                    await session.abortTransaction()
-                    throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]`)
-                }
-            });
-            // perform cache and audi-log tasks
-            if (removed.acknowledged) {
-                // delete cache
-                deleteHashCache(this.cacheKey, this.coll);
-                // check the audit-log settings - to perform audit-log
-                let logRes = {code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null};
-                if (this.logDelete || this.logCrud) {
-                    const logDocuments: LogDocumentsType = {
-                        collDocuments: this.currentRecs,
-                    }
-                    logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
-                }
-                const deleteResultValue: CrudResultType = {
-                    recordsCount: removed.deletedCount,
-                    logRes,
-                }
-                return getResMessage("success", {
-                    message: "Document/record deleted successfully",
-                    value  : deleteResultValue,
-                });
+            },);
+            if (!removed.acknowledged || removed.deletedCount < 1) {
+                throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} removed]`)
             }
-            return getResMessage("deleteError", {message: "No record(s) deleted"});
+            // perform delete cache and audit-log tasks
+            deleteHashCache(this.cacheKey, this.coll);
+            let logRes = {code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null};
+            if (this.logDelete || this.logCrud) {
+                const logDocuments: LogDocumentsType = {
+                    collDocuments: this.currentRecs,
+                }
+                logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
+            }
+            const deleteResultValue: CrudResultType = {
+                recordsCount: removed.deletedCount,
+                logRes,
+            }
+            return getResMessage("success", {
+                message: `Delete task completed - [${removed.deletedCount} of ${this.currentRecs.length} removed] `,
+                value  : deleteResultValue,
+            });
         } catch (e) {
-            await session.abortTransaction()
             return getResMessage("removeError", {
                 message: `Error removing/deleting record(s): ${e.message ? e.message : ""}`,
                 value  : e,
             });
-        } finally {
-            await session.endSession();
         }
     }
 
     async removeRecordByParams(): Promise<ResponseMessage> {
+        if (!this.queryParams || isEmptyObject(this.queryParams)) {
+            return getResMessage("deleteError", {message: "Valid queryParams required"});
+        }
         // delete/remove records and log in audit-collection
-        // create a transaction session
-        const session = this.dbClient.startSession();
         try {
-            if (this.queryParams && !isEmptyObject(this.queryParams)) {
-                // trx starts
-                let removed: DeleteResult = {deletedCount: 0, acknowledged: false};
-                await session.withTransaction(async () => {
-                    const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
-                    removed = await appDbColl.deleteMany(this.queryParams, {session});
-                    if (removed.deletedCount !== this.currentRecs.length) {
-                        await session.abortTransaction();
-                        throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]. Transaction aborted.`)
-                    }
-                    // optional, update child-collection-documents for setDefault and setNull/initialize-value?, if this.deleteSetDefault or this.deleteSetNull
-                    if (this.deleteSetDefault && this.childRelations.length > 0) {
-                        const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
-                        for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
-                            for await (const cItem of childRelations) {
-                                const sourceField = cItem.sourceField;
-                                const targetField = cItem.targetField
-                                // check if targetModel is defined/specified, required to determine default-action
-                                if (!cItem.targetModel) {
-                                    // handle as error
-                                    await session.abortTransaction();
-                                    throw new Error("Target model is required to complete the set-default-task");
-                                }
-                                const targetDocDesc = cItem.targetModel.docDesc || {};
-                                const targetColl = cItem.targetModel.collName || cItem.targetColl;
-                                // compute default values for the targetFields
-                                const docDefaultValue = await this.computeDefaultValues(targetDocDesc);
-                                const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
-                                const fieldDefaultValue = docDefaultValue[targetField] || null; // new value (default-value) of the targetField
-                                if (currentFieldValue === fieldDefaultValue) {
-                                    // skip update
-                                    continue;
-                                }
-                                // validate targetField default value | check if setDefault is permissible for the targetField
-                                let targetFieldDesc = targetDocDesc[targetField];
-                                switch (typeof targetFieldDesc) {
-                                    case "object":
-                                        targetFieldDesc = targetFieldDesc as FieldDescType
-                                        // handle non-default-field
-                                        if (!Object.keys(targetFieldDesc).includes("defaultValue") || !targetFieldDesc.defaultValue) {
-                                            await session.abortTransaction();
-                                            throw new Error("Target/foreignKey default-value is required to complete the set-default task");
-                                        }
-                                        break;
-                                    default:
-                                        break;
-                                }
-                                let updateQuery: ObjectRefType = {};
-                                let updateSet: ObjectRefType = {};
-                                updateQuery[targetField] = currentFieldValue;
-                                updateSet[targetField] = fieldDefaultValue;
-                                const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
-                                const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
-                                if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                    await session.abortTransaction();
-                                    throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
-                                }
-                            }
-                        }
-                    } else if (this.deleteSetNull && this.childRelations.length > 0) {
-                        const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL);
-                        for await (const currentRec of (this.currentRecs as Array<ObjectRefType>)) {
-                            for await (const cItem of childRelations) {
-                                const sourceField = cItem.sourceField;
-                                const targetField = cItem.targetField;
-                                // check if targetModel is defined/specified, required to determine allowNull-action
-                                if (!cItem.targetModel) {
-                                    // handle as error
-                                    await session.abortTransaction();
-                                    throw new Error("Target model is required to complete the set-null-task");
-                                }
-                                const targetDocDesc = cItem.targetModel.docDesc || {};
-                                const initializeDocValue = this.computeInitializeValues(targetDocDesc)
-                                const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                                const nullFieldValue = initializeDocValue[targetField] || null; // new value (null-value) of the targetField
-                                if (currentFieldValue === nullFieldValue) {
-                                    // skip update
-                                    continue;
-                                }
-                                // validate targetField null value | check if allowNull is permissible for the targetField
-                                const targetColl = cItem.targetModel.collName || cItem.targetColl;
-                                let targetFieldDesc = targetDocDesc[targetField];
-                                switch (typeof targetFieldDesc) {
-                                    case "object":
-                                        targetFieldDesc = targetFieldDesc as FieldDescType
-                                        // handle non-null-field
-                                        if (!Object.keys(targetFieldDesc).includes("allowNull") || !targetFieldDesc.allowNull) {
-                                            await session.abortTransaction();
-                                            throw new Error("Target/foreignKey allowNull is required to complete the set-null task");
-                                        }
-                                        break;
-                                    default:
-                                        break;
-                                }
-                                let updateQuery: ObjectRefType = {};
-                                let updateSet: ObjectRefType = {};
-                                updateQuery[targetField] = currentFieldValue;
-                                updateSet[targetField] = nullFieldValue;
-                                const TargetColl = this.dbClient.db(this.dbName).collection(targetColl);
-                                const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,}) as UpdateResult;
-                                if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                    await session.abortTransaction();
-                                    throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
-                                }
-                            }
-                        }
-                    }
-                    // commit or abort trx
-                    if (removed.acknowledged && removed.deletedCount === this.currentRecs.length) {
-                        await session.commitTransaction();
-                    } else {
-                        await session.abortTransaction()
-                        throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]`)
-                    }
-                });
-                // perform cache and audi-log tasks
-                if (removed.acknowledged) {
-                    // delete cache
-                    await deleteHashCache(this.cacheKey, this.coll);
-                    // check the audit-log settings - to perform audit-log
-                    let logRes = {
-                        code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null
-                    };
-                    if (this.logDelete || this.logCrud) {
-                        const logDocuments: LogDocumentsType = {
-                            collDocuments: this.currentRecs,
-                        }
-                        logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
-                    }
-                    const deleteResultValue: CrudResultType = {
-                        recordsCount: removed.deletedCount,
-                        logRes,
-                    }
-                    return getResMessage("success", {
-                        message: "Document/record deleted successfully",
-                        value  : deleteResultValue,
-                    });
-                } else {
-                    return getResMessage("deleteError", {message: "No record(s) deleted"});
-                }
-            } else {
-                return getResMessage("deleteError", {message: "Unable to delete record(s), due to missing queryParams"});
+            const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
+            const removed = await appDbColl.deleteMany(this.queryParams,);
+            if (!removed.acknowledged || removed.deletedCount < 1) {
+                throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} removed]`)
             }
+            // perform delete cache and audit-log tasks
+            deleteHashCache(this.cacheKey, this.coll);
+            let logRes = {
+                code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null
+            };
+            if (this.logDelete || this.logCrud) {
+                const logDocuments: LogDocumentsType = {
+                    collDocuments: this.currentRecs,
+                }
+                logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
+            }
+            const deleteResultValue: CrudResultType = {
+                recordsCount: removed.deletedCount,
+                logRes,
+            }
+            return getResMessage("success", {
+                message: `Delete task completed - [${removed.deletedCount} of ${this.currentRecs.length} removed] `,
+                value  : deleteResultValue,
+            });
         } catch (e) {
-            await session.abortTransaction()
             return getResMessage("removeError", {
                 message: `Error removing/deleting record(s): ${e.message ? e.message : ""}`,
                 value  : e,
             });
-        } finally {
-            await session.endSession();
         }
     }
 }
@@ -572,4 +330,4 @@ function newDeleteRecord(params: CrudParamsType, options: CrudOptionsType = {}) 
     return new DeleteRecord(params, options);
 }
 
-export {DeleteRecord, newDeleteRecord};
+export { DeleteRecord, newDeleteRecord };

@@ -1,5 +1,5 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-07-15
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-07-15, 2023-11-22
  * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: mcdbcrud-mg audit-log (mongodb) entry point | auditLog
@@ -10,6 +10,7 @@ import {Db} from "mongodb";
 import {getResMessage, ResponseMessage} from "@mconnect/mcresponse";
 import {checkDb} from "../dbc";
 import {AuditLogTypes, AuditLogOptionsType, LogDocumentsType} from "../crud";
+import { isEmptyObject } from "../orm";
 
 //types
 
@@ -26,7 +27,7 @@ class AuditLog {
         return this.auditColl
     }
 
-    async createLog(collName: string, collDocuments: LogDocumentsType, userId: string): Promise<ResponseMessage> {
+    async createLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (dbCheck.code !== "success") {
             return dbCheck;
@@ -38,10 +39,10 @@ class AuditLog {
             errorMessage = errorMessage ? errorMessage + " | Table or Collection name is required." :
                 "Table or Collection name is required.";
         }
-        if (!userId) {
-            errorMessage = errorMessage ? errorMessage + " | userId is required." :
-                "userId is required.";
-        }
+        // if (!userId) {
+        //     errorMessage = errorMessage ? errorMessage + " | userId is required." :
+        //         "userId is required.";
+        // }
         if (!collDocuments) {
             errorMessage = errorMessage ? errorMessage + " | Created record(s) information is required." :
                 "Created record(s) information is required.";
@@ -83,7 +84,7 @@ class AuditLog {
         }
     }
 
-    async updateLog(collName: string, collDocuments: LogDocumentsType, newCollDocuments: LogDocumentsType, userId: string): Promise<ResponseMessage> {
+    async updateLog(collName: string, collDocuments: LogDocumentsType, newCollDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -95,10 +96,10 @@ class AuditLog {
             errorMessage = errorMessage ? errorMessage + " | Table or Collection name is required." :
                 "Table or Collection name is required.";
         }
-        if (!userId) {
-            errorMessage = errorMessage ? errorMessage + " | userId is required." :
-                "userId is required.";
-        }
+        // if (!userId) {
+        //     errorMessage = errorMessage ? errorMessage + " | userId is required." :
+        //         "userId is required.";
+        // }
         if (!collDocuments) {
             errorMessage = errorMessage ? errorMessage + " | Current record(s) information is required." :
                 "Current record(s) information is required.";
@@ -140,7 +141,7 @@ class AuditLog {
         }
     }
 
-    async readLog(collName: string, collDocuments: LogDocumentsType, userId: string = ""): Promise<ResponseMessage> {
+    async readLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -189,7 +190,7 @@ class AuditLog {
         }
     }
 
-    async deleteLog(collName: string, collDocuments: LogDocumentsType, userId: string): Promise<ResponseMessage> {
+    async deleteLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -201,10 +202,10 @@ class AuditLog {
             errorMessage = errorMessage ? errorMessage + " | Table or Collection name is required." :
                 "Table or Collection name is required.";
         }
-        if (!userId) {
-            errorMessage = errorMessage ? errorMessage + " | userId is required." :
-                "userId is required.";
-        }
+        // if (!userId) {
+        //     errorMessage = errorMessage ? errorMessage + " | userId is required." :
+        //         "userId is required.";
+        // }
         if (!collDocuments) {
             errorMessage = errorMessage ? errorMessage + " | Deleted record(s) information is required." :
                 "Deleted record(s) information is required.";
@@ -241,7 +242,7 @@ class AuditLog {
         }
     }
 
-    async loginLog(collDocuments: LogDocumentsType, userId: string = ""): Promise<ResponseMessage> {
+    async loginLog(collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -282,7 +283,7 @@ class AuditLog {
         }
     }
 
-    async logoutLog(collDocuments: LogDocumentsType, userId: string = ""): Promise<ResponseMessage> {
+    async logoutLog(collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -290,10 +291,10 @@ class AuditLog {
 
         // validate params/values
         let errorMessage = "";
-        if (!userId) {
-            errorMessage = errorMessage + " | userId is required."
-        }
-        if (!collDocuments || collDocuments === "") {
+        // if (!userId) {
+        //     errorMessage = errorMessage + " | userId is required."
+        // }
+        if (!collDocuments || isEmptyObject(collDocuments)) {
             errorMessage = errorMessage + " | Logout information is required."
         }
         if (errorMessage) {
@@ -327,7 +328,7 @@ class AuditLog {
         }
     }
 
-    async auditLog(logType: string, userId: string = "", options?: AuditLogOptionsType) {
+    async auditLog(logType: string, userId: string = "not-specified", options?: AuditLogOptionsType) {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -352,10 +353,10 @@ class AuditLog {
                     errorMessage = errorMessage ? errorMessage + " | Table or Collection name is required." :
                         "Table or Collection name is required.";
                 }
-                if (!userId) {
-                    errorMessage = errorMessage ? errorMessage + " | userId is required." :
-                        "userId is required.";
-                }
+                // if (!userId) {
+                //     errorMessage = errorMessage ? errorMessage + " | userId is required." :
+                //         "userId is required.";
+                // }
                 if (!collDocuments) {
                     errorMessage = errorMessage ? errorMessage + " | Created record(s) information is required." :
                         "Created record(s) information is required.";
@@ -366,10 +367,10 @@ class AuditLog {
                     });
                 }
                 actionParams = {
-                    collName     : collName,
-                    collDocuments: collDocuments,
-                    logType      : logType,
-                    logBy        : userId,
+                    tableName : collName,
+                    logRecords: collDocuments,
+                    logType   : logType,
+                    logBy     : userId,
                 };
                 break;
             case "update":
@@ -383,10 +384,10 @@ class AuditLog {
                     errorMessage = errorMessage ? errorMessage + " | Table or Collection name is required." :
                         "Table or Collection name is required.";
                 }
-                if (!userId) {
-                    errorMessage = errorMessage ? errorMessage + " | userId is required." :
-                        "userId is required.";
-                }
+                // if (!userId) {
+                //     errorMessage = errorMessage ? errorMessage + " | userId is required." :
+                //         "userId is required.";
+                // }
                 if (!collDocuments) {
                     errorMessage = errorMessage ? errorMessage + " | Current record(s) information is required." :
                         "Current record(s) information is required.";
@@ -402,11 +403,11 @@ class AuditLog {
                 }
 
                 actionParams = {
-                    collName        : collName,
-                    collDocuments   : collDocuments,
-                    newCollDocuments: newCollDocuments,
-                    logType         : logType,
-                    logBy           : userId,
+                    tableName    : collName,
+                    logRecords   : collDocuments,
+                    newLogRecords: newCollDocuments,
+                    logType      : logType,
+                    logBy        : userId,
                 };
                 break;
             case "remove":
@@ -421,10 +422,10 @@ class AuditLog {
                     errorMessage = errorMessage ? errorMessage + " | Table or Collection name is required." :
                         "Table or Collection name is required.";
                 }
-                if (!userId) {
-                    errorMessage = errorMessage ? errorMessage + " | userId is required." :
-                        "userId is required.";
-                }
+                // if (!userId) {
+                //     errorMessage = errorMessage ? errorMessage + " | userId is required." :
+                //         "userId is required.";
+                // }
                 if (!collDocuments) {
                     errorMessage = errorMessage ? errorMessage + " | Deleted record(s) information is required." :
                         "Deleted record(s) information is required.";
@@ -436,10 +437,10 @@ class AuditLog {
                 }
 
                 actionParams = {
-                    collName     : collName,
-                    collDocuments: collDocuments,
-                    logType      : logType,
-                    logBy        : userId,
+                    tableName : collName,
+                    logRecords: collDocuments,
+                    logType   : logType,
+                    logBy     : userId,
                 };
                 break;
             case "read":
@@ -465,10 +466,10 @@ class AuditLog {
                 }
 
                 actionParams = {
-                    collName     : collName,
-                    collDocuments: collDocuments,
-                    logType      : logType,
-                    logBy        : userId,
+                    tableName : collName,
+                    logRecords: collDocuments,
+                    logType   : logType,
+                    logBy     : userId,
                 };
                 break;
             case "login":
@@ -486,9 +487,9 @@ class AuditLog {
                 }
 
                 actionParams = {
-                    collDocuments: collDocuments,
-                    logType      : logType,
-                    logBy        : userId,
+                    logRecords: collDocuments,
+                    logType   : logType,
+                    logBy     : userId,
                 };
                 break;
             case "logout":
@@ -496,10 +497,10 @@ class AuditLog {
                 collDocuments = options && options.collDocuments ? options.collDocuments : null;
 
                 // validate params/values
-                if (!userId) {
-                    errorMessage = errorMessage + " | userId is required."
-                }
-                if (!collDocuments || collDocuments === "") {
+                // if (!userId) {
+                //     errorMessage = errorMessage + " | userId is required."
+                // }
+                if (!collDocuments || isEmptyObject(collDocuments)) {
                     errorMessage = errorMessage + " | Logout information is required."
                 }
                 if (errorMessage) {
@@ -508,9 +509,9 @@ class AuditLog {
                     });
                 }
                 actionParams = {
-                    collDocuments: collDocuments,
-                    logType      : logType,
-                    logBy        : userId,
+                    logRecords: collDocuments,
+                    logType   : logType,
+                    logBy     : userId,
                 };
                 break;
             default:

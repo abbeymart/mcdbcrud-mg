@@ -1,5 +1,5 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16, 2023-11-22
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16
  * @Company: mConnect.biz | @License: MIT
  * @Description: get records, by docIds, queryParams, all | cache-in-memory
  */
@@ -27,6 +27,10 @@ class GetRecord extends Crud {
         const auditDbCheck = this.checkDb(this.auditDb);
         if (auditDbCheck.code !== "success") {
             return auditDbCheck;
+        }
+        const accessDbCheck = this.checkDb(this.accessDb);
+        if (accessDbCheck.code !== "success") {
+            return accessDbCheck;
         }
 
         // set maximum limit and default values per query
@@ -204,6 +208,10 @@ class GetRecord extends Crud {
         if (auditDbCheck.code !== "success") {
             return auditDbCheck;
         }
+        const accessDbCheck = this.checkDb(this.accessDb);
+        if (accessDbCheck.code !== "success") {
+            return accessDbCheck;
+        }
 
         // set maximum limit and default values per query
         if (this.limit < 1) {
@@ -294,6 +302,10 @@ class GetRecord extends Crud {
         const auditDbCheck = this.checkDb(this.auditDb);
         if (auditDbCheck.code !== "success") {
             return auditDbCheck;
+        }
+        const accessDbCheck = this.checkDb(this.accessDb);
+        if (accessDbCheck.code !== "success") {
+            return accessDbCheck;
         }
 
         // set maximum limit and default values per query
@@ -390,6 +402,10 @@ class GetRecord extends Crud {
         const auditDbCheck = this.checkDb(this.auditDb);
         if (auditDbCheck.code !== "success") {
             return auditDbCheck;
+        }
+        const accessDbCheck = this.checkDb(this.accessDb);
+        if (accessDbCheck.code !== "success") {
+            return accessDbCheck;
         }
 
         // set maximum limit and default values per query
