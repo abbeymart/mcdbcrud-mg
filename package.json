@@ -34,17 +34,17 @@
   },
   "homepage": "https://github.com/abbeymart/mcdbcrud-mg#readme",
   "dependencies": {
-    "@mconnect/mccache": "^0.5.3",
-    "@mconnect/mcresponse": "^0.5.2",
-    "mongodb": "^4.11.0",
-    "validator": "^13.7.0"
+    "@mconnect/mccache": "^0.8.0",
+    "@mconnect/mcresponse": "^0.7.0",
+    "mongodb": "^6.3.0",
+    "validator": "^13.11.0"
   },
   "devDependencies": {
     "@mconnect/mctest": "^0.5.5",
     "@types/mongodb": "^4.0.7",
-    "@types/node": "^18.11.9",
-    "@types/validator": "^13.7.10",
-    "tslib": "^2.4.1",
-    "typescript": "^4.8.4"
+    "@types/node": "^20.9.5",
+    "@types/validator": "^13.11.7",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.2"
   }
 }

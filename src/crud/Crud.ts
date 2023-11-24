@@ -147,7 +147,7 @@ export class Crud {
     }
 
     // checkDb checks / validate appDb
-    checkDb(dbConnect: Db): ResponseMessage {
+    checkDb(dbConnect: Db): ResponseMessage<any> {
         if (dbConnect && dbConnect.databaseName !== "") {
             return getResMessage("success", {
                 message: "valid database handler",
@@ -160,7 +160,7 @@ export class Crud {
     }
 
     // checkDbClient checks / validates mongo-client connection (for crud-transactional tasks)
-    checkDbClient(dbc: MongoClient): ResponseMessage {
+    checkDbClient(dbc: MongoClient): ResponseMessage<any> {
         if (dbc) {
             return getResMessage("success", {
                 message: "valid database-server client connection",
@@ -173,7 +173,7 @@ export class Crud {
     }
 
     // checkRecExist method checks if items/documents exist: document uniqueness
-    async checkRecExist(): Promise<ResponseMessage> {
+    async checkRecExist(): Promise<ResponseMessage<any>> {
         try {
             // check if existParams condition is specified
             if (this.existParams.length < 1) {
@@ -224,7 +224,7 @@ export class Crud {
     }
 
     // getCurrentRecords fetch documents by docIds, queryParams or all limited by this.limit and this.skip, if applicable
-    async getCurrentRecords(by = ""): Promise<ResponseMessage> {
+    async getCurrentRecords(by = ""): Promise<ResponseMessage<any>> {
         try {
             // validate models
             const validDb = this.checkDb(this.appDb);

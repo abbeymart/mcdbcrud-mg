@@ -27,7 +27,7 @@ class AuditLog {
         return this.auditColl
     }
 
-    async createLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
+    async createLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage<any>> {
         const dbCheck = checkDb(this.dbHandle);
         if (dbCheck.code !== "success") {
             return dbCheck;
@@ -84,7 +84,7 @@ class AuditLog {
         }
     }
 
-    async updateLog(collName: string, collDocuments: LogDocumentsType, newCollDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
+    async updateLog(collName: string, collDocuments: LogDocumentsType, newCollDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage<any>> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -141,7 +141,7 @@ class AuditLog {
         }
     }
 
-    async readLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
+    async readLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage<any>> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -190,7 +190,7 @@ class AuditLog {
         }
     }
 
-    async deleteLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
+    async deleteLog(collName: string, collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage<any>> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -242,7 +242,7 @@ class AuditLog {
         }
     }
 
-    async loginLog(collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
+    async loginLog(collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage<any>> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -283,7 +283,7 @@ class AuditLog {
         }
     }
 
-    async logoutLog(collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage> {
+    async logoutLog(collDocuments: LogDocumentsType, userId: string = "not-specified"): Promise<ResponseMessage<any>> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;
@@ -328,7 +328,7 @@ class AuditLog {
         }
     }
 
-    async auditLog(logType: string, userId: string = "not-specified", options?: AuditLogOptionsType) {
+    async auditLog(logType: string, userId: string = "not-specified", options?: AuditLogOptionsType): Promise<ResponseMessage<any>> {
         const dbCheck = checkDb(this.dbHandle);
         if (!dbCheck) {
             return dbCheck;

@@ -6,8 +6,8 @@
  */
 
 import validator from "validator";
-import {getParamsMessage, getResMessage, MessageObject, ResponseMessage} from "@mconnect/mcresponse";
-import {ObjectId} from "mongodb";
+import { getParamsMessage, getResMessage, MessageObject, ResponseMessage } from "@mconnect/mcresponse";
+import { ObjectId } from "mongodb";
 import {
     ComputedMethodsType,
     DataTypes,
@@ -36,7 +36,7 @@ import {
     newSaveRecord,
     TaskTypes,
 } from "../crud";
-import {isEmptyObject} from "./helpers";
+import { isEmptyObject } from "./helpers";
 
 export class Model {
     private readonly collName: string;
@@ -591,12 +591,12 @@ export class Model {
 
     // ***** crud operations / methods : interface to the CRUD modules *****
 
-    async save(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage> {
+    async save(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage<any>> {
         try {
             // model specific params
             params.coll = this.modelCollName;
             params.docDesc = this.modelDocDesc;
-            this.taskType = TaskTypes.UNKNOWN;
+            this.taskType = TaskTypes.UNKNOWN;  // create or update
             // set checkAccess status for crud-task-permission control
             options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : false;
             this.checkAccess = options.checkAccess;
@@ -630,30 +630,32 @@ export class Model {
             };
             // instantiate CRUD-save class & perform save-crud task (create or update)
             const crud = newSaveRecord(params, options);
-            // determine / set taskType (CREATE/INSERT or UPDATE) | permission (if checkAccess: true)
-            // determine taskType - create or update (not both):
+            // validate docIds, for updates
             let docIds: Array<string> = [];
             for (const rec of params.actionParams) {
                 if (rec["_id"]) {
                     docIds.push(rec["_id"] as string);
                 }
             }
-            if (docIds.length === params.actionParams.length) {
-                params.taskType = TaskTypes.UPDATE;
-                params.docIds = docIds;
-                this.taskType = params.taskType;
-            } else if (params.actionParams.length === 1 &&
-                ((params.docIds && params.docIds.length > 0) ||
-                    (params.queryParams && !isEmptyObject(params.queryParams)))) {
-                params.taskType = TaskTypes.UPDATE;
-                this.taskType = params.taskType;
-            } else if (docIds.length === 0 && isEmptyObject(params.queryParams as MessageObject) &&
-                params.actionParams.length > 0) {
-                params.taskType = TaskTypes.CREATE;
-                this.taskType = params.taskType;
+            if (docIds.length > 0) {
+                params.docIds = docIds
+            }
+            // determine taskType - create or update (not both)
+            if (params.actionParams && params.actionParams.length > 0) {
+                const actParam = params.actionParams[0]
+                if (!actParam["id"] || actParam["id"] === "") {
+                    if (params.actionParams.length === 1 && (params.docIds && params.docIds?.length > 0) ||
+                        params.queryParams && !isEmptyObject(params.queryParams)) {
+                        this.taskType = TaskTypes.UPDATE
+                    } else {
+                        this.taskType = TaskTypes.CREATE
+                    }
+                } else {
+                    this.taskType = TaskTypes.UPDATE
+                }
             } else {
                 return getResMessage('saveError', {
-                    message: "Only Create or Update tasks, not both, may be performed exclusively",
+                    message: "Valid actionParams is required to perform save (create/update) task",
                 });
             }
             return await crud.saveRecord();
@@ -663,19 +665,17 @@ export class Model {
         }
     }
 
-    async get(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage> {
+    async get(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage<any>> {
         try {
             // model specific params
             params.coll = this.modelCollName;
             params.docDesc = this.modelDocDesc;
-            params.taskType = params.taskType || TaskTypes.READ;
+            params.taskType = TaskTypes.READ;
             this.taskType = params.taskType;
             // set access:
             options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
             this.checkAccess = options.checkAccess;
             const crud = newGetRecord(params, options);
-            // check access permission
-            let loginStatusRes: ResponseMessage = getResMessage("unknown");
             return await crud.getRecord();
         } catch (e) {
             console.error(e);
@@ -689,7 +689,7 @@ export class Model {
             // model specific params
             params.coll = this.modelCollName;
             params.docDesc = this.modelDocDesc;
-            params.taskType = params.taskType || TaskTypes.READ;
+            params.taskType = TaskTypes.READ;
             this.taskType = params.taskType;
             // set access:
             options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
@@ -702,13 +702,13 @@ export class Model {
         }
     }
 
-    async lookup(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage> {
+    async lookupGet(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage<any>> {
         // get lookup documents based on queryParams and model-relations definition
         try {
             // model specific params
             params.coll = this.modelCollName;
             params.docDesc = this.modelDocDesc;
-            params.taskType = params.taskType || TaskTypes.READ;
+            params.taskType = TaskTypes.READ;
             this.taskType = params.taskType;
             // set access
             options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
@@ -723,7 +723,7 @@ export class Model {
         }
     }
 
-    async delete(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage> {
+    async delete(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage<any>> {
         // validate queryParams based on model/docDesc
         try {
             // model specific params

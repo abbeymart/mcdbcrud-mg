@@ -6,7 +6,7 @@
 
 // Import required module/function(s)
 import { Db } from "mongodb";
-import { getResMessage, getParamsMessage, ResponseMessage } from "@mconnect/mcresponse";
+import { getParamsMessage, getResMessage, MessageCodes, ResponseMessage } from "@mconnect/mcresponse";
 import { isEmptyObject } from "../orm";
 import { validateLoadParams } from "./ValidateCrudParam";
 import { checkDb } from "../dbc";
@@ -27,7 +27,35 @@ class LoadRecord {
         this.maxQueryLimit = options && options.maxQueryLimit ? options.maxQueryLimit : 10000;
     }
 
-    async loadRecord(): Promise<ResponseMessage> {
+    async deleteRecord(): Promise<ResponseMessage<any>> {
+        // Check/validate the attributes / parameters
+        const dbCheck = checkDb(this.appDb);
+        if (dbCheck.code !== "success") {
+            return dbCheck;
+        }
+        try {
+            // use / activate database-collection
+            const appDbColl = this.appDb.collection(this.coll);
+            // clear the current collection documents/records, for refresh
+            const deleteRes = await appDbColl.deleteMany({});
+            if (deleteRes.acknowledged) {
+                return  getResMessage("success", {
+                    message: `${this.coll} collection - ${deleteRes.deletedCount} documents deleted successfully. Ready for data/documents refresh.`
+                })
+            }
+            return  getResMessage("deleteError", {
+                message: `Deletion task not acknowledged for ${this.coll}. Review system-error-log and retry.`
+            })
+        } catch (e) {
+            return getResMessage('insertError', {
+                message: `Error-inserting/creating new record(s). Please retry. ${e.message}`,
+                value  : {
+                    error: e,
+                },
+            });
+        }
+    }
+    async loadRecord(): Promise<ResponseMessage<any>> {
         // Check/validate the attributes / parameters
         const dbCheck = checkDb(this.appDb);
         if (dbCheck.code !== "success") {
@@ -46,7 +74,7 @@ class LoadRecord {
         Please do not send more than ${this.maxQueryLimit} records to load at a time`;
         }
         if (!isEmptyObject(errors)) {
-            return getParamsMessage(errors, "paramsError");
+            return getParamsMessage(errors, MessageCodes.paramsError);
         }
 
         // create/load multiple records
@@ -55,8 +83,6 @@ class LoadRecord {
             try {
                 // use / activate database-collection
                 const appDbColl = this.appDb.collection(this.coll);
-                // clear the current collection documents/records, for refresh
-                await appDbColl.deleteMany({});
                 // refresh (insert/create) new multiple records
                 const records = await appDbColl.insertMany(this.actionParams);
                 if (records.insertedCount > 0) {

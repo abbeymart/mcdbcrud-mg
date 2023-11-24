@@ -9,7 +9,7 @@
 import { ObjectId, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { isEmptyObject } from "../orm";
-import { deleteHashCache } from "@mconnect/mccache";
+import { deleteHashCache, QueryHashCacheParamsType } from "@mconnect/mccache";
 import Crud from "./Crud";
 import {
     CrudOptionsType, CrudParamsType, CrudResultType, LogDocumentsType, ObjectRefType, SubItemsType
@@ -32,7 +32,7 @@ class DeleteRecord extends Crud {
         this.deleteSetDefault = false;
     }
 
-    async deleteRecord(): Promise<ResponseMessage> {
+    async deleteRecord(): Promise<ResponseMessage<any>> {
         // Check/validate the attributes / parameters
         const dbCheck = this.checkDb(this.appDb);
         if (dbCheck.code !== "success") {
@@ -130,7 +130,7 @@ class DeleteRecord extends Crud {
     }
 
     // checkSubItemById checks referential integrity for same collection, by id
-    async checkSubItemById(): Promise<ResponseMessage> {
+    async checkSubItemById(): Promise<ResponseMessage<any>> {
         // check if any/some of the collection contain at least a sub-item/document
         const appDbColl = this.appDb.collection(this.coll);
         const docWithSubItems = await appDbColl.findOne({
@@ -150,7 +150,7 @@ class DeleteRecord extends Crud {
     }
 
     // checkSubItemByParams checks referential integrity for same collection, by queryParam
-    async checkSubItemByParams(): Promise<ResponseMessage> {
+    async checkSubItemByParams(): Promise<ResponseMessage<any>> {
         // check if any/some of the collection contain at least a sub-item/document
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             await this.getCurrentRecords("queryParams")
@@ -166,7 +166,7 @@ class DeleteRecord extends Crud {
     }
 
     // checkRefIntegrityById checks referential integrity for parent-child collections, by document-Id
-    async checkRefIntegrityById(): Promise<ResponseMessage> {
+    async checkRefIntegrityById(): Promise<ResponseMessage<any>> {
         // required-inputs: parent/child-collections and current item-id/item-name
         if (this.childRelations.length < 1) {
             return getResMessage("success", {
@@ -229,7 +229,7 @@ class DeleteRecord extends Crud {
     }
 
     // checkRefIntegrityByParams checks referential integrity for parent-child collections, by queryParams
-    async checkRefIntegrityByParams(): Promise<ResponseMessage> {
+    async checkRefIntegrityByParams(): Promise<ResponseMessage<any>> {
         // required-inputs: parent/child-collections and current item-id/item-name
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             await this.getCurrentRecords("queryParams")
@@ -244,7 +244,7 @@ class DeleteRecord extends Crud {
         })
     }
 
-    async removeRecordById(): Promise<ResponseMessage> {
+    async removeRecordById(): Promise<ResponseMessage<any>> {
         if (this.docIds.length < 1) {
             return getResMessage("deleteError", {message: "Valid document-ID(s) required"});
         }
@@ -262,7 +262,12 @@ class DeleteRecord extends Crud {
                 throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} removed]`)
             }
             // perform delete cache and audit-log tasks
-            deleteHashCache(this.cacheKey, this.coll);
+            const cacheParams: QueryHashCacheParamsType = {
+                key : this.cacheKey,
+                hash: this.coll,
+                by  : "hash",
+            }
+            deleteHashCache(cacheParams);
             let logRes = {code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null};
             if (this.logDelete || this.logCrud) {
                 const logDocuments: LogDocumentsType = {
@@ -270,7 +275,7 @@ class DeleteRecord extends Crud {
                 }
                 logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
             }
-            const deleteResultValue: CrudResultType = {
+            const deleteResultValue: CrudResultType<any> = {
                 recordsCount: removed.deletedCount,
                 logRes,
             }
@@ -286,7 +291,7 @@ class DeleteRecord extends Crud {
         }
     }
 
-    async removeRecordByParams(): Promise<ResponseMessage> {
+    async removeRecordByParams(): Promise<ResponseMessage<any>> {
         if (!this.queryParams || isEmptyObject(this.queryParams)) {
             return getResMessage("deleteError", {message: "Valid queryParams required"});
         }
@@ -298,7 +303,12 @@ class DeleteRecord extends Crud {
                 throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} removed]`)
             }
             // perform delete cache and audit-log tasks
-            deleteHashCache(this.cacheKey, this.coll);
+            const cacheParams: QueryHashCacheParamsType = {
+                key : this.cacheKey,
+                hash: this.coll,
+                by  : "hash",
+            }
+            deleteHashCache(cacheParams);
             let logRes = {
                 code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null
             };
@@ -308,7 +318,7 @@ class DeleteRecord extends Crud {
                 }
                 logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
             }
-            const deleteResultValue: CrudResultType = {
+            const deleteResultValue: CrudResultType<any> = {
                 recordsCount: removed.deletedCount,
                 logRes,
             }

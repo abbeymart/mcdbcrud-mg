@@ -8,7 +8,7 @@
 // Import required module/function(s)
 import { ObjectId, UpdateResult, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
-import { deleteHashCache } from "@mconnect/mccache";
+import { deleteHashCache, QueryHashCacheParamsType } from "@mconnect/mccache";
 import { isEmptyObject } from "../orm";
 import Crud from "./Crud";
 import {
@@ -37,7 +37,7 @@ class SaveRecord extends Crud {
         this.updateSetDefault = false;
     }
 
-    async saveRecord(): Promise<ResponseMessage> {
+    async saveRecord(): Promise<ResponseMessage<any>> {
         // Check/validate the attributes / parameters
         const dbCheck = this.checkDb(this.appDb);
         if (dbCheck.code !== "success") {
@@ -96,7 +96,7 @@ class SaveRecord extends Crud {
             try {
                 // check duplicate records, i.e. if similar records exist
                 if (this.existParams.length > 0) {
-                    const recExist: ResponseMessage = await this.checkRecExist();
+                    const recExist: ResponseMessage<any> = await this.checkRecExist();
                     if (recExist.code !== "success") {
                         return recExist;
                     }
@@ -315,7 +315,7 @@ class SaveRecord extends Crud {
         };
     }
 
-    async createRecord(): Promise<ResponseMessage> {
+    async createRecord(): Promise<ResponseMessage<any>> {
         if (this.createItems.length < 1) {
             return getResMessage("insertError", {
                 message: "Unable to create new record(s), due to incomplete/incorrect input-parameters. ",
@@ -334,7 +334,12 @@ class SaveRecord extends Crud {
                 throw new Error(`Unable to create new record(s), database error [${insertResult.insertedCount} of ${this.createItems.length} set to be created]`)
             }
             // perform delete cache and audit-log tasks | TODO: update mccache package & usage
-            deleteHashCache(this.cacheKey, this.coll, "hash");
+            const cacheParams: QueryHashCacheParamsType = {
+                key : this.cacheKey,
+                hash: this.coll,
+                by  : "hash",
+            }
+            deleteHashCache(cacheParams);
             // check the audit-log settings - to perform audit-log
             let logRes = {};
             if (this.logCreate || this.logCrud) {
@@ -358,7 +363,7 @@ class SaveRecord extends Crud {
         }
     }
 
-    async updateRecord(): Promise<ResponseMessage> {
+    async updateRecord(): Promise<ResponseMessage<any>> {
         if (this.isRecExist) {
             return getResMessage("recExist", {
                 message: this.recExistMessage,
@@ -418,7 +423,12 @@ class SaveRecord extends Crud {
                 }
             }
             // perform delete cache and audit-log tasks
-            deleteHashCache(this.cacheKey, this.coll, "hash");
+            const cacheParams: QueryHashCacheParamsType = {
+                key : this.cacheKey,
+                hash: this.coll,
+                by  : "hash",
+            }
+            deleteHashCache(cacheParams);
             // check the audit-log settings - to perform audit-log
             let logRes = {};
             if (this.logUpdate || this.logCrud) {
@@ -445,7 +455,7 @@ class SaveRecord extends Crud {
         }
     }
 
-    async updateRecordById(): Promise<ResponseMessage> {
+    async updateRecordById(): Promise<ResponseMessage<any>> {
         if (this.isRecExist) {
             return getResMessage("recExist", {
                 message: this.recExistMessage,
@@ -474,7 +484,12 @@ class SaveRecord extends Crud {
                 throw new Error("No records updated. Please retry.")
             }
             // perform delete cache and audit-log tasks
-            deleteHashCache(this.cacheKey, this.coll, "hash");
+            const cacheParams: QueryHashCacheParamsType = {
+                key : this.cacheKey,
+                hash: this.coll,
+                by  : "hash",
+            }
+            deleteHashCache(cacheParams);
             // check the audit-log settings - to perform audit-log
             let logRes = {};
             if (this.logUpdate || this.logCrud) {
@@ -501,7 +516,7 @@ class SaveRecord extends Crud {
         }
     }
 
-    async updateRecordByParams(): Promise<ResponseMessage> {
+    async updateRecordByParams(): Promise<ResponseMessage<any>> {
         if (this.isRecExist) {
             return getResMessage("recExist", {
                 message: this.recExistMessage,
@@ -530,7 +545,12 @@ class SaveRecord extends Crud {
                 throw new Error("No records updated. Please retry.")
             }
             // perform delete cache and audit-log tasks
-            deleteHashCache(this.cacheKey, this.coll, "hash");
+            const cacheParams: QueryHashCacheParamsType = {
+                key : this.cacheKey,
+                hash: this.coll,
+                by  : "hash",
+            }
+            deleteHashCache(cacheParams);
             // check the audit-log settings - to perform audit-log
             let logRes = {};
             if (this.logUpdate || this.logCrud) {

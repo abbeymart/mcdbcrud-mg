@@ -75,28 +75,28 @@ export interface GetRecordStats {
 
 export type GetRecords = Array<ObjectType>;
 
-export interface GetResultType {
+export interface GetResultType<T> {
     records: GetRecords,
     stats: GetRecordStats,
-    logRes?: ResponseMessage;
+    logRes?: ResponseMessage<T>;
     taskType?: string;
 }
 
-export interface CrudResultType {
+export interface CrudResultType<T> {
     queryParam?: QueryParamsType;
     recordIds?: Array<string>;
     recordsCount?: number;
     records?: ActionParamsType;
     taskType?: string;
-    logRes?: ResponseMessage;
+    logRes?: ResponseMessage<T>;
 }
 
-export interface SaveResultType {
+export interface SaveResultType<T> {
     queryParam?: QueryParamsType;
     recordIds?: Array<string>;
     recordsCount?: number;
     taskType?: string;
-    logRes?: ResponseMessage;
+    logRes?: ResponseMessage<T>;
 }
 
 export enum TaskTypes {

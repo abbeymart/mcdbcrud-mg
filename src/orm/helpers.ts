@@ -15,7 +15,7 @@ export function isEmptyObject(val: ObjectRefType): boolean {
 }
 
 // validateActionParams validates actParams for save (create or update) operation
-export function validateActionParams(actParams: ActionParamsType = []): ResponseMessage {
+export function validateActionParams(actParams: ActionParamsType = []): ResponseMessage<any> {
     // validate req-params: actionParams must be array or 1 or more item(s)
     if (actParams.length < 1) {
         return getResMessage('validateError', {
