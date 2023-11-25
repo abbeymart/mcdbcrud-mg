@@ -20,6 +20,7 @@ export interface DbOptionsType extends MongoClientOptions {
     reconnectInterval?: number;
     useNewUrlParser?: boolean;
     useUnifiedTopology?: boolean;
+    replicaSet?: string;
 }
 
 export interface DbParamsType {
