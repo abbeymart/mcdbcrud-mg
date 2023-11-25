@@ -256,7 +256,7 @@ export type PromiseResponseType = Promise<string>
 export interface ActionParamTaskType {
     createItems: ActionParamsType;
     updateItems: ActionParamsType;
-    docIds: Array<string>;
+    docIds?: Array<string>;
 }
 
 export interface AppParamsType {

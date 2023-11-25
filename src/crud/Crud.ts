@@ -87,7 +87,7 @@ export class Crud {
         this.taskType = params && params.taskType ? params.taskType : "";
         this.docIds = params && params.docIds ? params.docIds : [];
         // options
-        this.userId = options?.userId? options.userId : 'not-specified';
+        this.userId = params.userInfo?.userId? params.userInfo.userId : options?.userId? options.userId : 'not-specified';
         this.skip = params.skip ? params.skip : options?.skip ? options.skip : 0;
         this.limit = params.limit ? params.limit : options?.limit ? options.limit : 10000;
         this.parentColls = options?.parentColls ? options.parentColls : [];
@@ -131,7 +131,7 @@ export class Crud {
         this.updateItems = [];
         this.currentRecs = [];
         this.subItems = [];
-        this.isRecExist = true;
+        this.isRecExist = false;
         this.actionAuthorized = false;
         this.recExistMessage = "Save / update error or duplicate documents exist. ";
         this.unAuthorizedMessage = "Action / task not authorised or permitted. ";

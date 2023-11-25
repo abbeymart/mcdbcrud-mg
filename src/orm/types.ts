@@ -5,7 +5,7 @@
  * @Description: mc-orm types
  */
 
-import {FieldValueTypes} from "../crud";
+import { FieldValueTypes } from "../crud";
 
 export enum DataTypes {
     STRING = "string",
@@ -164,7 +164,11 @@ export const BaseModel: DocDescType = {
         defaultValue: new Date(),
     },
     deletedAt  : DataTypes.DATETIME,
-    appId      : DataTypes.STRING,  // application-id in a multi-hosted apps environment (e.g. cloud-env)
+    appId      : {
+        fieldType: DataTypes.STRING,
+        allowNull: true,
+        comments : "application-id in a multi-hosted apps environment (e.g. cloud-env)",
+    },
 }
 
 export interface ModelDescType {

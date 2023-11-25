@@ -8,7 +8,7 @@
 import { DataTypes, ModelDescType, BaseModel } from "../src";
 
 const UserProfileModel: ModelDescType = {
-    tableName: "userProfiles",
+    collName: "userProfiles",
     docDesc  : {
         firstName : {
             fieldType  : DataTypes.STRING,
@@ -26,7 +26,7 @@ const UserProfileModel: ModelDescType = {
 }
 
 const UserModel: ModelDescType = {
-    tableName: "users",
+    collName: "users",
     docDesc  : {
         ...BaseModel,
         _id       : DataTypes.MONGODB_ID,

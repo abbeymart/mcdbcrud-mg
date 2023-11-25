@@ -1,5 +1,10 @@
 # Historical logs
 
+## Version 0.2.0
+
+- Release date: Nov-24-2023
+- Updated-audit-crud-methods-and-types-v0.2.0
+
 ## Version 0.1.0
 
 - Release date: Nov-12-2022

@@ -5,31 +5,31 @@ import {
     TaskTypes, QueryParamsType, ActionParamsType, ModelRelationType, RelationTypes, RelationActionTypes, ModelDescType,
     BaseModel, DataTypes, ModelCrudOptionsType, newModel,
 } from "../src"
-import {collections} from "./collections";
+import { collections } from "./collections";
 
 // Models
 
 // TODO: include groups and categories collections, with relations-specs
 
 export const groupModel: ModelDescType = {
-    tableName: collections.GROUPS,
-    docDesc  : {
+    collName   : collections.GROUPS,
+    docDesc    : {
         ...BaseModel,
-        name   : {
+        name     : {
             fieldType  : DataTypes.STRING,
             fieldLength: 100,
             allowNull  : false,
         },
-        ownerId: DataTypes.STRING,
+        iconStyle: DataTypes.STRING,
     },
-    timeStamp: true,
+    timeStamp  : true,
     activeStamp: true,
     actorStamp : true,
 }
 
 export const categoryModel: ModelDescType = {
-    tableName: collections.CATEGORIES,
-    docDesc  : {
+    collName   : collections.CATEGORIES,
+    docDesc    : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -129,7 +129,7 @@ export const CategoryModel = newModel(categoryModel, categoryOptions);
 
 
 export interface AuditType {
-    id: string;
+    _id: string; // => map to _id (mongodb), especially for UI components
     collName: string;
     collDocuments: any;
     newCollDocuments: any;
@@ -139,13 +139,13 @@ export interface AuditType {
 }
 
 export const AuditModel: AuditType = {
-    id           : "",
-    tableName    : "",
-    logRecords   : null,
-    newLogRecords: null,
-    logType      : "",
-    logBy        : "",
-    logAt        : new Date(),
+    _id             : "",
+    collName        : "",
+    collDocuments   : null,
+    newCollDocuments: null,
+    logType         : "",
+    logBy           : "",
+    logAt           : new Date(),
 }
 
 export const AuditTable = "audits"
@@ -162,7 +162,7 @@ export const UserId = "c85509ac-7373-464d-b667-425bb59b5738" // TODO: review/upd
 export const TestUserInfo: UserInfoType = {
     userId   : "c85509ac-7373-464d-b667-425bb59b5738",
     loginName: "abbeymart",
-    email    : "abbeya1@yahoo.com",
+    email    : "abbeymart@yahoo.com",
     language : "en-US",
     firstname: "Abi",
     lastname : "Akindele",
@@ -227,39 +227,39 @@ export const NewLogRecords2: ActionParamType = {
 // create record(s)
 
 export const AuditCreateRec1: ActionParamType = {
-    "tableName" : "audits",
-    "logAt"     : new Date(),
-    "logBy"     : UserId,
-    "logRecords": LogRecords,
-    "logType"   : TaskTypes.CREATE,
+    "collName"     : "audits",
+    "logAt"        : new Date(),
+    "logBy"        : UserId,
+    "collDocuments": LogRecords,
+    "logType"      : TaskTypes.CREATE,
 }
 
 export const AuditCreateRec2: ActionParamType = {
-    "tableName" : "audits",
-    "logAt"     : new Date(),
-    "logBy"     : UserId,
-    "logRecords": LogRecords2,
-    "logType"   : TaskTypes.CREATE,
+    "collName"     : "audits",
+    "logAt"        : new Date(),
+    "logBy"        : UserId,
+    "collDocuments": LogRecords2,
+    "logType"      : TaskTypes.CREATE,
 }
 
 export const AuditUpdateRec1: ActionParamType = {
-    "id"           : "c1c3f614-b10d-40a4-9269-4e03f5fcf55e",
-    "tableName"    : "todos",
-    "logAt"        : new Date(),
-    "logBy"        : UserId,
-    "logRecords"   : LogRecords,
-    "newLogRecords": NewLogRecords,
-    "logType"      : TaskTypes.UPDATE,
+    "_id"              : "638fd565c97d023503c6a0d8",
+    "collName"        : "todos",
+    "logAt"           : new Date(),
+    "logBy"           : UserId,
+    "collDocuments"   : LogRecords,
+    "newCollDocuments": NewLogRecords,
+    "logType"         : TaskTypes.UPDATE,
 }
 
 export const AuditUpdateRec2: ActionParamType = {
-    "id"           : "003c1422-c7cb-476f-b96f-9c8028e04a14",
-    "tableName"    : "todos",
-    "logAt"        : new Date(),
-    "logBy"        : UserId,
-    "logRecords"   : LogRecords2,
-    "newLogRecords": NewLogRecords2,
-    "logType"      : TaskTypes.UPDATE,
+    "_id"              : "638fd565c97d023503c6a0d9",
+    "collName"        : "todos",
+    "logAt"           : new Date(),
+    "logBy"           : UserId,
+    "collDocuments"   : LogRecords2,
+    "newCollDocuments": NewLogRecords2,
+    "logType"         : TaskTypes.UPDATE,
 }
 
 export const AuditCreateActionParams: ActionParamsType = [
@@ -275,51 +275,51 @@ export const AuditUpdateActionParams: ActionParamsType = [
 // TODO: update and delete params, by ids / queryParams
 
 export const AuditUpdateRecordById: ActionParamType = {
-    "id"           : "a345c33f-d9bf-47a4-aab5-3979528a0972",
-    "tableName"    : "groups",
-    "logAt"        : new Date(),
-    "logBy"        : UserId,
-    "logRecords"   : LogRecords,
-    "newLogRecords": NewLogRecords,
-    "logType"      : TaskTypes.DELETE,
+    // "_id"              : "638fd565c97d023503c6a0db",
+    "collName"        : "groups",
+    "logAt"           : new Date(),
+    "logBy"           : UserId,
+    "collDocuments"   : LogRecords,
+    "newCollDocuments": NewLogRecords,
+    "logType"         : TaskTypes.DELETE,
 }
 
 export const AuditUpdateRecordByParam: ActionParamType = {
-    "id"           : "d9cb7344-2c37-4492-9bf1-d6fa5ccc9634",
-    "tableName"    : "contacts",
-    "logAt"        : new Date(),
-    "logBy"        : UserId,
-    "logRecords"   : LogRecords,
-    "newLogRecords": NewLogRecords,
-    "logType"      : TaskTypes.UPDATE,
+    // "_id"              : "638fd565c97d023503c6a0dc",
+    "collName"        : "contacts",
+    "logAt"           : new Date(),
+    "logBy"           : UserId,
+    "collDocuments"   : LogRecords,
+    "newCollDocuments": NewLogRecords,
+    "logType"         : TaskTypes.UPDATE,
 }
 
-// GetIds: for get-records by ids & params | TODO: update ids after create
+// GetIds: for get-records by ids & params
 
-export const GetAuditById = "40afeaf8-abbb-43be-9c44-1642f393f0e9"
-export const GetAuditByIds = ["40afeaf8-abbb-43be-9c44-1642f393f0e9",
-    "5cd69f14-1945-400a-91fd-8ea6ca51cd64"] as Array<string>
+export const GetAuditById = "638fd565c97d023503c6a0d8"
+export const GetAuditByIds = ["638fd565c97d023503c6a0d8",
+    "638fd565c97d023503c6a0d9"] as Array<string>
 export const GetAuditByParams: QueryParamsType = {
     "logType": "create",
 }
 
-export const DeleteAuditById = "d9cb7344-2c37-4492-9bf1-d6fa5ccc9634"
+export const DeleteAuditById = "638fd565c97d023503c6a0d8"
 export const DeleteAuditByIds: Array<string> = [
-    "40afeaf8-abbb-43be-9c44-1642f393f0e9",
-    "3e56eb70-9fa1-4881-b8b4-11a114cb5673",
-    "2cb32875-2268-4636-a2da-298611a19fd3",
-    "7bedcf6d-d229-4553-9ff0-19011e7ac0ff",
+    "638fd565c97d023503c6a0dc",
+    "638fd565c97d023503c6a0dd",
+    "638fd835c77947991e7f7e11",
+    "638fd835c77947991e7f7e12",
 ]
 
 export const DeleteAuditByParams: QueryParamsType = {
     "logType": "read",
 }
 
-export const UpdateAuditById = "d9cb7344-2c37-4492-9bf1-d6fa5ccc9634"
+export const UpdateAuditById = "638fd565c97d023503c6a0d8"
 export const UpdateAuditByIds: Array<string> = [
-    "d9cb7344-2c37-4492-9bf1-d6fa5ccc9634",
-    "40afeaf8-abbb-43be-9c44-1642f393f0e9",
-    "8d090d92-a916-4683-8619-4aa1484c6544",
+    "638fd565c97d023503c6a0d8",
+    "638fd565c97d023503c6a0d9",
+    "638fd565c97d023503c6a0da",
 ]
 
 export const UpdateAuditByParams: QueryParamsType = {

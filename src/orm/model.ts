@@ -643,7 +643,7 @@ export class Model {
             // determine taskType - create or update (not both)
             if (params.actionParams && params.actionParams.length > 0) {
                 const actParam = params.actionParams[0]
-                if (!actParam["id"] || actParam["id"] === "") {
+                if (!actParam["_id"] || actParam["_id"] === "") {
                     if (params.actionParams.length === 1 && (params.docIds && params.docIds?.length > 0) ||
                         params.queryParams && !isEmptyObject(params.queryParams)) {
                         this.taskType = TaskTypes.UPDATE

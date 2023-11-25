@@ -1,31 +1,24 @@
-import {assertEquals, assertNotEquals, mcTest, postTestResult} from '@mconnect/mctest';
-import {appDb, auditDb, dbOptions} from "./config";
-import {CrudOptionsType, CrudParamsType, GetResultType, newDbMongo, newGetRecord} from "../src";
+import { assertEquals, assertNotEquals, mcTest, postTestResult } from '@mconnect/mctest';
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "./config";
+import { CrudOptionsType, CrudParamsType, GetResultType, newDbMongo, newGetRecord } from "../src";
 import {
-    CrudParamOptions, GetTable, TestUserInfo, AuditModel, GetAuditById, GetAuditByIds, GetAuditByParams, AuditTable
+    GetTable, TestUserInfo, GetAuditById, GetAuditByIds, GetAuditByParams, AuditTable,
 } from "./testData";
-import {Db, MongoClient} from "mongodb";
 
-const appDbInstance = newDbMongo(appDb, dbOptions);
-const auditDbInstance = newDbMongo(auditDb, dbOptions);
-
-let appDbHandle: Db;
-let appDbClient: MongoClient;
-let auditDbHandle: Db;
-let auditDbClient: MongoClient;
-
+const appDbInstance = newDbMongo(appDbLocal, dbOptionsLocal);
+const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
 
 (async () => {
     // DB clients/handles
-    appDbHandle = await appDbInstance.openDb()
-    appDbClient = await appDbInstance.mgServer()
-    auditDbHandle = await auditDbInstance.openDb()
-    auditDbClient = await auditDbInstance.mgServer()
+    const appDbHandle = await appDbInstance.openDb()
+    const appDbClient = await appDbInstance.mgServer()
+    const auditDbHandle = await auditDbInstance.openDb()
+    const auditDbClient = await auditDbInstance.mgServer()
 
     const crudParams: CrudParamsType = {
         appDb      : appDbHandle,
         dbClient   : appDbClient,
-        dbName     : appDb.database,
+        dbName     : appDbLocal.database || "mcdev",
         coll       : GetTable,
         userInfo   : TestUserInfo,
         docIds     : [],
@@ -35,8 +28,9 @@ let auditDbClient: MongoClient;
     const crudOptions: CrudOptionsType = {
         auditDb      : auditDbHandle,
         auditDbClient: auditDbClient,
-        auditDbName  : appDb.database,
+        auditDbName  : auditDbLocal.database || "mcdevaudit",
         auditColl    : AuditTable,
+        userId       : TestUserInfo.userId,
         checkAccess  : false,
         logCrud      : true,
         logRead      : true,
@@ -51,9 +45,9 @@ let auditDbClient: MongoClient;
         testFunc: async () => {
             crudParams.docIds = [GetAuditById]
             crudParams.queryParams = {}
-            const crud = newGetRecord(crudParams, CrudParamOptions);
+            const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType
+            const resValue = res.value as GetResultType<any>
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -68,9 +62,9 @@ let auditDbClient: MongoClient;
         testFunc: async () => {
             crudParams.docIds = GetAuditByIds
             crudParams.queryParams = {}
-            const crud = newGetRecord(crudParams, CrudParamOptions);
+            const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType
+            const resValue = res.value as GetResultType<any>
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -85,9 +79,9 @@ let auditDbClient: MongoClient;
         testFunc: async () => {
             crudParams.docIds = []
             crudParams.queryParams = GetAuditByParams
-            const crud = newGetRecord(crudParams, CrudParamOptions);
+            const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType
+            const resValue = res.value as GetResultType<any>
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -103,10 +97,10 @@ let auditDbClient: MongoClient;
             crudParams.coll = GetTable
             crudParams.docIds = []
             crudParams.queryParams = {}
-            CrudParamOptions.getAllRecords = true
-            const crud = newGetRecord(crudParams, CrudParamOptions);
+            crudOptions.getAllRecords = true
+            const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType
+            const resValue = res.value as GetResultType<any>
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -124,10 +118,10 @@ let auditDbClient: MongoClient;
             crudParams.queryParams = {}
             crudParams.skip = 0
             crudParams.limit = 20
-            CrudParamOptions.getAllRecords = true
-            const crud = newGetRecord(crudParams, CrudParamOptions);
+            crudOptions.getAllRecords = true
+            const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType
+            const resValue = res.value as GetResultType<any>
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -138,7 +132,7 @@ let auditDbClient: MongoClient;
     });
 
     await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
 
 })();
