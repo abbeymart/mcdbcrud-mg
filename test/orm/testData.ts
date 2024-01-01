@@ -3,9 +3,9 @@
 import {
     ActionParamType, QueryParamsType, ModelRelationType, RelationTypes, RelationActionTypes,
     ModelDescType, BaseModel, DataTypes, ModelCrudOptionsType, newModel,
-    BaseModelType,
-} from "../../src/index.ts"
-import { collections } from "../collections.ts";
+    BaseModelType
+} from "../../src"
+import {collections} from "../collections";
 
 // Models
 

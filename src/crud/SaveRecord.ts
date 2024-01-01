@@ -233,7 +233,7 @@ class SaveRecord extends Crud {
                 } else {
                     // create new record
                     // exclude any traces/presence of id, especially without concrete value ("", null, undefined)
-                    const {id, ...itemRec} = item;
+                    const {_id, ...itemRec} = item;
                     if (modelOptions.actorStamp) {
                         itemRec["createdBy"] = this.userId;
                     }
@@ -282,7 +282,7 @@ class SaveRecord extends Crud {
                 } else {
                     // create new document/record
                     // exclude any traces/presence of id, especially without concrete value ("", null, undefined)
-                    const {id, ...itemRec} = item;
+                    const {_id, ...itemRec} = item;
                     if (modelOptions.actorStamp) {
                         itemRec["createdBy"] = this.userId;
                     }

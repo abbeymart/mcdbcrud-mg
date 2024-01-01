@@ -43,7 +43,7 @@ export type SortParamsType = Map<string, SortDirection> // key:direction => 1 fo
 export type ObjectType = ObjectRefType | object;
 
 export interface BaseModelType {
-    id?: string;
+    _id?: string;
     language?: string;
     description?: string;
     appId?: string;
