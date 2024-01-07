@@ -1,23 +1,24 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16, 2023-11-23
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16, 2023-11-23, 2024-01-06
  * Updated 2018-04-08, prototype-to-class
  * @Company: mConnect.biz | @License: MIT
- * @Description: delete one or more records / documents by docIds or queryParams
+ * @Description: delete one or more records / documents by recordIds or queryParams
  */
 
 // Import required module/function(s)
 import { ObjectId, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
-import { isEmptyObject } from "../orm";
+import {isEmptyObject} from "./utils";
 import { deleteHashCache, QueryHashCacheParamsType } from "@mconnect/mccache";
 import Crud from "./Crud";
 import {
-    CrudOptionsType, CrudParamsType, CrudResultType, LogDocumentsType, ObjectRefType, SubItemsType
+    AuditLogParamsType,
+    CrudOptionsType, CrudParamsType, CrudResultType, LogRecordsType, ObjectRefType, SubItemsType
 } from "./types";
 import { RelationActionTypes } from "../orm";
 
 class DeleteRecord extends Crud {
-    protected collRestrict: boolean;
+    protected tableRestrict: boolean = false;
     protected deleteRestrict: boolean;
     protected deleteSetNull: boolean;
     protected deleteSetDefault: boolean;
@@ -26,13 +27,13 @@ class DeleteRecord extends Crud {
         super(params, options);
         // Set specific instance properties
         this.currentRecs = [];
-        this.collRestrict = false;
+        this.tableRestrict = false;
         this.deleteRestrict = false;
         this.deleteSetNull = false;
         this.deleteSetDefault = false;
     }
 
-    async deleteRecord(): Promise<ResponseMessage<any>> {
+    async deleteRecord(): Promise<ResponseMessage> {
         // Check/validate the attributes / parameters
         const dbCheck = this.checkDb(this.appDb);
         if (dbCheck.code !== "success") {
@@ -50,28 +51,28 @@ class DeleteRecord extends Crud {
             this.queryParams = otherParams;
         }
 
-        // delete / remove item(s) by docId(s) | usually for owner, admin and by role-assignment on collection/collection-documents
-        if (this.docIds && this.docIds.length > 0) {
+        // delete / remove item(s) by docId(s) | usually for owner, admin and by role-assignment on table-documents
+        if (this.recordIds && this.recordIds.length > 0) {
             try {
                 this.deleteRestrict = this.childRelations.filter(item => item.onDelete === RelationActionTypes.RESTRICT).length > 0;
                 this.deleteSetDefault = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT).length > 0;
                 this.deleteSetNull = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL).length > 0;
-                this.collRestrict = this.childRelations.filter(item => (item.onDelete === RelationActionTypes.RESTRICT && item.sourceColl === item.targetColl)).length > 0;
+                this.tableRestrict = this.childRelations.filter(item => (item.onDelete === RelationActionTypes.RESTRICT && item.sourceTable === item.targetTable)).length > 0;
                 // check if records exist, for delete and audit-log
-                if (this.logDelete || this.logCrud || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.collRestrict) {
+                if (this.logDelete || this.logCrud || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.tableRestrict) {
                     const recExist = await this.getCurrentRecords("id");
                     if (recExist.code !== "success") {
                         return recExist;
                     }
                 }
-                // sub-items integrity check, same collection
-                if (this.collRestrict) {
+                // sub-items integrity check, same table
+                if (this.tableRestrict) {
                     const subItem = await this.checkSubItemById();
                     if (subItem.code !== "success") {
                         return subItem;
                     }
                 }
-                // parent-child integrity check, multiple collections
+                // parent-child integrity check, multiple tables
                 if (this.deleteRestrict) {
                     const refIntegrity = await this.checkRefIntegrityById();
                     if (refIntegrity.code !== "success") {
@@ -87,28 +88,28 @@ class DeleteRecord extends Crud {
             }
         }
 
-        // delete / remove item(s) by queryParams | usually for owner, admin and by role-assignment on collection/collection-documents
+        // delete / remove item(s) by queryParams | usually for owner, admin and by role-assignment on table-records
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             try {
                 this.deleteRestrict = this.childRelations.map(item => item.onDelete === RelationActionTypes.RESTRICT).length > 0;
                 this.deleteSetDefault = this.childRelations.map(item => item.onDelete === RelationActionTypes.SET_DEFAULT).length > 0;
                 this.deleteSetNull = this.childRelations.map(item => item.onDelete === RelationActionTypes.SET_NULL).length > 0;
-                this.collRestrict = this.childRelations.map(item => (item.onDelete === RelationActionTypes.RESTRICT && item.sourceColl === item.targetColl)).length > 0;
+                this.tableRestrict = this.childRelations.map(item => (item.onDelete === RelationActionTypes.RESTRICT && item.sourceTable === item.targetTable)).length > 0;
                 // check if records exist, for delete and audit-log
-                if (this.logDelete || this.logCrud || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.collRestrict) {
+                if (this.logDelete || this.logCrud || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.tableRestrict) {
                     const recExist = await this.getCurrentRecords("queryParams");
                     if (recExist.code !== "success") {
                         return recExist;
                     }
                 }
-                // sub-items integrity check, same collection
-                if (this.collRestrict) {
+                // sub-items integrity check, same table
+                if (this.tableRestrict) {
                     const subItem = await this.checkSubItemByParams();
                     if (subItem.code !== "success") {
                         return subItem;
                     }
                 }
-                // parent-child integrity check, multiple collections
+                // parent-child integrity check, multiple tables
                 if (this.deleteRestrict) {
                     const refIntegrity = await this.checkRefIntegrityByParams();
                     if (refIntegrity.code !== "success") {
@@ -129,13 +130,13 @@ class DeleteRecord extends Crud {
         });
     }
 
-    // checkSubItemById checks referential integrity for same collection, by id
-    async checkSubItemById(): Promise<ResponseMessage<any>> {
-        // check if any/some of the collection contain at least a sub-item/document
-        const appDbColl = this.appDb.collection(this.coll);
+    // checkSubItemById checks referential integrity for same table, by id
+    async checkSubItemById(): Promise<ResponseMessage> {
+        // check if any/some of the table contain at least a sub-item/document
+        const appDbColl = this.appDb.collection(this.tableName);
         const docWithSubItems = await appDbColl.findOne({
             parentId: {
-                $in: this.docIds,
+                $in: this.recordIds,
             }
         });
         if (docWithSubItems && !isEmptyObject(docWithSubItems)) {
@@ -149,14 +150,14 @@ class DeleteRecord extends Crud {
         }
     }
 
-    // checkSubItemByParams checks referential integrity for same collection, by queryParam
-    async checkSubItemByParams(): Promise<ResponseMessage<any>> {
-        // check if any/some of the collection contain at least a sub-item/document
+    // checkSubItemByParams checks referential integrity for same table, by queryParam
+    async checkSubItemByParams(): Promise<ResponseMessage> {
+        // check if any/some of the table contain at least a sub-item/document
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             await this.getCurrentRecords("queryParams")
-            this.docIds = [];          // reset docIds instance value
+            this.recordIds = [];          // reset recordIds instance value
             this.currentRecs.forEach((item: ObjectRefType) => {
-                this.docIds.push(item["_id"]);
+                this.recordIds.push(item["_id"]);
             });
             return await this.checkSubItemById();
         }
@@ -165,27 +166,27 @@ class DeleteRecord extends Crud {
         })
     }
 
-    // checkRefIntegrityById checks referential integrity for parent-child collections, by document-Id
-    async checkRefIntegrityById(): Promise<ResponseMessage<any>> {
-        // required-inputs: parent/child-collections and current item-id/item-name
+    // checkRefIntegrityById checks referential integrity for parent-child tables, by document-Id
+    async checkRefIntegrityById(): Promise<ResponseMessage> {
+        // required-inputs: parent/child-tables and current item-id/item-name
         if (this.childRelations.length < 1) {
             return getResMessage("success", {
                 message: "no data integrity condition specified or required",
             });
         }
-        if (this.docIds.length > 0) {
-            // prevent item delete, if child-collection-items reference itemId
+        if (this.recordIds.length > 0) {
+            // prevent item delete, if child-table-items reference itemId
             let subItems: Array<SubItemsType> = []
-            // docIds ref-check
+            // recordIds ref-check
             const childExist = this.childRelations.some(async (relation) => {
-                const targetDbColl = this.appDb.collection(relation.targetColl);
+                const targetDbColl = this.appDb.collection(relation.targetTable);
                 // include foreign-key/target as the query condition
                 const targetField = relation.targetField;
                 const sourceField = relation.sourceField;
                 const query: ObjectRefType = {}
                 if (sourceField === "_id") {
                     query[targetField] = {
-                        $in: this.docIds,
+                        $in: this.recordIds,
                     }
                 } else {
                     // other source-fields besides _id
@@ -197,13 +198,13 @@ class DeleteRecord extends Crud {
                 const collItem = targetDbColl.find(query);
                 if (collItem && !isEmptyObject(collItem)) {
                     subItems.push({
-                        collName          : relation.targetColl,
+                        tableName         : relation.targetTable,
                         hasRelationRecords: true,
                     });
                     return true;
                 } else {
                     subItems.push({
-                        collName          : relation.targetColl,
+                        tableName         : relation.targetTable,
                         hasRelationRecords: false,
                     });
                     return false;
@@ -212,7 +213,7 @@ class DeleteRecord extends Crud {
             this.subItems = subItems;
             if (childExist) {
                 return getResMessage("subItems", {
-                    message: `A record that contains sub-items cannot be deleted. Delete/remove the sub-items [from ${this.childColls.join(", ")} collection(s)], first.`,
+                    message: `A record that contains sub-items cannot be deleted. Delete/remove the sub-items [from ${this.childTables.join(", ")} table(s)], first.`,
                     value  : subItems,
                 });
             } else {
@@ -223,19 +224,19 @@ class DeleteRecord extends Crud {
             }
         } else {
             return getResMessage("success", {
-                message: "docIds is required for integrity check/validation",
+                message: "recordIds is required for integrity check/validation",
             });
         }
     }
 
-    // checkRefIntegrityByParams checks referential integrity for parent-child collections, by queryParams
-    async checkRefIntegrityByParams(): Promise<ResponseMessage<any>> {
-        // required-inputs: parent/child-collections and current item-id/item-name
+    // checkRefIntegrityByParams checks referential integrity for parent-child tables, by queryParams
+    async checkRefIntegrityByParams(): Promise<ResponseMessage> {
+        // required-inputs: parent/child-tables and current item-id/item-name
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             await this.getCurrentRecords("queryParams")
-            this.docIds = [];
+            this.recordIds = [];
             this.currentRecs.forEach((item: ObjectRefType) => {
-                this.docIds.push(item["_id"]);
+                this.recordIds.push(item["_id"]);
             });
             return await this.checkRefIntegrityById();
         }
@@ -244,18 +245,18 @@ class DeleteRecord extends Crud {
         })
     }
 
-    async removeRecordById(): Promise<ResponseMessage<any>> {
-        if (this.docIds.length < 1) {
+    async removeRecordById(): Promise<ResponseMessage> {
+        if (this.recordIds.length < 1) {
             return getResMessage("deleteError", {message: "Valid document-ID(s) required"});
         }
-        // delete/remove records and log in audit-collection
+        // delete/remove records and log in audit-table
         try {
-            const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
+            const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
             // id(s): convert string to ObjectId
-            const docIds = this.docIds.map(id => new ObjectId(id));
+            const recordIds = this.recordIds.map(id => new ObjectId(id));
             const removed = await appDbColl.deleteMany({
                 _id: {
-                    $in: docIds,
+                    $in: recordIds,
                 }
             },);
             if (!removed.acknowledged || removed.deletedCount < 1) {
@@ -264,18 +265,23 @@ class DeleteRecord extends Crud {
             // perform delete cache and audit-log tasks
             const cacheParams: QueryHashCacheParamsType = {
                 key : this.cacheKey,
-                hash: this.coll,
+                hash: this.tableName,
                 by  : "hash",
             }
             deleteHashCache(cacheParams);
             let logRes = {code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null};
             if (this.logDelete || this.logCrud) {
-                const logDocuments: LogDocumentsType = {
-                    collDocuments: this.currentRecs,
+                const logRecs: LogRecordsType = {
+                    logRecords: this.currentRecs,
                 }
-                logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
+                const logParams: AuditLogParamsType = {
+                    logRecords: logRecs,
+                    tableName : this.tableName,
+                    logBy     : this.userId,
+                }
+                logRes = await this.transLog.deleteLog(this.userId, logParams);
             }
-            const deleteResultValue: CrudResultType<any> = {
+            const deleteResultValue: CrudResultType = {
                 recordsCount: removed.deletedCount,
                 logRes,
             }
@@ -291,13 +297,13 @@ class DeleteRecord extends Crud {
         }
     }
 
-    async removeRecordByParams(): Promise<ResponseMessage<any>> {
+    async removeRecordByParams(): Promise<ResponseMessage> {
         if (!this.queryParams || isEmptyObject(this.queryParams)) {
             return getResMessage("deleteError", {message: "Valid queryParams required"});
         }
-        // delete/remove records and log in audit-collection
+        // delete/remove records and log in audit-table
         try {
-            const appDbColl = this.dbClient.db(this.dbName).collection(this.coll);
+            const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
             const removed = await appDbColl.deleteMany(this.queryParams,);
             if (!removed.acknowledged || removed.deletedCount < 1) {
                 throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} removed]`)
@@ -305,7 +311,7 @@ class DeleteRecord extends Crud {
             // perform delete cache and audit-log tasks
             const cacheParams: QueryHashCacheParamsType = {
                 key : this.cacheKey,
-                hash: this.coll,
+                hash: this.tableName,
                 by  : "hash",
             }
             deleteHashCache(cacheParams);
@@ -313,12 +319,17 @@ class DeleteRecord extends Crud {
                 code: "unknown", message: "in-determinate", resCode: 200, resMessage: "", value: null
             };
             if (this.logDelete || this.logCrud) {
-                const logDocuments: LogDocumentsType = {
-                    collDocuments: this.currentRecs,
+                const logRecs: LogRecordsType = {
+                    logRecords: this.currentRecs,
                 }
-                logRes = await this.transLog.deleteLog(this.coll, logDocuments, this.userId);
+                const logParams: AuditLogParamsType = {
+                    logRecords: logRecs,
+                    tableName : this.tableName,
+                    logBy     : this.userId,
+                }
+                logRes = await this.transLog.deleteLog(this.userId, logParams);
             }
-            const deleteResultValue: CrudResultType<any> = {
+            const deleteResultValue: CrudResultType = {
                 recordsCount: removed.deletedCount,
                 logRes,
             }

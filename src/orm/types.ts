@@ -111,8 +111,8 @@ export interface FieldDescType {
     unique?: boolean;
     indexable?: boolean;
     primaryKey?: boolean;
-    minValue?: number;
-    maxValue?: number;
+    minValue?: number | Date | string;
+    maxValue?: number | Date | string;
     setValue?: SetValueType;    // set/transform fieldValue prior to save(create/insert), T=>fieldType
     defaultValue?: DefaultValueType | FieldValueTypes;  // result/T must be of fieldType
     validate?: ValidateMethodType;  // T=>fieldType, returns a bool (valid=true/invalid=false)
@@ -121,8 +121,8 @@ export interface FieldDescType {
 }
 
 export interface ModelRelationType {
-    sourceColl: string;
-    targetColl: string;
+    sourceTable: string;
+    targetTable: string;
     sourceField: string;
     targetField: string;
     relationType: RelationTypes;
@@ -130,16 +130,16 @@ export interface ModelRelationType {
     targetModel?: ModelDescType;
     foreignField?: string;  // source-to-targetField map
     relationField?: string; // relation-targetField, for many-to-many
-    relationColl?: string;  // optional collName for many-to-many | default: sourceTarget or source_target
+    relationTable?: string;  // optional tableName for many-to-many | default: sourceTarget or source_target
     onDelete?: RelationActionTypes;
     onUpdate?: RelationActionTypes;
 }
 
-export interface DocDescType {
+export interface TableDescType {
     [key: string]: DataTypes | FieldDescType | ModelDescType;       // TODO: ModelDescType case-handling - optional
 }
 
-export const BaseModel: DocDescType = {
+export const BaseModel: TableDescType = {
     _id        : DataTypes.MONGODB_ID,
     language   : {
         fieldType   : DataTypes.STRING,
@@ -172,14 +172,14 @@ export const BaseModel: DocDescType = {
 }
 
 export interface ModelDescType {
-    collName: string;
-    docDesc: DocDescType;
+    tableName: string;
+    tableDesc: TableDescType;
     timeStamp?: boolean;    // auto-add: createdAt and updatedAt | default: true
     actorStamp?: boolean;   // auto-add: createdBy and updatedBy | default: true
     activeStamp?: boolean;  // record active status, isActive (true | false) | default: true
     computedMethods?: ComputedMethodsType;  // model-level functions, e.g fullName(a, b: T): T
     validateMethod?: ValidateMethodResponseType;
-    alterSyncColl?: boolean;    // create / alter collection and sync existing data, if there was a change to the Coll structure | default: true
+    alterSyncTable?: boolean;    // create / alter table / collection and sync existing data, if there was a change to the Coll structure | default: true
                                 // if alterSyncColl: false; it will create/re-create the Coll, with no data sync
 }
 
@@ -187,7 +187,7 @@ export interface ModelOptionsType {
     timeStamp?: boolean;        // auto-add: createdAt and updatedAt | default: true
     actorStamp?: boolean;       // auto-add: createdBy and updatedBy | default: true
     activeStamp?: boolean;      // auto-add isActive, if not already set | default: true
-    docValueDesc?: DocDescType;
+    docValueDesc?: TableDescType;
     docValue?: ValueParamsType;
 }
 

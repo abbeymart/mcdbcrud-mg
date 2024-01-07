@@ -1,31 +1,26 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-02-21 | @Updated: 2020-05-28, 2023-11-22
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-02-21 | @Updated: 2020-05-28, 2023-11-22, 2024-01-06
  * @Company: mConnect.biz | @License: MIT
  * @Description: mcdbcrud-mg base class, for all CRUD operations
  */
 
 // Import required module/function(s)/types
-import {Db, MongoClient, ObjectId} from "mongodb";
-import {getResMessage, ResponseMessage} from "@mconnect/mcresponse";
+import { Db, MongoClient, ObjectId } from "mongodb";
+import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import {
-    CrudParamsType,
-    CrudOptionsType,
-    TaskTypes,
-    QueryParamsType,
-    ActionParamsType,
-    ProjectParamsType, SortParamsType, SubItemsType, ObjectRefType,
-    ActionExistParamsType,
+    CrudParamsType, CrudOptionsType, TaskTypes, QueryParamsType, ActionParamsType,
+    ProjectParamsType, SortParamsType, SubItemsType, ObjectRefType, ActionExistParamsType,
 } from "./types";
-import {AuditLog, newAuditLog} from "../auditlog";
-import { ModelRelationType} from "../orm";
+import { AuditLog, newAuditLog } from "../auditlog";
+import { ModelRelationType } from "../orm";
 
 export class Crud {
     protected params: CrudParamsType;
     protected readonly appDb: Db;
-    protected readonly coll: string;
+    protected readonly tableName: string;
     protected readonly dbClient: MongoClient;
     protected readonly dbName: string;
-    protected docIds: Array<string>;       // to capture string-id | ObjectId
+    protected recordIds: Array<string>;       // to capture string-id | ObjectId
     protected actionParams: ActionParamsType;
     protected queryParams: QueryParamsType;
     protected readonly existParams: ActionExistParamsType;
@@ -38,7 +33,7 @@ export class Crud {
     protected readonly auditDb: Db;
     protected readonly auditDbClient: MongoClient;
     protected readonly auditDbName: string;
-    protected readonly auditColl: string;
+    protected readonly auditTable: string;
     protected maxQueryLimit: number;
     protected readonly logCrud: boolean;
     protected readonly logCreate: boolean;
@@ -62,8 +57,8 @@ export class Crud {
     protected unAuthorizedMessage: string;
     protected subItems: Array<SubItemsType>;
     protected cacheExpire: number;
-    protected readonly parentColls: Array<string>;
-    protected readonly childColls: Array<string>;
+    protected readonly parentTables: Array<string>;
+    protected readonly childTables: Array<string>;
     protected readonly parentRelations: Array<ModelRelationType>;
     protected readonly childRelations: Array<ModelRelationType>;
     protected readonly queryFieldType: string;
@@ -76,7 +71,7 @@ export class Crud {
         // crudParams
         this.params = params;
         this.appDb = params.appDb;
-        this.coll = params.coll;
+        this.tableName = params.tableName;
         this.dbClient = params.dbClient;
         this.dbName = params.dbName;
         this.actionParams = params && params.actionParams ? params.actionParams : [];
@@ -85,18 +80,19 @@ export class Crud {
         this.projectParams = params && params.projectParams ? params.projectParams : {};
         this.sortParams = params && params.sortParams ? params.sortParams : {};
         this.taskType = params && params.taskType ? params.taskType : "";
-        this.docIds = params && params.docIds ? params.docIds : [];
+        this.recordIds = params && params.recordIds ? params.recordIds : [];
         // options
-        this.userId = params.userInfo?.userId? params.userInfo.userId : options?.userId? options.userId : 'not-specified';
+        this.userId = params.userInfo?.userId ? params.userInfo.userId :
+            options?.userId ? options.userId : 'not-specified';
         this.skip = params.skip ? params.skip : options?.skip ? options.skip : 0;
         this.limit = params.limit ? params.limit : options?.limit ? options.limit : 10000;
-        this.parentColls = options?.parentColls ? options.parentColls : [];
-        this.childColls = options?.childColls ? options.childColls : [];
+        this.parentTables = options?.parentTables ? options.parentTables : [];
+        this.childTables = options?.childTables ? options.childTables : [];
         this.parentRelations = options?.parentRelations ? options.parentRelations : [];
         this.childRelations = options?.childRelations ? options.childRelations : [];
         this.recursiveDelete = options?.recursiveDelete !== undefined ? options.recursiveDelete : false;
         this.checkAccess = options?.checkAccess !== undefined ? options.checkAccess : false;
-        this.auditColl = options?.auditColl ? options.auditColl : "audits";
+        this.auditTable = options?.auditTable ? options.auditTable : "audits";
         this.auditDb = options?.auditDb ? options.auditDb : this.appDb;
         this.auditDbClient = options?.auditDbClient ? options.auditDbClient : this.dbClient;
         this.auditDbName = options?.auditDbName ? options.auditDbName : this.dbName;
@@ -112,17 +108,17 @@ export class Crud {
         // unique cache-key
         this.cacheKey = JSON.stringify({
             dbName       : this.dbName,
-            coll         : this.coll,
+            tableName    : this.tableName,
             queryParams  : this.queryParams,
             projectParams: this.projectParams,
             sortParams   : this.sortParams,
-            docIds       : this.docIds,
+            recordIds    : this.recordIds,
             skip         : this.skip,
             limit        : this.limit,
         });
         // auditLog constructor / instance
         this.transLog = newAuditLog(this.auditDb, {
-            auditColl: this.auditColl,
+            auditTable: this.auditTable,
         });
         // standard defaults
         this.isAdmin = false;
@@ -147,7 +143,7 @@ export class Crud {
     }
 
     // checkDb checks / validate appDb
-    checkDb(dbConnect: Db): ResponseMessage<any> {
+    checkDb(dbConnect: Db): ResponseMessage {
         if (dbConnect && dbConnect.databaseName !== "") {
             return getResMessage("success", {
                 message: "valid database handler",
@@ -160,7 +156,7 @@ export class Crud {
     }
 
     // checkDbClient checks / validates mongo-client connection (for crud-transactional tasks)
-    checkDbClient(dbc: MongoClient): ResponseMessage<any> {
+    checkDbClient(dbc: MongoClient): ResponseMessage {
         if (dbc) {
             return getResMessage("success", {
                 message: "valid database-server client connection",
@@ -173,7 +169,7 @@ export class Crud {
     }
 
     // checkRecExist method checks if items/documents exist: document uniqueness
-    async checkRecExist(): Promise<ResponseMessage<any>> {
+    async checkRecExist(): Promise<ResponseMessage> {
         try {
             // check if existParams condition is specified
             if (this.existParams.length < 1) {
@@ -182,7 +178,7 @@ export class Crud {
                 });
             }
             // check record existence/uniqueness for the documents/actionParams
-            const appDbColl = this.appDb.collection(this.coll);
+            const appDbColl = this.appDb.collection(this.tableName);
             let attributesMessage = "";
             for (const actionExistParams of this.existParams) {
                 for (const existItem of actionExistParams) {
@@ -223,8 +219,8 @@ export class Crud {
         }
     }
 
-    // getCurrentRecords fetch documents by docIds, queryParams or all limited by this.limit and this.skip, if applicable
-    async getCurrentRecords(by = ""): Promise<ResponseMessage<any>> {
+    // getCurrentRecords fetch documents by recordIds, queryParams or all limited by this.limit and this.skip, if applicable
+    async getCurrentRecords(by = ""): Promise<ResponseMessage> {
         try {
             // validate models
             const validDb = this.checkDb(this.appDb);
@@ -234,22 +230,22 @@ export class Crud {
             let currentRecords: ActionParamsType;
             switch (by.toLowerCase()) {
                 case "id":
-                    const docIds = this.docIds.map(id => new ObjectId(id));
-                    currentRecords = await this.appDb.collection(this.coll)
-                        .find({_id: {$in: docIds}},)
+                    const recordIds = this.recordIds.map(id => new ObjectId(id));
+                    currentRecords = await this.appDb.collection(this.tableName)
+                        .find({_id: {$in: recordIds}},)
                         .skip(this.skip)
                         .limit(this.limit)
                         .toArray();
                     break;
                 case "queryparams":
-                    currentRecords = await this.appDb.collection(this.coll)
+                    currentRecords = await this.appDb.collection(this.tableName)
                         .find(this.queryParams,)
                         .skip(this.skip)
                         .limit(this.limit)
                         .toArray();
                     break;
                 default:
-                    currentRecords = await this.appDb.collection(this.coll)
+                    currentRecords = await this.appDb.collection(this.tableName)
                         .find({},)
                         .skip(this.skip)
                         .limit(this.limit)
@@ -257,16 +253,16 @@ export class Crud {
                     break;
             }
             if (by.toLowerCase() === "id") {
-                if (currentRecords.length > 0 && currentRecords.length === this.docIds.length) {
+                if (currentRecords.length > 0 && currentRecords.length === this.recordIds.length) {
                     // update crud instance current-records value
                     this.currentRecs = currentRecords;
                     return getResMessage("success", {
                         message: `${currentRecords.length} document/record(s) retrieved successfully.`,
                         value  : currentRecords,
                     });
-                } else if (currentRecords.length > 0 && currentRecords.length < this.docIds.length) {
+                } else if (currentRecords.length > 0 && currentRecords.length < this.recordIds.length) {
                     return getResMessage("partialRecords", {
-                        message: `${currentRecords.length} out of ${this.docIds.length} document/record(s) found`,
+                        message: `${currentRecords.length} out of ${this.recordIds.length} document/record(s) found`,
                         value  : currentRecords,
                     });
                 } else {

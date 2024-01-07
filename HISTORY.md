@@ -1,5 +1,10 @@
 # Historical logs
 
+## Version 0.3.0
+
+- Release date: Jan-07-2024
+- Refactor-db-types-and-crud-funcs-v0.3.0
+
 ## Version 0.2.0
 
 - Release date: Nov-24-2023

@@ -1,14 +1,13 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16, 2023-11-22
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-04-05 | @Updated: 2020-05-16, 2023-11-22, 2024-01-06
  * @Company: mConnect.biz | @License: MIT
- * @Description: get stream of records, by docIds, queryParams, all | cache-in-memory
+ * @Description: get stream of records, by recordIds, queryParams, all | cache-in-memory
  */
 
 // Import required module(s)
 import { ObjectId } from 'mongodb';
-import { isEmptyObject } from "../orm";
 import Crud from './Crud';
-import {CrudOptionsType, CrudParamsType, LogDocumentsType,} from "./types";
+import { AuditLogParamsType, CrudOptionsType, CrudParamsType, LogRecordsType, } from "./types";
 
 class GetRecordStream extends Crud {
     constructor(params: CrudParamsType, options: CrudOptionsType = {}) {
@@ -40,22 +39,17 @@ class GetRecordStream extends Crud {
         }
 
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
-        // let logRes = getResMessage("unknown");
-        if ((this.logRead || this.logCrud) && this.queryParams && !isEmptyObject(this.queryParams)) {
-            const logDocuments: LogDocumentsType = {
+        if (this.logRead || this.logCrud) {
+            const logRecs: LogRecordsType = {
                 queryParam: this.queryParams,
+                recordIds : this.recordIds,
             }
-            await this.transLog.readLog(this.coll, logDocuments, this.userId);
-        } else if ((this.logRead || this.logCrud) && this.docIds && this.docIds.length > 0) {
-            const logDocuments: LogDocumentsType = {
-                docIds: this.docIds,
+            const logParams: AuditLogParamsType = {
+                logRecords: logRecs,
+                tableName : this.tableName,
+                logBy     : this.userId,
             }
-            await this.transLog.readLog(this.coll, logDocuments, this.userId);
-        } else if(this.logRead || this.logCrud) {
-            const logDocuments: LogDocumentsType = {
-                queryParam: {},
-            }
-            await this.transLog.readLog(this.coll, logDocuments, this.userId);
+            await this.transLog.readLog(logParams, this.userId);
         }
 
         // exclude _id, if present, from the queryParams
@@ -66,13 +60,13 @@ class GetRecordStream extends Crud {
         }
 
         // Get the item(s) by docId(s), queryParams or all items
-        if (this.docIds && this.docIds.length > 0) {
+        if (this.recordIds && this.recordIds.length > 0) {
             try {
                 // id(s): convert string to ObjectId
-                const docIds = this.docIds.map(id => new ObjectId(id));
+                const recordIds = this.recordIds.map(id => new ObjectId(id));
                 // use / activate database
-                const appDbColl = this.appDb.collection(this.coll);
-                return appDbColl.find({_id: {$in: docIds}})
+                const appDbColl = this.appDb.collection(this.tableName);
+                return appDbColl.find({_id: {$in: recordIds}})
                     .skip(this.skip)
                     .limit(this.limit)
                     .project(this.projectParams)
@@ -86,7 +80,7 @@ class GetRecordStream extends Crud {
         if (this.queryParams && Object.keys(this.queryParams).length > 0) {
             try {
                 // use / activate database
-                const appDbColl = this.appDb.collection(this.coll);
+                const appDbColl = this.appDb.collection(this.tableName);
                 return appDbColl.find(this.queryParams)
                     .skip(this.skip)
                     .limit(this.limit)
@@ -101,7 +95,7 @@ class GetRecordStream extends Crud {
         // get all documents, up to the permissible limit
         try {
             // use / activate database
-            const appDbColl = this.appDb.collection(this.coll);
+            const appDbColl = this.appDb.collection(this.tableName);
             return appDbColl.find()
                 .skip(this.skip)
                 .limit(this.limit)

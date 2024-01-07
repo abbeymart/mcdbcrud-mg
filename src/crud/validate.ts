@@ -1,8 +1,11 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-06-26 | @Updated: 2020-06-26
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-06-26 | @Updated: 2020-06-26, 2024-01-06
  * @Company: mConnect.biz | @License: MIT
  * @Description: common validation functions
  */
+import { CrudParamsType } from "./types";
+import { isEmptyObject } from "./utils";
+import { MessageObject } from "../orm";
 
 export const isProvided = (param: any): boolean => {
     // Verify the Required status
@@ -198,3 +201,259 @@ export const isSafeInteger = (n: number): boolean => {
         Number.MIN_SAFE_INTEGER <= n &&
         n <= Number.MAX_SAFE_INTEGER);
 };
+
+// crudParams validation helper functions
+
+export function validateSaveParams(crudParams: CrudParamsType) {
+    // Initialise error object and patterns matching:
+    let errors: MessageObject = {};
+    try {
+        if (crudParams.tableName) {
+            // Check input formats/patterns
+            const testItem = isStringAlpha(crudParams.tableName);
+            if (!testItem) {
+                errors.coll = "format-error, should be a string/alphanumeric";
+            }
+        } else {
+            errors.coll = "required-error, info is required";
+        }
+
+        if (crudParams.recordIds) {
+            // Check input formats/patterns
+            const testItem = isArrayType(crudParams.recordIds);
+            if (!testItem) {
+                errors.docIds = "format-error, should be an array[]";
+            }
+        }
+
+        if (crudParams.actionParams) {
+            // Check input formats/patterns:  array
+            const testObject = isArrayType(crudParams.actionParams);
+            if (!testObject) {
+                errors.actionParams = "format-error, should be an array";
+            }
+        } else {
+            errors.queryParams = "required-error, info required";
+        }
+
+        if (crudParams.queryParams) {
+            // Check input formats/patterns: object or array
+            const testObject = isObjectType(crudParams.queryParams);
+            if (!testObject) {
+                errors.queryParams = "format-error, should be an object{}";
+            }
+        }
+
+        if (crudParams.existParams) {
+            // Check input formats/patterns
+            const testItem = isArrayType(crudParams.existParams);
+            if (!testItem) {
+                errors.existParams = "format-error, should be an array[]";
+            }
+        } else {
+            errors.existParams = "required-error, info is required";
+        }
+
+        if (crudParams.token) {
+            // Check input formats/patterns
+            const testItem = isStringAlpha(crudParams.token);
+            if (!testItem) {
+                errors.token = "format-error, should be a string/alphanumeric";
+            }
+        }
+
+        if (crudParams.userInfo) {
+            // Check input formats/patterns
+            const testItem = isObjectType(crudParams.userInfo);
+            if (!testItem) {
+                errors.userInfo = "format-error, should be an object{}";
+            }
+        }
+
+        // if (!crudParams.token && Object.keys(crudParams.userInfo).length < 1) {
+        //     errors.userInfoRequired = "token or userInfo is required";
+        //     errors.tokenRequired = "token or userInfo is required";
+        // }
+    } catch (e) {
+        console.error("Error validating save-record(s) inputs");
+        errors.validationError = "Error validating save-record(s) inputs";
+    }
+
+    return errors;
+}
+
+export function validateDeleteParams(crudParams: CrudParamsType) {
+    // Initialise error object and patterns matching:
+    let errors: MessageObject = {};
+
+    try {
+        if (crudParams.tableName) {
+            // Check input formats/patterns
+            const testItem = isStringAlpha(crudParams.tableName);
+            if (!testItem) {
+                errors.coll = "format-error, should be a string/alphanumeric";
+            }
+        } else {
+            errors.coll = "required-error, info is required";
+        }
+
+        if (crudParams.queryParams) {
+            // Check input formats/patterns
+            const testItem = isObjectType(crudParams.queryParams);
+            if (!testItem) {
+                errors.queryParams = "format-error, should be an object{}";
+            }
+        }
+
+        if (crudParams.recordIds) {
+            // Check input formats/patterns
+            const testItem = isArrayType(crudParams.recordIds);
+            if (!testItem) {
+                errors.docIds = "format-error, should be an array[]";
+            }
+        }
+
+        if ((!crudParams.recordIds || crudParams.recordIds.length < 1) && (!crudParams.queryParams || isEmptyObject(crudParams.queryParams))) {
+            errors.docIds = errors.docIds ? errors.docIds + " | docId or queryParams is required" :
+                "docId or queryParams is required";
+            errors.queryParams = errors.queryParams ? errors.queryParams + " | docId or queryParams is required" :
+                "docId or queryParams is required";
+        }
+
+        if (crudParams.token) {
+            // Check input formats/patterns
+            const testItem = isStringAlpha(crudParams.token);
+            if (!testItem) {
+                errors.token = "format-error, should a string/alphanumeric";
+            }
+        }
+
+        if (crudParams.userInfo) {
+            // Check input formats/patterns
+            const testItem = isObjectType(crudParams.userInfo);
+            if (!testItem) {
+                errors.userInfo = "format-error, should be an object{}";
+            }
+        }
+
+        // if (!crudParams.token && Object.keys(crudParams.userInfo).length < 1) {
+        //     errors.userInfoRequired = "token or userInfo is required";
+        //     errors.tokenRequired = "token or userInfo is required";
+        // }
+
+    } catch (e) {
+        console.error("Error validating delete-record(s) inputs");
+        errors.validationError = "Error validating delete-record(s) inputs";
+    }
+
+    return errors;
+
+}
+
+export function validateGetParams(crudParams: CrudParamsType) {
+    // Initialise error object and patterns matching:
+    let errors: MessageObject = {};
+
+    try {
+        if (crudParams.tableName) {
+            // Check input formats/patterns
+            const testItem = isStringAlpha(crudParams.tableName);
+            if (!testItem) {
+                errors.coll = "format-error, collection name should be a string";
+            }
+        } else {
+            errors.coll = "required-error, info is required";
+        }
+
+        if (crudParams.queryParams) {
+            // Check input formats/patterns
+            const testItem = isObjectType(crudParams.queryParams);
+            if (!testItem) {
+                errors.queryParams = "format-error, queryParams should be an object";
+            }
+        }
+
+        if (crudParams.projectParams) {
+            // Check input formats/patterns
+            const testItem = isObjectType(crudParams.projectParams);
+            if (!testItem) {
+                errors.projectParams = "format-error, projectParams should be an object";
+            }
+        }
+
+        if (crudParams.sortParams) {
+            // Check input formats/patterns
+            const testItem = isObjectType(crudParams.sortParams);
+            if (!testItem) {
+                errors.sortParams = "format-error, sortParams should be an object";
+            }
+        }
+
+        if (crudParams.recordIds) {
+            // Check input formats/patterns
+            const testItem = isArrayType(crudParams.recordIds);
+            if (!testItem) {
+                errors.docId = "format-error, docId(s) should be an array";
+            }
+        }
+
+        if (crudParams.token) {
+            // Check input formats/patterns
+            const testItem = isStringAlpha(crudParams.token);
+            if (!testItem) {
+                errors.token = "format-error, token should be a string/alphanumeric";
+            }
+        }
+
+        if (crudParams.userInfo) {
+            // Check input formats/patterns
+            const testItem = isObjectType(crudParams.userInfo);
+            if (!testItem) {
+                errors.userInfo = "format-error, userInfo should be an object";
+            }
+        }
+
+        // if (!crudParams.token && Object.keys(crudParams.userInfo).length < 1) {
+        //     errors.userInfoRequired = "token or userInfo is required";
+        //     errors.tokenRequired = "token or userInfo is required";
+        // }
+
+    } catch (e) {
+        console.error("Error validating get-record(s) inputs");
+        errors.validationError = "Error validating get-record(s) inputs";
+    }
+
+    return errors;
+}
+
+export function validateLoadParams(crudParams: CrudParamsType) {
+    // Initialise error object and patterns matching:
+    let errors: MessageObject = {};
+
+    try {
+        if (crudParams.tableName) {
+            // Check input formats/patterns
+            const testItem = isStringAlpha(crudParams.tableName);
+            if (!testItem) {
+                errors.coll = 'format-error, collection name should be a string/alphanumeric';
+            }
+        } else {
+            errors.coll = 'required-error, info is required';
+        }
+
+        if (crudParams.actionParams) {
+            // Check input formats/patterns
+            const testItem = isArrayType(crudParams.actionParams);
+            if (!testItem) {
+                errors.actionParams = 'format-error, actionParams should be an array';
+            }
+        } else {
+            errors.actionParams = 'required-error; info is required';
+        }
+    } catch (e) {
+        console.error('Error validating load-record(s) inputs');
+        errors.validationError = 'Error validating load-record(s) inputs';
+    }
+
+    return errors;
+}

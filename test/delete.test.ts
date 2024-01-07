@@ -20,9 +20,9 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
         appDb      : appDbHandle,
         dbClient   : appDbClient,
         dbName     : appDbLocal.database || "mcdev",
-        coll       : GetTable,
+        tableName  : GetTable,
         userInfo   : TestUserInfo,
-        docIds     : [],
+        recordIds  : [],
         queryParams: {},
     };
 
@@ -30,7 +30,7 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
         auditDb      : auditDbHandle,
         auditDbClient: auditDbClient,
         auditDbName  : auditDbLocal.database || "mcdevaudit",
-        auditColl    : AuditTable,
+        auditTable   : AuditTable,
         userId       : TestUserInfo.userId,
         checkAccess  : false,
         logCrud      : true,
@@ -44,8 +44,8 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should prevent the delete of all table records and return removeError:',
         testFunc: async () => {
-            crudParams.coll = DeleteAllTable
-            crudParams.docIds = []
+            crudParams.tableName = DeleteAllTable
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             const crud = newDeleteRecord(crudParams, crudOptions);
             const res = await crud.deleteRecord()
@@ -57,8 +57,8 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should delete record by Id and return success or notFound[delete-record-method]:',
         testFunc: async () => {
-            crudParams.coll = DeleteTable
-            crudParams.docIds = [DeleteAuditById]
+            crudParams.tableName = DeleteTable
+            crudParams.recordIds = [DeleteAuditById]
             crudParams.queryParams = {}
             const crud = newDeleteRecord(crudParams, crudOptions);
             const res = await crud.deleteRecord()
@@ -71,8 +71,8 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should delete record by Ids and return success or notFound[delete-record-method]:',
         testFunc: async () => {
-            crudParams.coll = DeleteTable
-            crudParams.docIds = DeleteAuditByIds
+            crudParams.tableName = DeleteTable
+            crudParams.recordIds = DeleteAuditByIds
             crudParams.queryParams = {}
             const crud = newDeleteRecord(crudParams, crudOptions);
             const res = await crud.deleteRecord()
@@ -85,8 +85,8 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should delete records by query-params and return success or notFound[delete-record-method]:',
         testFunc: async () => {
-            crudParams.coll = DeleteTable
-            crudParams.docIds = []
+            crudParams.tableName = DeleteTable
+            crudParams.recordIds = []
             crudParams.queryParams = DeleteAuditByParams
             const crud = newDeleteRecord(crudParams, crudOptions);
             const res = await crud.deleteRecord()

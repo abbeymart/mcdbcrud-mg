@@ -8,8 +8,8 @@
 import { DataTypes, ModelDescType, BaseModel } from "../src";
 
 const UserProfileModel: ModelDescType = {
-    collName: "userProfiles",
-    docDesc  : {
+    tableName: "userProfiles",
+    tableDesc: {
         firstName : {
             fieldType  : DataTypes.STRING,
             fieldLength: 255,
@@ -26,8 +26,8 @@ const UserProfileModel: ModelDescType = {
 }
 
 const UserModel: ModelDescType = {
-    collName: "users",
-    docDesc  : {
+    tableName: "users",
+    tableDesc: {
         ...BaseModel,
         _id       : DataTypes.MONGODB_ID,
         acceptTerm: DataTypes.BOOLEAN,

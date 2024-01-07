@@ -53,7 +53,7 @@ import { newDbMongo } from "../src";
             const dbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
             try {
                 const dbClient = await dbInstance.mgServer()
-                const db = await dbClient.db(auditDbLocal.database)
+                const db = dbClient.db(auditDbLocal.database)
                 if (db.databaseName === auditDbLocal.database) {
                     pResult = true
                 }

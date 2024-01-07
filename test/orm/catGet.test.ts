@@ -1,11 +1,10 @@
-import { assertEquals, assertNotEquals, mcTest, postTestResult } from "../../test_deps.ts";
-import { appDb, auditDb, dbOptions } from "../config/secure/config.ts";
+import { CrudParamsType, GetResultType, newDbMongo } from "../../src";
+import { appDb, auditDb, dbOptions } from "../config";
 import {
-    CrudParamsType, GetResultType,
-    newDbMongo, AuditType,
-} from "../../src/index.ts";
-import { GetCategoryById, GetCategoryByIds, GetCategoryByParams, categoryColl, CategoryModel } from "./testData.ts";
-import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
+    auditColl, categoryColl, CategoryModel, crudParamOptions, GetCategoryById, GetCategoryByIds,
+    GetCategoryByParams, testUserInfo
+} from "./testData";
+import { assertEquals, assertNotEquals, mcTest, postTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -17,28 +16,28 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     const auditDbHandle = await auditDbInstance.openDb();
     const auditDbClient = await auditDbInstance.mgServer();
 
-    const crudParams: CrudParamsType<AuditType> = {
+    const crudParams: CrudParamsType = {
         appDb      : appDbHandle,
         dbClient   : appDbClient,
         dbName     : appDb.database || "",
-        coll       : categoryColl,
+        tableName  : categoryColl,
         userInfo   : testUserInfo,
-        docIds     : [],
+        recordIds  : [],
         queryParams: {},
     };
 
     crudParamOptions.auditDb = auditDbHandle;
     crudParamOptions.auditDbClient = auditDbClient;
     crudParamOptions.auditDbName = appDb.database;
-    crudParamOptions.auditColl = auditColl;
+    crudParamOptions.auditTable = auditColl;
 
     await mcTest({
         name    : "should get records by Id and return success:",
         testFunc: async () => {
-            crudParams.docIds = [GetCategoryById]
+            crudParams.recordIds = [GetCategoryById]
             crudParams.queryParams = {}
             const res = await CategoryModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>
+            const resValue = res.value as unknown as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -51,10 +50,10 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should get records by Ids and return success:",
         testFunc: async () => {
-            crudParams.docIds = GetCategoryByIds;
+            crudParams.recordIds = GetCategoryByIds;
             crudParams.queryParams = {};
             const res = await CategoryModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>
+            const resValue = res.value as unknown as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -67,10 +66,10 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should get records by query-params and return success:",
         testFunc: async () => {
-            crudParams.docIds = [];
+            crudParams.recordIds = [];
             crudParams.queryParams = GetCategoryByParams;
             const res = await CategoryModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>;
+            const resValue = res.value as unknown as GetResultType;
             const recLen = resValue.records?.length || 0;
             const recCount = resValue.stats?.recordsCount || 0;
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -83,13 +82,13 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should get all records and return success:",
         testFunc: async () => {
-            crudParams.coll = categoryColl
-            crudParams.docIds = []
+            crudParams.tableName = categoryColl
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             crudParamOptions.getAllRecords = true
             crudParamOptions.checkAccess = false;
-            const res = await CategoryModel.lookup(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>
+            const res = await CategoryModel.lookupGet(crudParams, crudParamOptions);
+            const resValue = res.value as unknown as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -102,14 +101,14 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should get all records by limit/skip(offset) and return success:",
         testFunc: async () => {
-            crudParams.coll = categoryColl
-            crudParams.docIds = []
+            crudParams.tableName = categoryColl
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             crudParams.skip = 0
             crudParams.limit = 5
             crudParamOptions.getAllRecords = true
             const res = await CategoryModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>
+            const resValue = res.value as unknown as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -119,7 +118,7 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
         }
     });
 
-    postTestResult();
+    await postTestResult();
     await appDbInstance.closeDb();
     await auditDbInstance.closeDb();
 

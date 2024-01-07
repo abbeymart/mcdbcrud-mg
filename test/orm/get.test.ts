@@ -1,11 +1,10 @@
-import { assertEquals, assertNotEquals, mcTest, postTestResult } from "../../test_deps.ts";
-import { appDb, auditDb, dbOptions } from "../config/secure/config.ts";
+import { CrudParamsType, GetResultType, newDbMongo } from "../../src";
+import { appDb, auditDb, dbOptions } from "../config";
 import {
-    CrudParamsType, GetResultType,
-    newDbMongo, AuditType,
-} from "../../src/index.ts";
-import { GetGroupById, GetGroupByIds, GetGroupByParams, groupColl, GroupModel } from "./testData.ts";
-import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
+    auditColl, crudParamOptions, GetGroupById, GetGroupByIds, GetGroupByParams,
+    groupColl, GroupModel, testUserInfo
+} from "./testData";
+import { assertEquals, assertNotEquals, mcTest, postTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -17,28 +16,28 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     const auditDbHandle = await auditDbInstance.openDb();
     const auditDbClient = await auditDbInstance.mgServer();
 
-    const crudParams: CrudParamsType<AuditType> = {
+    const crudParams: CrudParamsType = {
         appDb      : appDbHandle,
         dbClient   : appDbClient,
         dbName     : appDb.database || "",
-        coll       : groupColl,
+        tableName  : groupColl,
         userInfo   : testUserInfo,
-        docIds     : [],
+        recordIds  : [],
         queryParams: {},
     };
 
     crudParamOptions.auditDb = auditDbHandle;
     crudParamOptions.auditDbClient = auditDbClient;
     crudParamOptions.auditDbName = appDb.database;
-    crudParamOptions.auditColl = auditColl;
+    crudParamOptions.auditTable = auditColl;
 
     await mcTest({
         name    : "should get records by Id and return success:",
         testFunc: async () => {
-            crudParams.docIds = [GetGroupById]
+            crudParams.recordIds = [GetGroupById]
             crudParams.queryParams = {}
             const res = await GroupModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>
+            const resValue = res.value as unknown as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -51,10 +50,10 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should get records by Ids and return success:",
         testFunc: async () => {
-            crudParams.docIds = GetGroupByIds;
+            crudParams.recordIds = GetGroupByIds;
             crudParams.queryParams = {};
             const res = await GroupModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>
+            const resValue = res.value as unknown as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -67,10 +66,10 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should get records by query-params and return success:",
         testFunc: async () => {
-            crudParams.docIds = [];
+            crudParams.recordIds = [];
             crudParams.queryParams = GetGroupByParams;
             const res = await GroupModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>;
+            const resValue = res.value as unknown as GetResultType;
             const recLen = resValue.records?.length || 0;
             const recCount = resValue.stats?.recordsCount || 0;
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -83,13 +82,13 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should get all records and return success:",
         testFunc: async () => {
-            crudParams.coll = groupColl
-            crudParams.docIds = []
+            crudParams.tableName = groupColl
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             crudParamOptions.getAllRecords = true
             crudParamOptions.checkAccess = false;
-            const res = await GroupModel.lookup(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>
+            const res = await GroupModel.lookupGet(crudParams, crudParamOptions);
+            const resValue = res.value as unknown as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -102,14 +101,14 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should get all records by limit/skip(offset) and return success:",
         testFunc: async () => {
-            crudParams.coll = groupColl
-            crudParams.docIds = []
+            crudParams.tableName = groupColl
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             crudParams.skip = 0
             crudParams.limit = 5
             crudParamOptions.getAllRecords = true
             const res = await GroupModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType<AuditType>
+            const resValue = res.value as unknown as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -119,7 +118,7 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
         }
     });
 
-    postTestResult();
+    await postTestResult();
     await appDbInstance.closeDb();
     await auditDbInstance.closeDb();
 

@@ -3,7 +3,7 @@
 import {
     UserInfoType, CrudOptionsType, ActionParamType,
     TaskTypes, QueryParamsType, ActionParamsType, ModelRelationType, RelationTypes, RelationActionTypes, ModelDescType,
-    BaseModel, DataTypes, ModelCrudOptionsType, newModel,
+    BaseModel, DataTypes, ModelCrudOptionsType, newModel, AuditType,
 } from "../src"
 import { collections } from "./collections";
 
@@ -12,8 +12,8 @@ import { collections } from "./collections";
 // TODO: include groups and categories collections, with relations-specs
 
 export const groupModel: ModelDescType = {
-    collName   : collections.GROUPS,
-    docDesc    : {
+    tableName  : collections.GROUPS,
+    tableDesc: {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -28,8 +28,8 @@ export const groupModel: ModelDescType = {
 }
 
 export const categoryModel: ModelDescType = {
-    collName   : collections.CATEGORIES,
-    docDesc    : {
+    tableName  : collections.CATEGORIES,
+    tableDesc: {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -65,8 +65,8 @@ export const categoryModel: ModelDescType = {
 
 export const groupRelations: Array<ModelRelationType> = [
     {
-        sourceColl  : collections.GROUPS,
-        targetColl  : collections.CATEGORIES,
+        sourceTable : collections.GROUPS,
+        targetTable : collections.CATEGORIES,
         sourceField : "_id",
         targetField : "groupId",
         targetModel : categoryModel,
@@ -76,8 +76,8 @@ export const groupRelations: Array<ModelRelationType> = [
         onUpdate    : RelationActionTypes.NO_ACTION,
     },
     {
-        sourceColl  : collections.GROUPS,
-        targetColl  : collections.CATEGORIES,
+        sourceTable : collections.GROUPS,
+        targetTable : collections.CATEGORIES,
         sourceField : "name",
         targetField : "groupName",
         targetModel : categoryModel,
@@ -90,8 +90,8 @@ export const groupRelations: Array<ModelRelationType> = [
 
 export const categoryRelations: Array<ModelRelationType> = [
     {
-        sourceColl  : collections.CATEGORIES,
-        targetColl  : collections.CATEGORIES,
+        sourceTable : collections.CATEGORIES,
+        targetTable : collections.CATEGORIES,
         sourceField : "_id",
         targetField : "parentId",
         targetModel : categoryModel,
@@ -128,24 +128,14 @@ const categoryOptions: ModelCrudOptionsType = {
 export const CategoryModel = newModel(categoryModel, categoryOptions);
 
 
-export interface AuditType {
-    _id: string; // => map to _id (mongodb), especially for UI components
-    collName: string;
-    collDocuments: any;
-    newCollDocuments: any;
-    logType: string;
-    logBy: string;
-    logAt: Date;
-}
-
 export const AuditModel: AuditType = {
-    _id             : "",
-    collName        : "",
-    collDocuments   : null,
-    newCollDocuments: null,
-    logType         : "",
-    logBy           : "",
-    logAt           : new Date(),
+    _id          : "",
+    tableName    : "",
+    logRecords   : {},
+    newLogRecords: {},
+    logType      : "",
+    logBy        : "",
+    logAt        : new Date(),
 }
 
 export const AuditTable = "audits"
@@ -172,12 +162,12 @@ export const TestUserInfo: UserInfoType = {
 
 export const CrudParamOptions: CrudOptionsType = {
     checkAccess  : false,
-    auditColl    : "audits",
-    userColl     : "users",
-    serviceColl  : "services",
-    accessColl   : "accesses",
-    verifyColl   : "verify_users",
-    roleColl     : "roles",
+    auditTable   : "audits",
+    userTable    : "users",
+    serviceTable : "services",
+    accessTable  : "accesses",
+    verifyTable  : "verify_users",
+    roleTable    : "roles",
     logCrud      : true,
     logCreate    : true,
     logUpdate    : true,
@@ -227,7 +217,7 @@ export const NewLogRecords2: ActionParamType = {
 // create record(s)
 
 export const AuditCreateRec1: ActionParamType = {
-    "collName"     : "audits",
+    "tableName"    : "audits",
     "logAt"        : new Date(),
     "logBy"        : UserId,
     "collDocuments": LogRecords,
@@ -235,7 +225,7 @@ export const AuditCreateRec1: ActionParamType = {
 }
 
 export const AuditCreateRec2: ActionParamType = {
-    "collName"     : "audits",
+    "tableName"    : "audits",
     "logAt"        : new Date(),
     "logBy"        : UserId,
     "collDocuments": LogRecords2,
@@ -243,8 +233,8 @@ export const AuditCreateRec2: ActionParamType = {
 }
 
 export const AuditUpdateRec1: ActionParamType = {
-    "_id"              : "638fd565c97d023503c6a0d8",
-    "collName"        : "todos",
+    "_id"             : "638fd565c97d023503c6a0d8",
+    "tableName"       : "todos",
     "logAt"           : new Date(),
     "logBy"           : UserId,
     "collDocuments"   : LogRecords,
@@ -253,8 +243,8 @@ export const AuditUpdateRec1: ActionParamType = {
 }
 
 export const AuditUpdateRec2: ActionParamType = {
-    "_id"              : "638fd565c97d023503c6a0d9",
-    "collName"        : "todos",
+    "_id"             : "638fd565c97d023503c6a0d9",
+    "tableName"       : "todos",
     "logAt"           : new Date(),
     "logBy"           : UserId,
     "collDocuments"   : LogRecords2,
@@ -276,7 +266,7 @@ export const AuditUpdateActionParams: ActionParamsType = [
 
 export const AuditUpdateRecordById: ActionParamType = {
     // "_id"              : "638fd565c97d023503c6a0db",
-    "collName"        : "groups",
+    "tableName"       : "groups",
     "logAt"           : new Date(),
     "logBy"           : UserId,
     "collDocuments"   : LogRecords,
@@ -286,7 +276,7 @@ export const AuditUpdateRecordById: ActionParamType = {
 
 export const AuditUpdateRecordByParam: ActionParamType = {
     // "_id"              : "638fd565c97d023503c6a0dc",
-    "collName"        : "contacts",
+    "tableName"       : "contacts",
     "logAt"           : new Date(),
     "logBy"           : UserId,
     "collDocuments"   : LogRecords,

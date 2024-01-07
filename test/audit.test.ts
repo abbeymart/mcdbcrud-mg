@@ -1,8 +1,8 @@
 import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
 import { auditDbLocal, dbOptionsLocal } from "./config";
-import { AuditLogTypes, LogDocumentsType, newAuditLog, newDbMongo } from "../src";
+import { AuditLogParamsType, AuditLogTypes, LogRecordsType, newAuditLog, newDbMongo } from "../src";
 
-const collName = "services"
+const tableName = "services"
 const userId = "085f48c5-8763-4e22-a1c6-ac1a68ba07de"
 const recs = {name: "Abi", desc: "Testing only", url: "localhost:9000", priority: 1, cost: 1000.00}
 const newRecs = {
@@ -18,25 +18,44 @@ const dbc = newDbMongo(auditDbLocal, dbOptionsLocal);
     // expected db-connection result
     const mcLogResult = {auditDb: dbHandle, auditColl: "audits"};
     // audit-log instance
-    const mcLog = newAuditLog(dbHandle, {auditColl: "audits"});
+    const mcLog = newAuditLog(dbHandle, {auditTable: "audits"});
 
     await mcTest({
         name    : 'should connect to the DB and return an instance object',
         testFunc: () => {
-            assertEquals(mcLog.getAuditColl(), mcLogResult.auditColl, `audit-table should be: ${mcLogResult.auditColl}`);
+            assertEquals(mcLog.getAuditTable(), mcLogResult.auditColl, `audit-table should be: ${mcLogResult.auditColl}`);
         }
     });
 
     await mcTest({
-        name    : 'should store create-transaction log and return success:',
+        name    : 'should store create-transaction log and return success [re: logBy]:',
         testFunc: async () => {
-            const collDocs: LogDocumentsType = {
-                logDocuments: recs,
+            const logRecs: LogRecordsType = {
+                logRecords: recs,
             }
-            const res = await mcLog.auditLog(AuditLogTypes.CREATE, userId, {
-                collName     : collName,
-                collDocuments: collDocs,
-            })
+            const logParams: AuditLogParamsType = {
+                logRecords   : logRecs,
+                tableName    : tableName,
+                logBy        : userId,
+            }
+            const res = await mcLog.auditLog(AuditLogTypes.CREATE, logParams)
+            assertEquals(res.code, "success", `res.Code should be: success`);
+            assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
+        }
+    });
+
+    await mcTest({
+        name    : 'should store create-transaction log and return success [re: userId]:',
+        testFunc: async () => {
+            const logRecs: LogRecordsType = {
+                logRecords: recs,
+            }
+            const logParams: AuditLogParamsType = {
+                logRecords   : logRecs,
+                tableName    : tableName,
+                // logBy        : userId,
+            }
+            const res = await mcLog.auditLog(AuditLogTypes.CREATE, logParams, userId)
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
         }
@@ -45,17 +64,19 @@ const dbc = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should store update-transaction log and return success:',
         testFunc: async () => {
-            const collDocs: LogDocumentsType = {
-                logDocuments: recs,
+            const logRecs: LogRecordsType = {
+                logRecords: recs,
             }
-            const newCollDocs: LogDocumentsType = {
-                logDocuments: newRecs,
+            const newLogRecs: LogRecordsType = {
+                logRecords: newRecs,
             }
-            const res = await mcLog.auditLog(AuditLogTypes.UPDATE, userId, {
-                collName        : collName,
-                collDocuments   : collDocs,
-                newCollDocuments: newCollDocs,
-            })
+            const logParams: AuditLogParamsType = {
+                logRecords   : logRecs,
+                newLogRecords: newLogRecs,
+                tableName    : tableName,
+                logBy        : userId,
+            }
+            const res = await mcLog.auditLog(AuditLogTypes.UPDATE, logParams)
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
         }
@@ -63,13 +84,15 @@ const dbc = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should store read-transaction log and return success:',
         testFunc: async () => {
-            const collDocs: LogDocumentsType = {
-                logDocuments: readP,
+            const logRecs: LogRecordsType = {
+                logRecords: readP,
             }
-            const res = await mcLog.auditLog(AuditLogTypes.READ, userId, {
-                collName     : collName,
-                collDocuments: collDocs,
-            })
+            const logParams: AuditLogParamsType = {
+                logRecords   : logRecs,
+                tableName    : tableName,
+                logBy        : userId,
+            }
+            const res = await mcLog.auditLog(AuditLogTypes.READ, logParams)
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
         }
@@ -77,13 +100,15 @@ const dbc = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should store delete-transaction log and return success:',
         testFunc: async () => {
-            const collDocs: LogDocumentsType = {
-                logDocuments: recs,
+            const logRecs: LogRecordsType = {
+                logRecords: recs,
             }
-            const res = await mcLog.auditLog(AuditLogTypes.DELETE, userId, {
-                collName     : collName,
-                collDocuments: collDocs,
-            })
+            const logParams: AuditLogParamsType = {
+                logRecords   : logRecs,
+                tableName    : tableName,
+                logBy        : userId,
+            }
+            const res = await mcLog.auditLog(AuditLogTypes.DELETE, logParams)
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
         }
@@ -91,13 +116,15 @@ const dbc = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should store login-transaction log and return success:',
         testFunc: async () => {
-            const collDocs: LogDocumentsType = {
-                logDocuments: recs,
+            const logRecs: LogRecordsType = {
+                logRecords: recs,
             }
-            const res = await mcLog.auditLog(AuditLogTypes.LOGIN, userId, {
-                collName     : collName,
-                collDocuments: collDocs,
-            })
+            const logParams: AuditLogParamsType = {
+                logRecords   : logRecs,
+                tableName    : tableName,
+                logBy        : userId,
+            }
+            const res = await mcLog.auditLog(AuditLogTypes.LOGIN, logParams)
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
         }
@@ -106,13 +133,15 @@ const dbc = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should store logout-transaction log and return success:',
         testFunc: async () => {
-            const collDocs: LogDocumentsType = {
-                logDocuments: recs,
+            const logRecs: LogRecordsType = {
+                logRecords: recs,
             }
-            const res = await mcLog.auditLog(AuditLogTypes.LOGOUT, userId, {
-                collName     : collName,
-                collDocuments: collDocs,
-            })
+            const logParams: AuditLogParamsType = {
+                logRecords   : logRecs,
+                tableName    : tableName,
+                logBy        : userId,
+            }
+            const res = await mcLog.auditLog(AuditLogTypes.LOGOUT, logParams)
             assertEquals(res.code, "success", `res.Code should be: success`);
             assertEquals(res.message.includes("successfully"), true, `res-message should include: successfully`);
         }
@@ -121,13 +150,15 @@ const dbc = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should return paramsError for incomplete/undefined inputs:',
         testFunc: async () => {
-            const collDocs: LogDocumentsType = {
-                logDocuments: recs,
+            const logRecs: LogRecordsType = {
+                logRecords: recs,
             }
-            const res = await mcLog.auditLog(AuditLogTypes.CREATE, userId, {
-                collName     : "",
-                collDocuments: collDocs,
-            })
+            const logParams: AuditLogParamsType = {
+                logRecords   : logRecs,
+                // tableName    : tableName,
+                logBy        : userId,
+            }
+            const res = await mcLog.auditLog(AuditLogTypes.CREATE, logParams)
             assertEquals(res.code, "paramsError", `res.Code should be: paramsError`);
             assertEquals(res.message.includes("Table or Collection name is required"), true, `res-message should include: Table or Collection name is required`);
         }

@@ -1,8 +1,10 @@
-import { assertEquals, mcTest, postTestResult } from "../../test_deps.ts";
-import { CrudParamsType, CrudResultType, newDbMongo, } from "../../src/index.ts";
-import { groupColl, GroupModel, GroupType, GroupCreateNonUniqueDocuments } from "./testData.ts";
-import { appDb, auditDb, dbOptions } from "../config/secure/config.ts";
-import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
+import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
+import { appDb, auditDb, dbOptions } from "../config";
+import {
+    auditColl, crudParamOptions, groupColl, GroupCreateNonUniqueDocuments,
+    GroupModel, testUserInfo
+} from "./testData";
+import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -14,31 +16,31 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     const auditDbHandle = await auditDbInstance.openDb();
     const auditDbClient = await auditDbInstance.mgServer();
 
-    const crudParams: CrudParamsType<GroupType> = {
+    const crudParams: CrudParamsType = {
         appDb      : appDbHandle,
         dbClient   : appDbClient,
         dbName     : appDb.database || "",
-        coll       : groupColl,
+        tableName  : groupColl,
         userInfo   : testUserInfo,
-        docIds     : [],
+        recordIds  : [],
         queryParams: {},
     };
 
     crudParamOptions.auditDb = auditDbHandle;
     crudParamOptions.auditDbClient = auditDbClient;
     crudParamOptions.auditDbName = appDb.database;
-    crudParamOptions.auditColl = auditColl;
+    crudParamOptions.auditTable = auditColl;
 
     await mcTest({
         name    : "should return recordExist or updateError for creating duplicate documents:",
         testFunc: async () => {
             crudParams.actionParams = GroupCreateNonUniqueDocuments;
-            crudParams.docIds = [];
+            crudParams.recordIds = [];
             crudParams.queryParams = {};
             const recLen = crudParams.actionParams?.length || 0;
             const res = await GroupModel.save(crudParams, crudParamOptions);
             console.log("create-result: ", res);
-            const resValue = res.value as unknown as CrudResultType<GroupType>;
+            const resValue = res.value as unknown as CrudResultType;
             const recCount = resValue.recordsCount || 0;
             assertEquals(res.code === "recordExist" || res.code === "updateError", true, `create-task should return recordExist`);
             assertEquals(res.code !== "success", true, `create-task should return existError or updateError`);
@@ -46,7 +48,7 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
         }
     });
 
-    postTestResult();
+    await postTestResult();
     await appDbInstance.closeDb();
     await auditDbInstance.closeDb();
 

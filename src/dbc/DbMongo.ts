@@ -1,5 +1,5 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-07-17
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-07-17 | @Updated: 2024-01-06
  * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: mcdbcrud-mg db-server-connect & db-handle for mongoDB
@@ -33,7 +33,7 @@ export class DbMongo {
         this.pass = encodeURIComponent(this.password);
         this.replicas = dbConfig.replicas || [];
         this.replicaName = dbConfig.replicaName || "";
-        // set default dbUrl and serverUrl - standard standalone DB | TODO: include ?directConnection=true for remote DB access
+        // set default dbUrl and serverUrl - standard standalone DB | include ?directConnection=true for remote DB access
         this.dbUrl = this.checkAccess ?
             `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?directConnection=true` :
             `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?directConnection=true`;

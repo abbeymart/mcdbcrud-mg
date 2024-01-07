@@ -1,12 +1,18 @@
-import { ActionParamsType, ActionParamType, CrudParamsType, TaskTypes, isEmptyObject } from "..";
+import { ActionParamsType, ActionParamType, CrudParamsType, ObjectRefType, TaskTypes } from "..";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
+
+
+// isEmptyObject validates is an object contains no keys and/or values
+export function isEmptyObject(val: ObjectRefType): boolean {
+    return !(Object.keys(val).length > 0 && Object.values(val).length > 0);
+}
 
 export function checkTaskType(params: CrudParamsType): string {
     let taskType = TaskTypes.UNKNOWN
     if (params.actionParams && params.actionParams.length > 0) {
         const actParam = params.actionParams[0]
         if (!actParam["id"] || actParam["id"] === "") {
-            if (params.actionParams.length === 1 && (params.docIds && params.docIds?.length > 0) || params.queryParams && !isEmptyObject(params.queryParams)) {
+            if (params.actionParams.length === 1 && (params.recordIds && params.recordIds?.length > 0) || params.queryParams && !isEmptyObject(params.queryParams)) {
                 taskType = TaskTypes.UPDATE
             } else {
                 taskType = TaskTypes.CREATE
@@ -18,7 +24,7 @@ export function checkTaskType(params: CrudParamsType): string {
     return taskType
 }
 
-export function validateActionParams(actParams: ActionParamsType = []): ResponseMessage<any> {
+export function validateActionParams(actParams: ActionParamsType = []): ResponseMessage {
     // validate req-params: actionParams must be an array or 1 or more item(s)
     if (actParams.length < 1) {
         return getResMessage('validateError', {

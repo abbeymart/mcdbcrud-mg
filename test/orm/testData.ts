@@ -3,11 +3,44 @@
 import {
     ActionParamType, QueryParamsType, ModelRelationType, RelationTypes, RelationActionTypes,
     ModelDescType, BaseModel, DataTypes, ModelCrudOptionsType, newModel,
-    BaseModelType
+    BaseModelType, UserInfoType, CrudOptionsType
 } from "../../src"
-import {collections} from "../collections";
+import { collections } from "../collections";
 
 // Models
+
+export const crudParamOptions: CrudOptionsType = {
+    checkAccess  : false,
+    auditTable   : "audits",
+    userTable    : "users",
+    serviceTable : "services",
+    accessTable  : "accesses",
+    verifyTable  : "verify_users",
+    roleTable    : "roles",
+    logCrud      : true,
+    logCreate    : true,
+    logUpdate    : true,
+    logDelete    : true,
+    logRead      : true,
+    logLogin     : false,
+    logLogout    : false,
+    maxQueryLimit: 10000,
+    msgFrom      : "support@mconnect.biz",
+    cacheResult  : false,
+}
+
+
+export const testUserInfo: UserInfoType = {
+    userId   : "c85509ac-7373-464d-b667-425bb59b5738",
+    loginName: "abbeymart",
+    email    : "abbeya1@yahoo.com",
+    language : "en-US",
+    firstname: "Abi",
+    lastname : "Akindele",
+    token    : "",
+    expire   : 0,
+    group    : "",
+}
 
 export interface GroupType extends BaseModelType {
     name: string;
@@ -23,8 +56,8 @@ export interface CategoryType extends BaseModelType {
 }
 
 export const groupModel: ModelDescType = {
-    collName   : collections.GROUPS,
-    docDesc    : {
+    tableName   : collections.GROUPS,
+    tableDesc: {
         ...BaseModel,
         name: {
             fieldType  : DataTypes.STRING,
@@ -38,8 +71,8 @@ export const groupModel: ModelDescType = {
 };
 
 export const categoryModel: ModelDescType = {
-    collName   : collections.CATEGORIES,
-    docDesc    : {
+    tableName   : collections.CATEGORIES,
+    tableDesc: {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -71,8 +104,8 @@ export const categoryModel: ModelDescType = {
 
 export const groupRelations: Array<ModelRelationType> = [
     {
-        sourceColl  : collections.GROUPS,
-        targetColl  : collections.CATEGORIES,
+        sourceTable : collections.GROUPS,
+        targetTable : collections.CATEGORIES,
         sourceField : "name",
         targetField : "groupName",
         targetModel : categoryModel,
@@ -85,8 +118,8 @@ export const groupRelations: Array<ModelRelationType> = [
 
 export const categoryRelations: Array<ModelRelationType> = [
     {
-        sourceColl  : collections.CATEGORIES,
-        targetColl  : collections.CATEGORIES,
+        sourceTable : collections.CATEGORIES,
+        targetTable : collections.CATEGORIES,
         sourceField : "_id",
         targetField : "parentId",
         targetModel : categoryModel,
@@ -123,6 +156,7 @@ export const GroupModel = newModel(groupModel, groupOptions);
 // instantiate model
 export const CategoryModel = newModel(categoryModel, categoryOptions);
 
+export const auditColl = collections.AUDITS;
 export const groupColl = collections.GROUPS;
 export const groupCollUpdate = "groups_update";
 export const groupCollDelete = "groups_delete";

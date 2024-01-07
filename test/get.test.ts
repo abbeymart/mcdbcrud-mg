@@ -19,9 +19,9 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
         appDb      : appDbHandle,
         dbClient   : appDbClient,
         dbName     : appDbLocal.database || "mcdev",
-        coll       : GetTable,
+        tableName  : GetTable,
         userInfo   : TestUserInfo,
-        docIds     : [],
+        recordIds  : [],
         queryParams: {},
     };
 
@@ -29,7 +29,7 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
         auditDb      : auditDbHandle,
         auditDbClient: auditDbClient,
         auditDbName  : auditDbLocal.database || "mcdevaudit",
-        auditColl    : AuditTable,
+        auditTable   : AuditTable,
         userId       : TestUserInfo.userId,
         checkAccess  : false,
         logCrud      : true,
@@ -43,11 +43,11 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should get records by Id and return success:',
         testFunc: async () => {
-            crudParams.docIds = [GetAuditById]
+            crudParams.recordIds = [GetAuditById]
             crudParams.queryParams = {}
             const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType<any>
+            const resValue = res.value as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -60,11 +60,11 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should get records by Ids and return success:',
         testFunc: async () => {
-            crudParams.docIds = GetAuditByIds
+            crudParams.recordIds = GetAuditByIds
             crudParams.queryParams = {}
             const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType<any>
+            const resValue = res.value as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -77,11 +77,11 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should get records by query-params and return success:',
         testFunc: async () => {
-            crudParams.docIds = []
+            crudParams.recordIds = []
             crudParams.queryParams = GetAuditByParams
             const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType<any>
+            const resValue = res.value as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -94,13 +94,13 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should get all records and return success:',
         testFunc: async () => {
-            crudParams.coll = GetTable
-            crudParams.docIds = []
+            crudParams.tableName = GetTable
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             crudOptions.getAllRecords = true
             const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType<any>
+            const resValue = res.value as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);
@@ -113,15 +113,15 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await mcTest({
         name    : 'should get all records by limit/skip(offset) and return success:',
         testFunc: async () => {
-            crudParams.coll = GetTable
-            crudParams.docIds = []
+            crudParams.tableName = GetTable
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             crudParams.skip = 0
             crudParams.limit = 20
             crudOptions.getAllRecords = true
             const crud = newGetRecord(crudParams, crudOptions);
             const res = await crud.getRecord()
-            const resValue = res.value as GetResultType<any>
+            const resValue = res.value as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
             assertEquals(res.code, "success", `response-code should be: success`);

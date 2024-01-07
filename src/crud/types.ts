@@ -5,9 +5,9 @@
  * @Description: CRUD types
  */
 
-import {Db, MongoClient, SortDirection} from "mongodb";
-import {ModelRelationType, ModelOptionsType, ValidateMethodResponseType, DocDescType} from "../orm";
-import {ResponseMessage} from "@mconnect/mcresponse";
+import { Db, MongoClient, SortDirection } from "mongodb";
+import { ModelRelationType, ModelOptionsType, ValidateMethodResponseType, TableDescType } from "../orm";
+import { ResponseMessage } from "@mconnect/mcresponse";
 
 export interface ObjectRefType {
     [key: string]: any;
@@ -75,28 +75,28 @@ export interface GetRecordStats {
 
 export type GetRecords = Array<ObjectType>;
 
-export interface GetResultType<T> {
+export interface GetResultType {
     records: GetRecords,
     stats: GetRecordStats,
-    logRes?: ResponseMessage<T>;
+    logRes?: ResponseMessage;
     taskType?: string;
 }
 
-export interface CrudResultType<T> {
+export interface CrudResultType {
     queryParam?: QueryParamsType;
     recordIds?: Array<string>;
     recordsCount?: number;
     records?: ActionParamsType;
     taskType?: string;
-    logRes?: ResponseMessage<T>;
+    logRes?: ResponseMessage;
 }
 
-export interface SaveResultType<T> {
+export interface SaveResultType {
     queryParam?: QueryParamsType;
     recordIds?: Array<string>;
     recordsCount?: number;
     taskType?: string;
-    logRes?: ResponseMessage<T>;
+    logRes?: ResponseMessage;
 }
 
 export enum TaskTypes {
@@ -106,6 +106,11 @@ export enum TaskTypes {
     READ = "read",
     DELETE = "delete",
     REMOVE = "remove",
+    LOGIN = "login",
+    LOGOUT = "logout",
+    APPLOG = "applog",
+    SYSLOG = "syslog",
+    ERRORLOG = "errorlog",
     UNKNOWN = "unknown",
 }
 
@@ -113,21 +118,31 @@ export enum TaskTypes {
 
 // auditLog types
 
-export interface LogDocumentsType {
-    logDocuments?: any;
+export interface LogRecordsType {
+    logRecords?: any;
     queryParam?: QueryParamsType;
-    docIds?: Array<string>;
-    collFields?: Array<string>;
-    collDocuments?: Array<any>;
+    recordIds?: Array<string>;
+    tableFields?: Array<string>;
 }
 
-export interface AuditLogOptionsType {
-    auditColl?: string;
-    collName?: string;
-    collDocuments?: LogDocumentsType;
-    newCollDocuments?: LogDocumentsType;
-    recordParams?: LogDocumentsType;
-    newRecordParams?: LogDocumentsType;
+export interface AuditLogParamsType {
+    tableName?: string;
+    logRecords?: LogRecordsType;
+    newLogRecords?: LogRecordsType;
+    logBy?: string;
+    auditTable?: string;
+    // recordParams?: LogRecordsType;
+    // newRecordParams?: LogRecordsType;
+}
+
+export interface AuditType {
+    _id?: string;
+    tableName?: string;
+    logRecords?: LogRecordsType;
+    newLogRecords?: LogRecordsType;
+    logType?: string;
+    logBy?: string;
+    logAt?: Date | string;
 }
 
 export enum AuditLogTypes {
@@ -139,6 +154,10 @@ export enum AuditLogTypes {
     READ = "read",
     LOGIN = "login",
     LOGOUT = "logout",
+    APPLOG = "applog",
+    SYSLOG = "syslog",
+    ERRORLOG = "errorlog",
+    CUSTOM = "custom",
 }
 
 export interface EmailAddressType {
@@ -191,7 +210,7 @@ export enum ServiceCategory {
 }
 
 export interface SubItemsType {
-    collName: string;
+    tableName: string;
     hasRelationRecords: boolean;
 }
 
@@ -205,7 +224,7 @@ export interface RoleServiceResponseType {
     canUpdate: boolean;
     canDelete: boolean;
     canCrud: boolean;
-    collAccessPermitted?: boolean;
+    tableAccessPermitted?: boolean;
 }
 
 export interface CheckAccessType {
@@ -215,7 +234,7 @@ export interface CheckAccessType {
     isActive: boolean;
     isAdmin: boolean;
     roleServices?: Array<RoleServiceResponseType>;
-    collId?: string;
+    tableId?: string;
     profile?: ProfileType;
 }
 
@@ -227,7 +246,7 @@ export interface RoleServiceType {
     canCreate: boolean;
     canUpdate: boolean;
     canDelete: boolean;
-    collAccessPermitted?: boolean;
+    tableAccessPermitted?: boolean;
 }
 
 export interface RoleFuncType {
@@ -256,7 +275,7 @@ export type PromiseResponseType = Promise<string>
 export interface ActionParamTaskType {
     createItems: ActionParamsType;
     updateItems: ActionParamsType;
-    docIds?: Array<string>;
+    recordIds?: Array<string>;
 }
 
 export interface AppParamsType {
@@ -270,17 +289,17 @@ export interface AppParamsType {
 
 export interface CrudParamsType {
     appDb: Db;
-    coll: string;
+    tableName: string;
     dbClient: MongoClient;
     dbName: string;
-    docDesc?: DocDescType;
+    docDesc?: TableDescType;
     userInfo?: UserInfoType;
     nullValues?: ActionParamType;
     defaultValues?: ActionParamType;
     actionParams?: ActionParamsType;
     existParams?: ActionExistParamsType;
     queryParams?: QueryParamsType;
-    docIds?: Array<string>;
+    recordIds?: Array<string>;
     projectParams?: ProjectParamsType;
     sortParams?: SortParamsType;
     token?: string;
@@ -295,18 +314,18 @@ export interface CrudParamsType {
 export interface CrudOptionsType {
     skip?: number;
     limit?: number;
-    parentColls?: Array<string>;
-    childColls?: Array<string>;
+    parentTables?: Array<string>;
+    childTables?: Array<string>;
     parentRelations?: Array<ModelRelationType>;
     childRelations?: Array<ModelRelationType>;
     recursiveDelete?: boolean;
     checkAccess?: boolean
-    auditColl?: string;
-    serviceColl?: string;
-    userColl?: string;
-    roleColl?: string;
-    accessColl?: string;
-    verifyColl?: string;
+    auditTable?: string;
+    serviceTable?: string;
+    userTable?: string;
+    roleTable?: string;
+    accessTable?: string;
+    verifyTable?: string;
     accessDb?: Db;
     auditDb?: Db;
     serviceDb?: Db;

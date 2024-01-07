@@ -1,15 +1,11 @@
-import { assertEquals, mcTest, postTestResult } from "../../test_deps.ts";
+import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
+import { appDb, auditDb, dbOptions } from "../config";
 import {
-    CrudParamsType, CrudResultType,
-    newDbMongo,
-} from "../../src/index.ts";
-import {
-    groupCollUpdate, GroupModel,
-    GroupUpdateRecordByParam, GroupType,
-    UpdateGroupById, GroupUpdateActionParams, GroupUpdateRecordById, UpdateGroupByParams, UpdateGroupByIds,
-} from "./testData.ts";
-import { appDb, auditDb, dbOptions } from "../config/secure/config.ts";
-import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
+    auditColl, crudParamOptions, groupCollUpdate, GroupModel,
+    GroupUpdateActionParams, GroupUpdateRecordById, GroupUpdateRecordByParam,
+    testUserInfo, UpdateGroupById, UpdateGroupByIds, UpdateGroupByParams
+} from "./testData";
+import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -21,32 +17,32 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     const auditDbHandle = await auditDbInstance.openDb();
     const auditDbClient = await auditDbInstance.mgServer();
 
-    const crudParams: CrudParamsType<GroupType> = {
+    const crudParams: CrudParamsType = {
         appDb      : appDbHandle,
         dbClient   : appDbClient,
         dbName     : appDb.database || "",
-        coll       : groupCollUpdate,
+        tableName  : groupCollUpdate,
         userInfo   : testUserInfo,
-        docIds     : [],
+        recordIds  : [],
         queryParams: {},
     };
 
     crudParamOptions.auditDb = auditDbHandle;
     crudParamOptions.auditDbClient = auditDbClient;
     crudParamOptions.auditDbName = appDb.database;
-    crudParamOptions.auditColl = auditColl;
+    crudParamOptions.auditTable = auditColl;
 
     await mcTest({
         name    : "should update two existing documents and return success:",
         testFunc: async () => {
-            crudParams.coll = groupCollUpdate;
+            crudParams.tableName = groupCollUpdate;
             crudParams.actionParams = GroupUpdateActionParams;
-            crudParams.docIds = []
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             const recLen = crudParams.actionParams?.length || 0
             const res = await GroupModel.save(crudParams, crudParamOptions);
             console.log("update-result: ", res);
-            const resValue = res.value as unknown as CrudResultType<GroupType>;
+            const resValue = res.value as unknown as CrudResultType;
             const recCount = resValue.recordsCount || 0
             assertEquals(res.code, "success", `update-task should return code: success`);
             assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
@@ -56,14 +52,14 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should update a record by Id and return success:",
         testFunc: async () => {
-            crudParams.coll = groupCollUpdate
+            crudParams.tableName = groupCollUpdate
             crudParams.actionParams = [GroupUpdateRecordById]
-            crudParams.docIds = [UpdateGroupById]
+            crudParams.recordIds = [UpdateGroupById]
             crudParams.queryParams = {}
-            const recLen = crudParams.docIds.length;
+            const recLen = crudParams.recordIds.length;
             const res = await GroupModel.save(crudParams, crudParamOptions);
             console.log("update-result: ", res);
-            const resValue = res.value as unknown as CrudResultType<GroupType>;
+            const resValue = res.value as unknown as CrudResultType;
             const recCount = resValue.recordsCount || 0;
             assertEquals(res.code, "success", `update-by-id-task should return code: success`);
             assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
@@ -73,14 +69,14 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should update records by query-params and return success:",
         testFunc: async () => {
-            crudParams.coll = groupCollUpdate;
+            crudParams.tableName = groupCollUpdate;
             crudParams.actionParams = [GroupUpdateRecordByParam]
-            crudParams.docIds = []
+            crudParams.recordIds = []
             crudParams.queryParams = UpdateGroupByParams;
             const recLen = 0
             const res = await GroupModel.save(crudParams, crudParamOptions);
             console.log("update-result: ", res);
-            const resValue = res.value as unknown as CrudResultType<GroupType>;
+            const resValue = res.value as unknown as CrudResultType;
             const recCount = resValue.recordsCount || 0
             assertEquals(res.code, "success", `create-task should return code: success`);
             assertEquals(recCount > recLen, true, `response-value-recordsCount should be >: ${recLen}`);
@@ -90,14 +86,14 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should return unique-error [recordExist or updateError] for updating documents by Ids:",
         testFunc: async () => {
-            crudParams.coll = groupCollUpdate
+            crudParams.tableName = groupCollUpdate
             crudParams.actionParams = [GroupUpdateRecordById]
-            crudParams.docIds = UpdateGroupByIds
+            crudParams.recordIds = UpdateGroupByIds
             crudParams.queryParams = {}
-            const recLen = crudParams.docIds.length;
+            const recLen = crudParams.recordIds.length;
             const res = await GroupModel.save(crudParams, crudParamOptions);
             console.log("update-result: ", res);
-            const resValue = res.value as unknown as CrudResultType<GroupType>;
+            const resValue = res.value as unknown as CrudResultType;
             const recCount = resValue.recordsCount || 0;
             assertEquals(res.code === "recordExist" || res.code === "updateError", true, `create-task should return recordExist`);
             assertEquals(res.code !== "success", true, `create-task should return existError or updateError`);
@@ -108,9 +104,9 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should return error updating a non-unique/existing document:",
         testFunc: async () => {
-            crudParams.coll = groupCollUpdate
+            crudParams.tableName = groupCollUpdate
             crudParams.actionParams = [GroupUpdateRecordByParam]
-            crudParams.docIds = [UpdateGroupById]
+            crudParams.recordIds = [UpdateGroupById]
             crudParams.queryParams = {};
             const res = await GroupModel.save(crudParams, crudParamOptions);
             console.log("create-result: ", res);
@@ -119,7 +115,7 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
         }
     });
 
-    postTestResult();
+    await postTestResult();
     await appDbInstance.closeDb();
     await auditDbInstance.closeDb();
 

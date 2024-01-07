@@ -1,10 +1,11 @@
-import { assertEquals, mcTest, postTestResult, } from "../../test_deps.ts";
-import { CrudParamsType, newDbMongo, AuditType } from "../../src/index.ts";
+import { CrudParamsType, newDbMongo } from "../../src";
+import { appDb, auditDb, dbOptions } from "../config";
 import {
-    DeleteGroupById, DeleteGroupByIds, DeleteGroupByParams, groupCollDelete, groupCollDeleteAll, GroupModel
-} from "./testData.ts";
-import { appDb, auditDb, dbOptions } from "../config/secure/config.ts";
-import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
+    auditColl, crudParamOptions, DeleteGroupById, DeleteGroupByIds, DeleteGroupByParams, groupCollDelete,
+    groupCollDeleteAll, GroupModel,
+    testUserInfo
+} from "./testData";
+import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -16,26 +17,26 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     const auditDbHandle = await auditDbInstance.openDb();
     const auditDbClient = await auditDbInstance.mgServer();
 
-    const crudParams: CrudParamsType<AuditType> = {
+    const crudParams: CrudParamsType = {
         appDb      : appDbHandle,
         dbClient   : appDbClient,
         dbName     : appDb.database || "",
-        coll       : groupCollDelete,
+        tableName  : groupCollDelete,
         userInfo   : testUserInfo,
-        docIds     : [],
+        recordIds  : [],
         queryParams: {},
     };
 
     crudParamOptions.auditDb = auditDbHandle;
     crudParamOptions.auditDbClient = auditDbClient;
     crudParamOptions.auditDbName = appDb.database;
-    crudParamOptions.auditColl = auditColl;
+    crudParamOptions.auditTable = auditColl;
 
     await mcTest({
         name    : "should delete record by Id and return success [delete-record-method]:",
         testFunc: async () => {
-            crudParams.coll = groupCollDelete
-            crudParams.docIds = [DeleteGroupById]
+            crudParams.tableName = groupCollDelete
+            crudParams.recordIds = [DeleteGroupById]
             crudParams.queryParams = {}
             const res = await GroupModel.delete(crudParams, crudParamOptions);
             console.log("delete-by-id-res: ", res)
@@ -47,8 +48,8 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should delete record by Ids and return success [delete-record-method]:",
         testFunc: async () => {
-            crudParams.coll = groupCollDelete;
-            crudParams.docIds = DeleteGroupByIds;
+            crudParams.tableName = groupCollDelete;
+            crudParams.recordIds = DeleteGroupByIds;
             crudParams.queryParams = {};
             const res = await GroupModel.delete(crudParams, crudParamOptions);
             console.log("delete-by-ids-res: ", res)
@@ -60,8 +61,8 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should delete records by query-params and return success[delete-record-method]:",
         testFunc: async () => {
-            crudParams.coll = groupCollDelete
-            crudParams.docIds = []
+            crudParams.tableName = groupCollDelete
+            crudParams.recordIds = []
             crudParams.queryParams = DeleteGroupByParams
             const res = await GroupModel.delete(crudParams, crudParamOptions);
             console.log("delete-by-params-res: ", res)
@@ -73,8 +74,8 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
     await mcTest({
         name    : "should prevent deletion of all records, only by docIds or queryParams only [delete-record-method]:",
         testFunc: async () => {
-            crudParams.coll = groupCollDeleteAll
-            crudParams.docIds = []
+            crudParams.tableName = groupCollDeleteAll
+            crudParams.recordIds = []
             crudParams.queryParams = {}
             const res = await GroupModel.delete(crudParams, crudParamOptions);
             console.log("delete-all-res: ", res)
@@ -84,7 +85,7 @@ import { auditColl, crudParamOptions, testUserInfo } from "../testData.ts";
         }
     });
 
-    postTestResult();
+    await postTestResult();
     await appDbInstance.closeDb();
     await auditDbInstance.closeDb();
 
