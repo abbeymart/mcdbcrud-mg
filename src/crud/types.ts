@@ -292,7 +292,7 @@ export interface CrudParamsType {
     tableName: string;
     dbClient: MongoClient;
     dbName: string;
-    docDesc?: TableDescType;
+    tableDesc?: TableDescType;
     userInfo?: UserInfoType;
     nullValues?: ActionParamType;
     defaultValues?: ActionParamType;

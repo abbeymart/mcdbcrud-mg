@@ -2,8 +2,8 @@
 
 ## Version 0.3.0
 
-- Release date: Jan-07-2024
-- Refactor-db-types-and-crud-funcs-v0.3.0
+- Release date: Jan-10-2024
+- Refactor-db-types-crud-and-transaction-methods-v0.3.0
 
 ## Version 0.2.0
 

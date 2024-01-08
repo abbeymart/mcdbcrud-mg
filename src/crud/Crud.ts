@@ -9,10 +9,14 @@ import { Db, MongoClient, ObjectId } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import {
     CrudParamsType, CrudOptionsType, TaskTypes, QueryParamsType, ActionParamsType,
-    ProjectParamsType, SortParamsType, SubItemsType, ObjectRefType, ActionExistParamsType,
+    ProjectParamsType, SortParamsType, SubItemsType, ObjectRefType, ActionExistParamsType, FieldValueTypes,
+    ActionParamType,
 } from "./types";
 import { AuditLog, newAuditLog } from "../auditlog";
-import { ModelRelationType } from "../orm";
+import { DataTypes, DefaultValueType, FieldDescType, ModelRelationType } from "../orm";
+
+class DocDescType {
+}
 
 export class Crud {
     protected params: CrudParamsType;
@@ -169,7 +173,7 @@ export class Crud {
     }
 
     // checkRecExist method checks if items/documents exist: document uniqueness
-    async checkRecExist(): Promise<ResponseMessage> {
+    async noRecordDuplication(): Promise<ResponseMessage> {
         try {
             // check if existParams condition is specified
             if (this.existParams.length < 1) {
@@ -177,7 +181,7 @@ export class Crud {
                     message: "No data integrity condition specified",
                 });
             }
-            // check record existence/uniqueness for the documents/actionParams
+            // check record existence/uniqueness for the record/actionParams
             const appDbColl = this.appDb.collection(this.tableName);
             let attributesMessage = "";
             for (const actionExistParams of this.existParams) {
@@ -208,13 +212,13 @@ export class Crud {
                 });
             } else {
                 return getResMessage("success", {
-                    message: "No data integrity conflict",
+                    message: "No data integrity (duplication) conflict",
                 });
             }
         } catch (e) {
             console.error(e);
             return getResMessage("saveError", {
-                message: "Unable to verify data integrity conflict",
+                message: "Unable to verify data integrity (duplication) conflict",
             });
         }
     }
@@ -236,7 +240,24 @@ export class Crud {
                         .skip(this.skip)
                         .limit(this.limit)
                         .toArray();
-                    break;
+                    if (currentRecords.length > 0 && currentRecords.length === this.recordIds.length) {
+                        // update crud instance current-records value
+                        this.currentRecs = currentRecords;
+                        return getResMessage("success", {
+                            message: `${currentRecords.length} document/record(s) retrieved successfully.`,
+                            value  : currentRecords,
+                        });
+                    } else if (currentRecords.length > 0 && currentRecords.length < this.recordIds.length) {
+                        return getResMessage("partialRecords", {
+                            message: `${currentRecords.length} out of ${this.recordIds.length} document/record(s) found`,
+                            value  : currentRecords,
+                        });
+                    } else {
+                        return getResMessage("notFound", {
+                            message: "Document/record(s) not found.",
+                            value  : currentRecords,
+                        });
+                    }
                 case "queryparams":
                     currentRecords = await this.appDb.collection(this.tableName)
                         .find(this.queryParams,)
@@ -251,26 +272,6 @@ export class Crud {
                         .limit(this.limit)
                         .toArray();
                     break;
-            }
-            if (by.toLowerCase() === "id") {
-                if (currentRecords.length > 0 && currentRecords.length === this.recordIds.length) {
-                    // update crud instance current-records value
-                    this.currentRecs = currentRecords;
-                    return getResMessage("success", {
-                        message: `${currentRecords.length} document/record(s) retrieved successfully.`,
-                        value  : currentRecords,
-                    });
-                } else if (currentRecords.length > 0 && currentRecords.length < this.recordIds.length) {
-                    return getResMessage("partialRecords", {
-                        message: `${currentRecords.length} out of ${this.recordIds.length} document/record(s) found`,
-                        value  : currentRecords,
-                    });
-                } else {
-                    return getResMessage("notFound", {
-                        message: "Document/record(s) not found.",
-                        value  : currentRecords,
-                    });
-                }
             }
             // response for by queryParams or all-documents
             if (currentRecords.length > 0) {
@@ -292,6 +293,125 @@ export class Crud {
                 message: "Error retrieving current document/record(s)",
             });
         }
+    }
+
+    // set null value by DataTypes
+    initializeValues(fieldTypeDesc: DataTypes): any {
+        switch (fieldTypeDesc) {
+            case DataTypes.STRING:
+            case DataTypes.POSTAL_CODE:
+            case DataTypes.MONGODB_ID:
+            case DataTypes.UUID:
+            case DataTypes.EMAIL:
+            case DataTypes.PORT:
+            case DataTypes.URL:
+            case DataTypes.JWT:
+            case DataTypes.MAC_ADDRESS:
+            case DataTypes.ISO2:
+            case DataTypes.ISO3:
+            case DataTypes.LAT_LONG:
+            case DataTypes.MIME:
+            case DataTypes.CREDIT_CARD:
+            case DataTypes.CURRENCY:
+            case DataTypes.IMEI:
+                return "";
+            case DataTypes.INTEGER:
+            case DataTypes.POSITIVE:
+            case DataTypes.BIGINT:
+                return 0;
+            case DataTypes.NUMBER:
+            case DataTypes.DECIMAL:
+            case DataTypes.FLOAT:
+            case DataTypes.BIGFLOAT:
+                return 0.00;
+            case DataTypes.ARRAY:
+            case DataTypes.ARRAY_NUMBER:
+            case DataTypes.ARRAY_STRING:
+            case DataTypes.ARRAY_OBJECT:
+            case DataTypes.ARRAY_BOOLEAN:
+            case DataTypes.ENUM:
+                return [];
+            case DataTypes.OBJECT:
+            case DataTypes.JSON:
+            case DataTypes.MAP:
+                return {};
+            case DataTypes.BOOLEAN:
+                return false;
+            case DataTypes.DATETIME:
+            case DataTypes.TIMESTAMP:
+            case DataTypes.TIMESTAMPZ:
+                return new Date("01-01-1970");
+            case DataTypes.IP:
+                return "0.0.0.0";
+            default:
+                return null;
+        }
+    }
+
+    // set default value based on FieldDescType
+    async setDefault(defaultValue: FieldValueTypes | DefaultValueType, fieldValue: FieldValueTypes = null): Promise<any> {
+        try {
+            switch (typeof defaultValue) {
+                // defaultValue may be of types: DefaultValueType(function) or FieldValueTypes(others)
+                case "function":
+                    const defValue = defaultValue as DefaultValueType;
+                    return await defValue(fieldValue);
+                default:
+                    return defaultValue || null;
+            }
+        } catch (e) {
+            return null
+        }
+    }
+
+    // computeInitializeValues set the null values for document/actionParam, for allowNull(true)
+    computeInitializeValues(docDesc: DocDescType): ActionParamType {
+        let nullValues: ActionParamType = {}
+        for (let [field, fieldDesc] of Object.entries(docDesc)) {
+            switch (typeof fieldDesc) {
+                case "string":
+                    fieldDesc = fieldDesc as DataTypes
+                    // allowNull = true
+                    // set null value for DataTypes
+                    nullValues[field] = this.initializeValues(fieldDesc);
+                    break;
+                case "object":
+                    fieldDesc = fieldDesc as FieldDescType
+                    // if !allowNull, skip setting null value
+                    if (Object.keys(fieldDesc).includes("allowNull") && !fieldDesc.allowNull) {
+                        continue;
+                    }
+                    // set null value for DataTypes
+                    nullValues[field] = this.initializeValues(fieldDesc.fieldType);
+                    break;
+            }
+        }
+        return nullValues;
+    }
+
+    async computeDefaultValues(docDesc: DocDescType): Promise<ActionParamType> {
+        let defaultValues: ActionParamType = {};
+        for (let [field, fieldDesc] of Object.entries(docDesc)) {
+            switch (typeof fieldDesc) {
+                case "string":
+                    fieldDesc = fieldDesc as DataTypes
+                    // set default-value (null value) for DataTypes
+                    defaultValues[field] = this.initializeValues(fieldDesc);
+                    break;
+                case "object":
+                    fieldDesc = fieldDesc as FieldDescType
+                    // if !defaultValue, skip setting default value
+                    if (!fieldDesc.defaultValue) {
+                        continue;
+                    }
+                    // set default value for FieldDescType
+                    defaultValues[field] = await this.setDefault(fieldDesc.defaultValue);
+                    break;
+                default:
+                    break;
+            }
+        }
+        return defaultValues;
     }
 
 }

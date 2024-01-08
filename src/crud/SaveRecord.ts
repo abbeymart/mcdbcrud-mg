@@ -59,7 +59,7 @@ class SaveRecord extends Crud {
         }
         if (this.createItems.length < 1 && this.updateItems.length < 1 && this.actionParams.length < 1) {
             return getResMessage("paramsError", {
-                message: "Inputs errors (actionParams) to complete create or update tasks.",
+                message: "Valid actionParams parameter is required to complete create or update tasks.",
                 value  : {},
             });
         }
@@ -75,7 +75,7 @@ class SaveRecord extends Crud {
                 // transform/cast id, from string, to mongoDB-new ObjectId
                 Object.keys(item).forEach((itemKey: string) => {
                     if (itemKey.toString().toLowerCase().endsWith("id")) {
-                        // create | TODO: review id-field length
+                        // create
                         if (typeof item[itemKey] === "string" && item[itemKey] !== "" &&
                             item[itemKey] !== null && item[itemKey].length <= 24) {
                             item[itemKey] = new ObjectId(item[itemKey]);
@@ -96,9 +96,9 @@ class SaveRecord extends Crud {
             try {
                 // check duplicate records, i.e. if similar records exist
                 if (this.existParams.length > 0) {
-                    const recExist: ResponseMessage = await this.checkRecExist();
-                    if (recExist.code !== "success") {
-                        return recExist;
+                    const noDuplication = await this.noRecordDuplication();
+                    if (noDuplication.code !== "success") {
+                        return noDuplication;
                     }
                 }
                 // create records
@@ -110,23 +110,28 @@ class SaveRecord extends Crud {
                 });
             }
         }
-
+        /**
+         * compute/set table-constraints settings for update task.
+         * @param updateCascade - for updating target table reference-field value
+         * @param updateSetNull - for updating target table reference-field value to null-value
+         * @param updateSetDefault - for updating target table reference-field value to default-value
+         */
+        this.updateCascade = this.childRelations.map(item => item.onUpdate === RelationActionTypes.CASCADE).length > 0;
+        this.updateSetNull = this.childRelations.map(item => item.onUpdate === RelationActionTypes.SET_NULL).length > 0;
+        this.updateSetDefault = this.childRelations.map(item => item.onUpdate === RelationActionTypes.SET_DEFAULT).length > 0;
         // update existing records/documents
         if (this.updateItems.length > 0) {
             this.taskType = TaskTypes.UPDATE
             try {
                 // check duplicate records, i.e. if similar records exist
                 if (this.existParams.length > 0) {
-                    const recExist = await this.checkRecExist();
-                    if (recExist.code !== "success") {
-                        return recExist;
+                    const noDuplication = await this.noRecordDuplication();
+                    if (noDuplication.code !== "success") {
+                        return noDuplication;
                     }
                 }
-                this.recordIds = this.updateItems.map(it => it["_id"])
+                this.recordIds = this.updateItems.map(it => it["_id"] as string)
                 // get current records for update-cascade and audit log
-                this.updateCascade = this.childRelations.map(item => item.onUpdate === RelationActionTypes.CASCADE).length > 0;
-                this.updateSetNull = this.childRelations.map(item => item.onUpdate === RelationActionTypes.SET_NULL).length > 0;
-                this.updateSetDefault = this.childRelations.map(item => item.onUpdate === RelationActionTypes.SET_DEFAULT).length > 0;
                 if (this.logUpdate || this.logCrud || this.updateCascade || this.updateSetNull || this.updateSetDefault) {
                     const currentRec = await this.getCurrentRecords("id");
                     if (currentRec.code !== "success") {
@@ -150,15 +155,12 @@ class SaveRecord extends Crud {
             try {
                 // check duplicate records, i.e. if similar records exist
                 if (this.existParams.length > 0) {
-                    const recExist = await this.checkRecExist();
+                    const recExist = await this.noRecordDuplication();
                     if (recExist.code !== "success") {
                         return recExist;
                     }
                 }
                 // get current records update and audit log
-                this.updateCascade = this.childRelations.filter(item => item.onUpdate === RelationActionTypes.CASCADE).length > 0;
-                this.updateSetNull = this.childRelations.map(item => item.onUpdate === RelationActionTypes.SET_NULL).length > 0;
-                this.updateSetDefault = this.childRelations.map(item => item.onUpdate === RelationActionTypes.SET_DEFAULT).length > 0;
                 if (this.logUpdate || this.logCrud || this.updateCascade || this.updateSetNull || this.updateSetDefault) {
                     const currentRec = await this.getCurrentRecords("queryparams");
                     if (currentRec.code !== "success") {
@@ -181,15 +183,12 @@ class SaveRecord extends Crud {
             try {
                 // check duplicate records, i.e. if similar records exist
                 if (this.existParams.length > 0) {
-                    const recExist = await this.checkRecExist();
+                    const recExist = await this.noRecordDuplication();
                     if (recExist.code !== "success") {
                         return recExist;
                     }
                 }
                 // get current records update and audit log
-                this.updateCascade = this.childRelations.filter(item => item.onUpdate === RelationActionTypes.CASCADE).length > 0;
-                this.updateSetNull = this.childRelations.map(item => item.onUpdate === RelationActionTypes.SET_NULL).length > 0;
-                this.updateSetDefault = this.childRelations.map(item => item.onUpdate === RelationActionTypes.SET_DEFAULT).length > 0;
                 if (this.logUpdate || this.logCrud || this.updateCascade || this.updateSetNull || this.updateSetDefault) {
                     const currentRec = await this.getCurrentRecords("id");
                     if (currentRec.code !== "success") {
@@ -215,8 +214,9 @@ class SaveRecord extends Crud {
     // helper methods:
     async computeItems(modelOptions: ModelOptionsType = this.modelOptions): Promise<ActionParamTaskType> {
         let updateItems: ActionParamsType = [],
-            // recordIds: Array<string> = [],
             createItems: ActionParamsType = [];
+            // recordIds: Array<string> = [];
+
         // cases - actionParams.length === 1 OR > 1
         if (this.actionParams.length === 1) {
             let item = this.actionParams[0]
@@ -248,7 +248,7 @@ class SaveRecord extends Crud {
                     createItems.push(itemRec);
                 }
             } else {
-                // update existing document/record, by docId
+                // update existing document/record, by recordId
                 this.recordIds = [];
                 this.queryParams = {};
                 if (modelOptions.actorStamp) {
@@ -261,7 +261,6 @@ class SaveRecord extends Crud {
                     item["isActive"] = modelOptions.activeStamp;
                 }
                 updateItems.push(item);
-                // recordIds.push(item["_id"]);
             }
         } else if (this.actionParams.length > 1) {
             // multiple/batch creation or update of document/records
@@ -280,7 +279,6 @@ class SaveRecord extends Crud {
                         item["isActive"] = modelOptions.activeStamp;
                     }
                     updateItems.push(item);
-                    // recordIds.push(item["_id"]);
                 } else {
                     // create new document/record
                     // exclude any traces/presence of id, especially without concrete value ("", null, undefined)
@@ -322,10 +320,10 @@ class SaveRecord extends Crud {
         try {
             const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
             const insertResult = await appDbColl.insertMany(this.createItems,);
-            if (insertResult.insertedCount < 1 || !insertResult.acknowledged) {
+            if (!insertResult.acknowledged || insertResult.insertedCount < 1) {
                 throw new Error(`Unable to create new record(s), database error [${insertResult.insertedCount} of ${this.createItems.length} set to be created]`)
             }
-            // perform delete cache and audit-log tasks | TODO: update mccache package & usage
+            // perform delete cache and audit-log tasks
             const cacheParams: QueryHashCacheParamsType = {
                 key : this.cacheKey,
                 hash: this.tableName,
@@ -376,49 +374,27 @@ class SaveRecord extends Crud {
         try {
             let updateCount = 0;
             let updateMatchedCount = 0;
-            // update one record
-            if (this.updateItems.length === 1) {
+            // update multiple records
+            const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
+            for await (const item of this.updateItems) {
                 // destruct _id /other attributes
-                const item: any = this.updateItems[0];
                 const {
                     _id,
                     ...otherParams
                 } = item;
-                const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
                 const updateResult = await appDbColl.updateOne({
-                    _id: new ObjectId(_id),
+                    _id: new ObjectId(_id as string),
                 }, {
                     $set: otherParams,
                 },);
-                if (updateResult.modifiedCount < 1) {
-                    throw new Error("No records updated. Please retry.")
+                if (!updateResult.acknowledged || updateResult.modifiedCount < 1) {
+                    continue
                 }
                 updateCount += updateResult.modifiedCount;
-                updateMatchedCount += updateResult.matchedCount;
+                updateMatchedCount += updateResult.matchedCount
             }
-            // update multiple records
-            if (this.updateItems.length > 1) {
-                const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
-                for await (const item of this.updateItems) {
-                    // destruct _id /other attributes
-                    const {
-                        _id,
-                        ...otherParams
-                    } = item;
-                    const updateResult = await appDbColl.updateOne({
-                        _id: new ObjectId(_id as string),
-                    }, {
-                        $set: otherParams,
-                    },);
-                    if (updateResult.modifiedCount < 1) {
-                        continue
-                    }
-                    updateCount += updateResult.modifiedCount;
-                    updateMatchedCount += updateResult.matchedCount
-                }
-                if (updateCount < 1) {
-                    throw new Error("No records updated. Please retry.")
-                }
+            if (updateCount < 1 || updateCount != updateMatchedCount) {
+                throw new Error("No records updated. Please retry.")
             }
             // perform delete cache and audit-log tasks
             const cacheParams: QueryHashCacheParamsType = {
@@ -480,8 +456,8 @@ class SaveRecord extends Crud {
             updateResult = await appDbColl.updateMany({_id: {$in: this.recordIds.map(id => new ObjectId(id))}}, {
                 $set: updateParams
             },) as UpdateResult;
-            if (updateResult.modifiedCount < 1) {
-                throw new Error(`Error updating document(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
+            if (!updateResult.acknowledged || updateResult.modifiedCount < 1) {
+                throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
             }
             updateCount += updateResult.modifiedCount;
             updateMatchedCount += updateResult.matchedCount
@@ -548,8 +524,8 @@ class SaveRecord extends Crud {
             updateResult = await appDbColl.updateMany(this.queryParams, {
                 $set: updateParams
             },) as UpdateResult;
-            if (updateResult.modifiedCount < 1) {
-                throw new Error(`Error updating document(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
+            if (!updateResult.acknowledged || updateResult.modifiedCount < 1) {
+                throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
             }
             updateCount += updateResult.modifiedCount;
             updateMatchedCount += updateResult.matchedCount

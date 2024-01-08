@@ -1,42 +1,30 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-07-25
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-07-25 | @Updated: 2024-01-07
  * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: mongodb mc-orm model specifications and validation
  */
 
 import validator from "validator";
-import { getParamsMessage, getResMessage, MessageObject, ResponseMessage } from "@mconnect/mcresponse";
 import { ObjectId } from "mongodb";
+import { getParamsMessage, getResMessage, MessageObject, ResponseMessage } from "@mconnect/mcresponse";
 import {
-    ComputedMethodsType,
-    DataTypes,
-    DefaultValueType,
-    TableDescType,
-    FieldDescType,
-    ModelCrudOptionsType,
-    ModelDescType,
-    ModelOptionsType,
-    ModelRelationType,
-    UniqueFieldsType,
-    ValidateMethodResponseType,
-    ValidateResponseType,
-    ValueToDataTypes,
+    ComputedMethodsType, DataTypes, DefaultValueType, TableDescType,
+    FieldDescType, ModelCrudOptionsType, ModelDescType, ModelOptionsType,
+    ModelRelationType, UniqueFieldsType, ValidateMethodResponseType,
+    ValidateResponseType, ValueToDataTypes,
 } from "./types";
 import {
-    ActionExistParamsType,
-    ActionParamsType,
-    ActionParamType,
-    CrudOptionsType,
-    CrudParamsType, ExistParamItemType,
-    newDeleteRecord,
-    newGetRecord,
-    newGetRecordStream,
-    newSaveRecord,
-    TaskTypes,
+    ActionExistParamsType, ActionParamsType, ActionParamType, CrudOptionsType,
+    CrudParamsType, ExistParamItemType, newDeleteRecord, newGetRecord,
+    newGetRecordStream, newSaveRecord, TaskTypes,
 } from "../crud";
 import { isEmptyObject } from "../crud/utils";
+import { newDeleteRecordTrans, newSaveRecordTrans } from "../crud/transactions";
 
+/**
+ * @class Model - the model class for the mongodb
+ */
 export class Model {
     private readonly tableName: string;
     private readonly tableDesc: TableDescType;
@@ -114,10 +102,12 @@ export class Model {
         return this.alterSyncColl;
     }
 
-    // instance methods
+    // ***** instance methods *****
 
-    // getParentRelations method retrieves/extracts parent relations/collections for the this.collName (as targetColl).
-    // sourceColl is the parentColl of this.collName(target/child).
+    /**
+     * @method getParentRelations retrieves/extracts parent relations/tables(collections) for the this.tableName
+     * (as targetTable), sourceTable is the parentTable of this.tableName(target/child).
+     */
     getParentRelations(): Array<ModelRelationType> {
         if (this.modelRelations.length < 1) {
             return [];
@@ -131,8 +121,10 @@ export class Model {
         return parentRelations;
     }
 
-    // getChildRelations method retrieves/extracts child-relations/collections for the this.collName (as sourceColl).
-    // targetColl is the childColl of this.collName(source/parent).
+    /**
+     * @function getChildRelations retrieves/extracts child-relations/collections for the this.tableName (as sourceTable).
+     * targetTable is the childColl of this.tableName(source/parent).
+     */
     getChildRelations(): Array<ModelRelationType> {
         if (this.modelRelations.length < 1) {
             return [];
@@ -146,19 +138,85 @@ export class Model {
         return childRelations;
     }
 
-    // getParentColls retrieves the parent/source-collections from parentRelations
+    /**
+     * @function getParentTables retrieves the parent/source-tables from parentRelations
+     */
     getParentTables(): Array<string> {
         const parentRelations = this.getParentRelations();
         return parentRelations.length > 0 ? parentRelations.map(rel => rel.sourceTable) : [];
     }
 
-    // getChildColls retrieves the child/target-collections from childRelations
+    /**
+     * @function getChildTables retrieves the child/target-collections from childRelations
+     */
     getChildTables(): Array<string> {
         const childRelations = this.getChildRelations();
         return childRelations.length > 0 ? childRelations.map(rel => rel.targetTable) : [];
     }
 
-    // computeExistParam compute the query-object(s) for checking document uniqueness based on model-unique-fields constraints.
+    // ***** helper methods *****
+
+    /**
+     * @deprecated - use the model-description for validation, see @function validateDocValue
+     * @see validateDocValue
+     * @function computeRequiredFields computes the non-null fields, i.e. allowNull === false.
+     */
+    computeRequiredFields(): Array<string> {
+        let requiredFields: Array<string> = [];
+        for (let [field, fieldDesc] of Object.entries(this.modelTableDesc)) {
+            switch (typeof fieldDesc) {
+                case "object":
+                    fieldDesc = fieldDesc as FieldDescType;
+                    if (!fieldDesc.allowNull) {
+                        requiredFields.push(field);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        this.requiredFields = requiredFields;
+        return requiredFields;
+    }
+
+    /**
+     * @deprecated - use the model-description for validation, see @function validateDocValue
+     * @see validateDocValue
+     * @function validateRequiredFields validates the non-null field-values, i.e. allowNull === false.
+     * @param actionParam
+     */
+    validateRequiredFields(actionParam: ActionParamType): ValidateResponseType {
+        const errors: MessageObject = {};
+        const reqFields = this.computeRequiredFields()
+        if (reqFields.length < 1) {
+            errors["message"] = "No field validation requirements specified"
+            return {
+                ok: true,
+                errors,
+            };
+        }
+        // validate required field-values
+        for (const field of reqFields) {
+            if (!actionParam[field]) {
+                errors[field] = `Field: ${field} is required (not-null)`;
+            }
+        }
+        if (!isEmptyObject(errors)) {
+            return {
+                ok: false,
+                errors,
+            }
+        }
+        return {
+            ok: true,
+            errors,
+        }
+    }
+
+    /**
+     * @function computeExistParam computes the query-object(s) for checking document uniqueness based on model-unique-fields constraints.
+     * @param actionParam
+     */
     computeExistParam(actionParam: ActionParamType): Array<ExistParamItemType> {
         if (this.modelUniqueFields.length < 1) {
             return []
@@ -195,7 +253,10 @@ export class Model {
         return existParams;
     }
 
-    // computeExistParams compute the query-object(s) for checking records/documents uniqueness based on model-unique-fields constraints.
+    /**
+     * @function computeExistParams computes the query-object(s) for checking records/documents uniqueness based on model-unique-fields constraints.
+     * @param actionParams
+     */
     computeExistParams(actionParams: ActionParamsType): ActionExistParamsType {
         // set the existParams for create or update action to determine records/documents uniqueness
         const recordExistParams: ActionExistParamsType = [];
@@ -206,57 +267,10 @@ export class Model {
         return recordExistParams;
     }
 
-    // computeRequiredFields computes the non-null fields, i.e. allowNull === false.
-    computeRequiredFields(): Array<string> {
-        let requiredFields: Array<string> = [];
-        for (let [field, fieldDesc] of Object.entries(this.modelTableDesc)) {
-            switch (typeof fieldDesc) {
-                case "object":
-                    fieldDesc = fieldDesc as FieldDescType;
-                    if (!fieldDesc.allowNull) {
-                        requiredFields.push(field);
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-        this.requiredFields = requiredFields;
-        return requiredFields;
-    }
-
-    // validateRequiredFields validates the non-null field-values, i.e. allowNull === false.
-    validateRequiredFields(actionParam: ActionParamType): ValidateResponseType {
-        const errors: MessageObject = {};
-        const reqFields = this.computeRequiredFields()
-        if (reqFields.length < 1) {
-            errors["message"] = "No field validation requirements specified"
-            return {
-                ok: true,
-                errors,
-            };
-        }
-        // validate required field-values
-        for (const field of reqFields) {
-            if (!actionParam[field]) {
-                errors[field] = `Field: ${field} is required (not-null)`;
-            }
-        }
-        if (!isEmptyObject(errors)) {
-            return {
-                ok: false,
-                errors,
-            }
-        }
-        return {
-            ok: true,
-            errors,
-        }
-    }
-
-    // ***** helper methods *****
-
-    // computeDocValueType computes the record/document-field-value-types (DataTypes).
+    /**
+     * @function computeDocValueType computes the record/document-field-value-types (DataTypes).
+     * @param docValue
+     */
     computeDocValueType(docValue: ActionParamType): ValueToDataTypes {
         let computedTypes: ValueToDataTypes = {};
         try {
@@ -338,7 +352,10 @@ export class Model {
         }
     }
 
-    // setDefaultValue set the default record/document-field-values for no-value fields and if specified, setValue (transform).
+    /**
+     * @function setDefaultValues set the default record/document-field-values for no-value fields and if specified, setValue (transform).
+     * @param docValue
+     */
     async setDefaultValues(docValue: ActionParamType): Promise<ActionParamType> {
         try {
             // set base docValue
@@ -395,7 +412,11 @@ export class Model {
         }
     }
 
-    // validateDocValue validates the docValue by model definition (this.modelDocDesc)
+    /**
+     * @function validateDocValue validates the docValue by model definition (this.modelDocDesc)
+     * @param docValue
+     * @param docValueTypes
+     */
     async validateDocValue(docValue: ActionParamType, docValueTypes: ValueToDataTypes): Promise<ValidateResponseType> {
         let errors: MessageObject = {};
         try {
@@ -472,7 +493,7 @@ export class Model {
                                 }
                             }
                         } else if (fieldValue && (docValueTypes[key] === DataTypes.STRING || docValueTypes[key] === DataTypes.DATETIME)) {
-                            // TODO: date value, compare using milliseconds since epoch, Jan-01-1970
+                            // date value, compare using milliseconds since epoch, Jan-01-1970
                             // const dateFieldValue = (new Date(fieldValue as string)).setHours(0, 0, 0, 0);
                             const dateFieldValue = (new Date(fieldValue as string)).getTime();
                             if (fieldDesc.minValue && fieldDesc.maxValue) {
@@ -599,17 +620,30 @@ export class Model {
         try {
             // model specific params
             params.tableName = this.modelTableName;
-            params.docDesc = this.modelTableDesc;
+            params.tableDesc = this.modelTableDesc;
             this.taskType = TaskTypes.UNKNOWN;  // create or update
             // set checkAccess status for crud-task-permission control
-            options.checkAccess = typeof options.checkAccess !== "undefined" ? options.checkAccess : false;
+            options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
             this.checkAccess = options.checkAccess;
             // validate task/action-params
             if (!params.actionParams || params.actionParams.length < 1) {
                 return getResMessage('validateError', {
-                    message: "actionParams(record-inputs) must be an array of object values [ActionParamsType].",
+                    message: "Valid actionParams(an array of object values - ActionParamsType) is required to perform save (create/update) task.",
                 });
             }
+            // determine taskType - create or update (not both)
+            const actParam = params.actionParams[0]
+            if (!actParam["_id"] || actParam["_id"] === "") {
+                if (params.actionParams.length === 1 && (params.recordIds && params.recordIds?.length > 0) ||
+                    params.queryParams && !isEmptyObject(params.queryParams)) {
+                    this.taskType = TaskTypes.UPDATE
+                } else {
+                    this.taskType = TaskTypes.CREATE
+                }
+            } else {
+                this.taskType = TaskTypes.UPDATE
+            }
+            params.taskType = this.taskType
             // get docValue transformed types (as DataTypes) | one iteration only for actionParams[0]
             const docValueTypes = this.computeDocValueType(params.actionParams[0]);
             // validate actionParams (docValues), prior to saving, via this.validateDocValue
@@ -630,37 +664,19 @@ export class Model {
             // update unique-fields query-parameters
             params.existParams = this.computeExistParams(params.actionParams);
             options = {
-                ...options, ...this.modelOptionValues,
+                ...options, ...{modelOptions: this.modelOptionValues},
             };
             // instantiate CRUD-save class & perform save-crud task (create or update)
             const crud = newSaveRecord(params, options);
-            // validate docIds, for updates
-            let docIds: Array<string> = [];
+            // validate recordIds, for updates
+            let recordIds: Array<string> = [];
             for (const rec of params.actionParams) {
                 if (rec["_id"]) {
-                    docIds.push(rec["_id"] as string);
+                    recordIds.push(rec["_id"] as string);
                 }
             }
-            if (docIds.length > 0) {
-                params.recordIds = docIds
-            }
-            // determine taskType - create or update (not both)
-            if (params.actionParams && params.actionParams.length > 0) {
-                const actParam = params.actionParams[0]
-                if (!actParam["_id"] || actParam["_id"] === "") {
-                    if (params.actionParams.length === 1 && (params.recordIds && params.recordIds?.length > 0) ||
-                        params.queryParams && !isEmptyObject(params.queryParams)) {
-                        this.taskType = TaskTypes.UPDATE
-                    } else {
-                        this.taskType = TaskTypes.CREATE
-                    }
-                } else {
-                    this.taskType = TaskTypes.UPDATE
-                }
-            } else {
-                return getResMessage('saveError', {
-                    message: "Valid actionParams is required to perform save (create/update) task",
-                });
+            if (recordIds.length > 0) {
+                params.recordIds = recordIds
             }
             return await crud.saveRecord();
         } catch (e) {
@@ -673,7 +689,7 @@ export class Model {
         try {
             // model specific params
             params.tableName = this.modelTableName;
-            params.docDesc = this.modelTableDesc;
+            params.tableDesc = this.modelTableDesc;
             params.taskType = TaskTypes.READ;
             this.taskType = params.taskType;
             // set access:
@@ -683,7 +699,7 @@ export class Model {
             return await crud.getRecord();
         } catch (e) {
             console.error(e);
-            return getResMessage(`readError ${e.message ? "=> " + e.message : ""}`);
+            return getResMessage("readError", {message: `${e.message ? "=> " + e.message : ""}`});
         }
     }
 
@@ -692,7 +708,7 @@ export class Model {
         try {
             // model specific params
             params.tableName = this.modelTableName;
-            params.docDesc = this.modelTableDesc;
+            params.tableDesc = this.modelTableDesc;
             params.taskType = TaskTypes.READ;
             this.taskType = params.taskType;
             // set access:
@@ -711,7 +727,7 @@ export class Model {
         try {
             // model specific params
             params.tableName = this.modelTableName;
-            params.docDesc = this.modelTableDesc;
+            params.tableDesc = this.modelTableDesc;
             params.taskType = TaskTypes.READ;
             this.taskType = params.taskType;
             // set access
@@ -722,7 +738,7 @@ export class Model {
         } catch (e) {
             console.error(e);
             return getResMessage("readError", {
-                message: `Document(s) lookup fetch-error ${e.message ? "=> " + e.message : ""}`
+                message: `${e.message ? "=> " + e.message : ""}`
             });
         }
     }
@@ -732,7 +748,7 @@ export class Model {
         try {
             // model specific params
             params.tableName = this.modelTableName;
-            params.docDesc = this.modelTableDesc;
+            params.tableDesc = this.modelTableDesc;
             params.taskType = TaskTypes.DELETE;
             this.taskType = params.taskType;
             // set access:
@@ -751,9 +767,111 @@ export class Model {
             return await crud.deleteRecord();
         } catch (e) {
             console.error(e);
-            return getResMessage(`deleteError ${e.message ? "=> " + e.message : ""}`);
+            return getResMessage("deleteError", {
+                message: `${e.message ? "=> " + e.message : ""}`
+            });
         }
     }
+
+    async saveTrans(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage> {
+        try {
+            // model specific params
+            params.tableName = this.modelTableName;
+            params.tableDesc = this.modelTableDesc;
+            this.taskType = TaskTypes.UNKNOWN;  // create or update
+            // set checkAccess status for crud-task-permission control
+            options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
+            this.checkAccess = options.checkAccess;
+            // validate task/action-params
+            if (!params.actionParams || params.actionParams.length < 1) {
+                return getResMessage('validateError', {
+                    message: "Valid actionParams(an array of object values - ActionParamsType) is required to perform save (create/update) task.",
+                });
+            }
+            // determine taskType - create or update (not both)
+            const actParam = params.actionParams[0]
+            if (!actParam["_id"] || actParam["_id"] === "") {
+                if (params.actionParams.length === 1 && (params.recordIds && params.recordIds?.length > 0) ||
+                    params.queryParams && !isEmptyObject(params.queryParams)) {
+                    this.taskType = TaskTypes.UPDATE
+                } else {
+                    this.taskType = TaskTypes.CREATE
+                }
+            } else {
+                this.taskType = TaskTypes.UPDATE
+            }
+            params.taskType = this.taskType
+            // get docValue transformed types (as DataTypes) | one iteration only for actionParams[0]
+            const docValueTypes = this.computeDocValueType(params.actionParams[0]);
+            // validate actionParams (docValues), prior to saving, via this.validateDocValue
+            let actParams: ActionParamsType = []
+            for (const docValue of params.actionParams) {
+                // set defaultValues, prior to save
+                const modelDocValue = await this.setDefaultValues(docValue);
+                // validate actionParam-item (docValue) field-values
+                const validateRes = await this.validateDocValue(modelDocValue, docValueTypes);
+                if (!validateRes.ok || !isEmptyObject(validateRes.errors)) {
+                    return getParamsMessage(validateRes.errors);
+                }
+                // update actParams, with the model-transformed document-value
+                actParams.push(modelDocValue)
+            }
+            // update CRUD params and options
+            params.actionParams = actParams
+            // update unique-fields query-parameters
+            params.existParams = this.computeExistParams(params.actionParams);
+            options = {
+                ...options, ...{modelOptions: this.modelOptionValues},
+            };
+            // instantiate CRUD-save class & perform save-crud task (create or update)
+            const crud = newSaveRecordTrans(params, options);
+            // validate recordIds, for updates
+            let recordIds: Array<string> = [];
+            for (const rec of params.actionParams) {
+                if (rec["_id"]) {
+                    recordIds.push(rec["_id"] as string);
+                }
+            }
+            if (recordIds.length > 0) {
+                params.recordIds = recordIds
+            }
+            return await crud.saveRecord();
+        } catch (e) {
+            console.error(e);
+            return getResMessage("saveError", {message: `${e.message ? e.message : "Unable to complete save tasks"}`});
+        }
+    }
+
+    async deleteTrans(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage> {
+        // validate queryParams based on model/docDesc
+        try {
+            // model specific params
+            params.tableName = this.modelTableName;
+            params.tableDesc = this.modelTableDesc;
+            params.taskType = TaskTypes.DELETE;
+            this.taskType = params.taskType;
+            // set access:
+            options.checkAccess = options.checkAccess !== undefined ? options.checkAccess : false;
+            this.checkAccess = options.checkAccess;
+            // update options
+            options = {
+                ...options, ...{
+                    parentColls    : this.getParentTables(),
+                    childColls     : this.getChildTables(),
+                    parentRelations: this.getParentRelations(),
+                    childRelations : this.getChildRelations(),
+                }
+            }
+            const crud = newDeleteRecordTrans(params, options);
+            return await crud.deleteRecord();
+        } catch (e) {
+            console.error(e);
+            return getResMessage("deleteError", {
+                message: `${e.message ? "=> " + e.message : ""}`
+            });
+        }
+    }
+
 }
 
 // factory function
