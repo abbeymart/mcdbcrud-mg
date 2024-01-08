@@ -3,7 +3,7 @@ import { ObjectId, UpdateResult, InsertManyResult, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { deleteHashCache, QueryHashCacheParamsType } from "@mconnect/mccache";
 import { FieldDescType, ModelOptionsType, RelationActionTypes } from "../../orm";
-import {isEmptyObject} from "../utils";
+import { isEmptyObject } from "../utils";
 import Crud from "../Crud";
 import {
     ActionParamsType, ActionParamTaskType, ActionParamType, AuditLogParamsType, CrudOptionsType, CrudParamsType,
@@ -209,7 +209,7 @@ class SaveRecordTrans extends Crud {
     async computeItems(modelOptions: ModelOptionsType = this.modelOptions): Promise<ActionParamTaskType> {
         let updateItems: ActionParamsType = [],
             createItems: ActionParamsType = [];
-            // recordIds: Array<string> = [];
+        // recordIds: Array<string> = [];
 
         // cases - actionParams.length === 1 OR > 1
         if (this.actionParams.length === 1) {
@@ -316,6 +316,8 @@ class SaveRecordTrans extends Crud {
         try {
             // insert/create multiple records and audit-log
             let insertResult: InsertManyResult = {acknowledged: false, insertedCount: 0, insertedIds: {}};
+            let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
+            let resultValue: CrudResultType = {}
             // trx starts
             await session.withTransaction(async () => {
                 const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
@@ -323,35 +325,34 @@ class SaveRecordTrans extends Crud {
                 // commit or abort trx
                 if (!insertResult.acknowledged || insertResult.insertedCount !== this.createItems.length) {
                     await session.abortTransaction()
-                    throw new Error(`Unable to create new record(s), database error [${insertResult.insertedCount} of ${this.createItems.length} set to be created]`)
+                    throw new Error(`Unable to create new record(s), database error [${insertResult.insertedCount} of ${this.createItems.length} set to be created]. Transaction aborted.`)
+                }
+                // perform delete cache and audit-log tasks
+                const cacheParams: QueryHashCacheParamsType = {
+                    key : this.cacheKey,
+                    hash: this.tableName,
+                    by  : "hash",
+                }
+                deleteHashCache(cacheParams);
+                // check the audit-log settings - to perform audit-log
+                if (this.logCreate || this.logCrud) {
+                    const logRecs: LogRecordsType = {
+                        logRecords: this.createItems,
+                    }
+                    const logParams: AuditLogParamsType = {
+                        logRecords: logRecs,
+                        tableName : this.tableName,
+                        logBy     : this.userId,
+                    }
+                    logRes = await this.transLog.createLog(this.userId, logParams);
+                }
+                resultValue = {
+                    recordsCount: insertResult.insertedCount,
+                    recordIds   : Object.values(insertResult.insertedIds).map(it => it.toString()),
+                    logRes,
                 }
                 await session.commitTransaction();
             });
-            // perform delete cache and audit-log tasks
-            const cacheParams: QueryHashCacheParamsType = {
-                key : this.cacheKey,
-                hash: this.tableName,
-                by  : "hash",
-            }
-            deleteHashCache(cacheParams);
-            // check the audit-log settings - to perform audit-log
-            let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
-            if (this.logCreate || this.logCrud) {
-                const logRecs: LogRecordsType = {
-                    logRecords: this.createItems,
-                }
-                const logParams: AuditLogParamsType = {
-                    logRecords   : logRecs,
-                    tableName    : this.tableName,
-                    logBy        : this.userId,
-                }
-                logRes = await this.transLog.createLog(this.userId, logParams);
-            }
-            const resultValue: CrudResultType = {
-                recordsCount: insertResult.insertedCount,
-                recordIds: Object.values(insertResult.insertedIds).map(it => it.toString()),
-                logRes,
-            }
             return getResMessage("success", {
                 message: `Record(s) created successfully: ${insertResult.insertedCount} of ${this.createItems.length} items created.`,
                 value  : resultValue,
@@ -377,25 +378,22 @@ class SaveRecordTrans extends Crud {
                 message: "Unable to update record(s), due to incomplete/incorrect input-parameters. ",
             });
         }
-        // check/validate update/upsert command for multiple records
         // create a transaction session
         const session = this.dbClient.startSession();
         try {
+            // update multiple records
             let updateCount = 0;
             let updateMatchedCount = 0;
-            // update multiple records
-            for await (const item of this.updateItems) {
-                // destruct _id /other attributes
-                const {
-                    _id,
-                    ...otherParams
-                } = item;
-                // trx starts
-                let updateResult: UpdateResult = {
-                    acknowledged: false, matchedCount: 0, modifiedCount: 0, upsertedCount: 0, upsertedId: null
-                }
-                await session.withTransaction(async () => {
-                    const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
+            // let updateResult: UpdateResult = {
+            //     acknowledged: false, matchedCount: 0, modifiedCount: 0, upsertedCount: 0, upsertedId: null
+            // }
+            let resultValue: CrudResultType = {}
+            // trx starts
+            await session.withTransaction(async () => {
+                const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
+                for await (const item of this.updateItems) {
+                    // destruct _id /other attributes
+                    const {_id, ...otherParams} = item;
                     // current record prior to update
                     const currentRec = await appDbColl.findOne({_id: new ObjectId(_id)}, {session,});
                     if (!currentRec || isEmptyObject(currentRec)) {
@@ -453,10 +451,10 @@ class SaveRecordTrans extends Crud {
                                 await session.abortTransaction();
                                 throw new Error("Target model is required to complete the set-default-task");
                             }
-                            const targetDocDesc = cItem.targetModel?.tableDesc || {};
+                            const targetDocDesc = cItem.targetModel?.recordDesc || {};
                             const targetColl = cItem.targetModel.tableName || cItem.targetTable;
                             // compute default values for the targetFields
-                            const defaultDocValue = await this.computeDefaultValues(targetDocDesc);
+                            const defaultDocValue = await this.computeRecordDefaultValues(targetDocDesc);
                             const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
                             const defaultFieldValue = defaultDocValue[targetField] || null;
                             if (currentFieldValue === defaultFieldValue) {
@@ -499,7 +497,7 @@ class SaveRecordTrans extends Crud {
                                 await session.abortTransaction();
                                 throw new Error("Target model is required to complete the set-null-task");
                             }
-                            const targetDocDesc = cItem.targetModel?.tableDesc || {};
+                            const targetDocDesc = cItem.targetModel?.recordDesc || {};
                             const targetColl = cItem.targetModel.tableName || cItem.targetTable;
                             const initializeDocValue = this.computeInitializeValues(targetDocDesc)
                             const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
@@ -534,53 +532,48 @@ class SaveRecordTrans extends Crud {
                             }
                         }
                     }
-                    updateCount += updateResult.modifiedCount;
-                    updateMatchedCount += updateResult.matchedCount;
-                    // commit or abort trx
-                    if (updateCount < 1 || updateCount != updateMatchedCount) {
-                        await session.abortTransaction()
-                        throw new Error("No records updated. Please retry.")
+                    if (updateResult.modifiedCount < 1) {
+                        continue
                     }
+                    updateCount += updateResult.modifiedCount;
+                    updateMatchedCount += updateResult.matchedCount
+                }
+                // validate overall transaction
+                if (updateCount < 1 || updateCount != updateMatchedCount) {
                     await session.abortTransaction()
-                });
-                // trx ends
-                if (updateResult.modifiedCount < 1) {
-                    continue
+                    throw new Error("No records updated. Please retry.")
                 }
-                updateCount += updateResult.modifiedCount;
-                updateMatchedCount += updateResult.matchedCount
-            }
-            if (updateCount < 1) {
-                throw new Error("No records updated. Please retry.")
-            }
-            // perform delete cache and audit-log tasks
-            const cacheParams: QueryHashCacheParamsType = {
-                key : this.cacheKey,
-                hash: this.tableName,
-                by  : "hash",
-            }
-            deleteHashCache(cacheParams);
-            // check the audit-log settings - to perform audit-log
-            let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
-            if (this.logUpdate || this.logCrud) {
-                const logRecs: LogRecordsType = {
-                    logRecords: this.currentRecs,
+                // perform delete cache and audit-log tasks
+                const cacheParams: QueryHashCacheParamsType = {
+                    key : this.cacheKey,
+                    hash: this.tableName,
+                    by  : "hash",
                 }
-                const newLogRecs: LogRecordsType = {
-                    logRecords: this.updateItems,
+                deleteHashCache(cacheParams);
+                // check the audit-log settings - to perform audit-log
+                let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
+                if (this.logUpdate || this.logCrud) {
+                    const logRecs: LogRecordsType = {
+                        logRecords: this.currentRecs,
+                    }
+                    const newLogRecs: LogRecordsType = {
+                        logRecords: this.updateItems,
+                    }
+                    const logParams: AuditLogParamsType = {
+                        logRecords   : logRecs,
+                        newLogRecords: newLogRecs,
+                        tableName    : this.tableName,
+                        logBy        : this.userId,
+                    }
+                    logRes = await this.transLog.updateLog(this.userId, logParams);
                 }
-                const logParams: AuditLogParamsType = {
-                    logRecords   : logRecs,
-                    newLogRecords: newLogRecs,
-                    tableName    : this.tableName,
-                    logBy        : this.userId,
+                resultValue = {
+                    recordsCount: updateCount,
+                    logRes,
                 }
-                logRes = await this.transLog.updateLog(this.userId, logParams);
-            }
-            const resultValue: CrudResultType = {
-                recordsCount: updateCount,
-                logRes,
-            }
+                await session.commitTransaction()
+            });
+            // trx ends
             return getResMessage("success", {
                 message: `Update completed - [${updateCount} of ${updateMatchedCount} updated].`,
                 value  : resultValue,
@@ -614,18 +607,11 @@ class SaveRecordTrans extends Crud {
             let updateCount = 0;
             let updateMatchedCount = 0;
             // trx starts
-            let updateResult: UpdateResult = {
-                acknowledged: false, matchedCount: 0, modifiedCount: 0, upsertedCount: 0, upsertedId: null
-            }
+            let resultValue: CrudResultType = {}
             await session.withTransaction(async () => {
                 const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
                 // update by recordIds
-                const currentRec = await appDbColl.findOne({_id: new Object(_id as string)}, {session,});
-                if (!currentRec || isEmptyObject(currentRec)) {
-                    await session.abortTransaction();
-                    throw new Error("Unable to retrieve current record for update.");
-                }
-                updateResult = await appDbColl.updateMany({_id: {$in: this.recordIds.map(id => new ObjectId(id))}}, {
+                const updateResult = await appDbColl.updateMany({_id: {$in: this.recordIds.map(id => new ObjectId(id))}}, {
                     $set: updateParams
                 }, {session,});
                 if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
@@ -675,10 +661,10 @@ class SaveRecordTrans extends Crud {
                             await session.abortTransaction();
                             throw new Error("Target model is required to complete the set-default-task");
                         }
-                        const targetDocDesc = cItem.targetModel?.tableDesc || {};
+                        const targetDocDesc = cItem.targetModel?.recordDesc || {};
                         const targetColl = cItem.targetModel.tableName || cItem.targetTable;
                         // compute default values for the targetFields
-                        const defaultDocValue = await this.computeDefaultValues(targetDocDesc);
+                        const defaultDocValue = await this.computeRecordDefaultValues(targetDocDesc);
                         const currentFieldValue = currentRec[sourceField];   // current value of the targetField
                         const defaultFieldValue = defaultDocValue[targetField] || null;
                         if (currentFieldValue === defaultFieldValue) {
@@ -721,7 +707,7 @@ class SaveRecordTrans extends Crud {
                             await session.abortTransaction();
                             throw new Error("Target model is required to complete the set-null-task");
                         }
-                        const targetDocDesc = cItem.targetModel?.tableDesc || {};
+                        const targetDocDesc = cItem.targetModel?.recordDesc || {};
                         const targetColl = cItem.targetModel.tableName || cItem.targetTable;
                         const currentFieldValue = currentRec[sourceField];  // current value of the targetField
                         const initializeDocValue = this.computeInitializeValues(targetDocDesc)
@@ -758,43 +744,43 @@ class SaveRecordTrans extends Crud {
                 }
                 updateCount += updateResult.modifiedCount;
                 updateMatchedCount += updateResult.matchedCount
-                
                 // commit or abort trx
-                if (updateCount != updateMatchedCount) {
+                if (updateCount < 1 || updateCount != updateMatchedCount) {
                     await session.abortTransaction()
                     throw new Error("No records updated. Please retry.")
+                }
+                // perform delete cache and audit-log tasks
+                const cacheParams: QueryHashCacheParamsType = {
+                    key : this.cacheKey,
+                    hash: this.tableName,
+                    by  : "hash",
+                }
+                deleteHashCache(cacheParams);
+                // check the audit-log settings - to perform audit-log
+                let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
+                if (this.logUpdate || this.logCrud) {
+                    const logRecs: LogRecordsType = {
+                        logRecords: this.currentRecs,
+                    }
+                    const newLogRecs: LogRecordsType = {
+                        queryParam: updateParams,
+                    }
+                    const logParams: AuditLogParamsType = {
+                        logRecords   : logRecs,
+                        newLogRecords: newLogRecs,
+                        tableName    : this.tableName,
+                        logBy        : this.userId,
+                    }
+                    logRes = await this.transLog.updateLog(this.userId, logParams);
+                }
+                resultValue = {
+                    recordsCount: updateCount,
+                    logRes,
                 }
                 await session.commitTransaction()
             });
             // trx ends
-            // perform delete cache and audit-log tasks
-            const cacheParams: QueryHashCacheParamsType = {
-                key : this.cacheKey,
-                hash: this.tableName,
-                by  : "hash",
-            }
-            deleteHashCache(cacheParams);
-            // check the audit-log settings - to perform audit-log
-            let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
-            if (this.logUpdate || this.logCrud) {
-                const logRecs: LogRecordsType = {
-                    logRecords: this.currentRecs,
-                }
-                const newLogRecs: LogRecordsType = {
-                    queryParam: updateParams,
-                }
-                const logParams: AuditLogParamsType = {
-                    logRecords   : logRecs,
-                    newLogRecords: newLogRecs,
-                    tableName    : this.tableName,
-                    logBy        : this.userId,
-                }
-                logRes = await this.transLog.updateLog(this.userId, logParams);
-            }
-            const resultValue: CrudResultType = {
-                recordsCount: updateCount,
-                logRes,
-            }
+
             return getResMessage("success", {
                 message: "Document updated completed successfully.",
                 value  : resultValue,
@@ -893,13 +879,13 @@ class SaveRecordTrans extends Crud {
                                 await session.abortTransaction();
                                 throw new Error("Target model is required to complete the set-default-task");
                             }
-                            const targetDocDesc = cItem.targetModel?.tableDesc || {};
+                            const targetDocDesc = cItem.targetModel?.recordDesc || {};
                             const targetColl = cItem.targetModel.tableName || cItem.targetTable;
                             // compute default values for the targetFields
-                            const defaultDocValue = await this.computeDefaultValues(targetDocDesc);
+                            const defaultDocValue = await this.computeRecordDefaultValues(targetDocDesc);
                             const currentFieldValue = currentRec[sourceField];   // current value of the targetField
                             const defaultFieldValue = defaultDocValue[targetField] || null;    // new value (default-value) of the targetField
-                            if (currentFieldValue === defaultFieldValue ) {
+                            if (currentFieldValue === defaultFieldValue) {
                                 // skip update
                                 continue;
                             }
@@ -941,7 +927,7 @@ class SaveRecordTrans extends Crud {
                                 await session.abortTransaction();
                                 throw new Error("Target model is required to complete the set-null-task");
                             }
-                            const targetDocDesc = cItem.targetModel?.tableDesc || {};
+                            const targetDocDesc = cItem.targetModel?.recordDesc || {};
                             const targetColl = cItem.targetModel.tableName || cItem.targetTable;
                             const initializeDocValue = this.computeInitializeValues(targetDocDesc)
                             const currentFieldValue = currentRec[sourceField];  // current value of the targetField

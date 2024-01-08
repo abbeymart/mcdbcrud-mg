@@ -38,6 +38,13 @@ class GetRecordStream extends Crud {
             this.skip = 0;
         }
 
+        // exclude _id, if present, from the queryParams
+        if (this.queryParams && Object.keys(this.queryParams).length > 0) {
+            const qParams: any = this.queryParams;
+            const {_id, ...otherParams} = qParams; // exclude _id, if present
+            this.queryParams = otherParams;
+        }
+
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
         if (this.logRead || this.logCrud) {
             const logRecs: LogRecordsType = {
@@ -52,14 +59,7 @@ class GetRecordStream extends Crud {
             await this.transLog.readLog(logParams, this.userId);
         }
 
-        // exclude _id, if present, from the queryParams
-        if (this.queryParams && Object.keys(this.queryParams).length > 0) {
-            const qParams: any = this.queryParams;
-            const {_id, ...otherParams} = qParams; // exclude _id, if present
-            this.queryParams = otherParams;
-        }
-
-        // Get the item(s) by docId(s), queryParams or all items
+        // Get the item(s) by recordId(s), queryParams or all items
         if (this.recordIds && this.recordIds.length > 0) {
             try {
                 // id(s): convert string to ObjectId

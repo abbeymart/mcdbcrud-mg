@@ -52,7 +52,7 @@ class GetRecord extends Crud {
         }
 
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
-        let logRes = getResMessage("unknown");
+        let logRes = getResMessage("noLog");
         if (this.logCrud || this.logRead) {
             const logRecs: LogRecordsType = {
                 queryParam: this.queryParams,

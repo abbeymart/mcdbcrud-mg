@@ -6,7 +6,7 @@
  */
 
 import { Db, MongoClient, SortDirection } from "mongodb";
-import { ModelRelationType, ModelOptionsType, ValidateMethodResponseType, TableDescType } from "../orm";
+import { ModelRelationType, ModelOptionsType, ValidateMethodResponseType, RecordDescType } from "../orm";
 import { ResponseMessage } from "@mconnect/mcresponse";
 
 export interface ObjectRefType {
@@ -292,7 +292,7 @@ export interface CrudParamsType {
     tableName: string;
     dbClient: MongoClient;
     dbName: string;
-    tableDesc?: TableDescType;
+    tableDesc?: RecordDescType;
     userInfo?: UserInfoType;
     nullValues?: ActionParamType;
     defaultValues?: ActionParamType;

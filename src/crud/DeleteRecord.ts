@@ -63,12 +63,10 @@ class DeleteRecord extends Crud {
         this.deleteSetNull = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL).length > 0;
         // delete / remove item(s) by recordId(s) | usually for owner, admin and by role-assignment on table/documents
         if (this.recordIds && this.recordIds.length > 0) {
-            // check if records exist, for delete and audit-log...
-            if (this.logDelete || this.logCrud || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.tableRestrict) {
-                const recExist = await this.getCurrentRecords("id");
-                if (recExist.code !== "success") {
-                    return recExist;
-                }
+            // check if records exist, for delete constraints and audit-log...
+            const recExist = await this.getCurrentRecords("id");
+            if (recExist.code !== "success") {
+                return recExist;
             }
             try {
                 // same-table referential integrity check, sub-items
@@ -97,12 +95,10 @@ class DeleteRecord extends Crud {
         // delete / remove item(s) by queryParams | usually for owner, admin and by role-assignment on table-records
         if (this.queryParams && !isEmptyObject(this.queryParams)) {
             try {
-                // check if records exist, for delete and audit-log
-                if (this.logDelete || this.logCrud || this.deleteRestrict || this.deleteSetDefault || this.deleteSetNull || this.tableRestrict) {
-                    const recExist = await this.getCurrentRecords("queryParams");
-                    if (recExist.code !== "success") {
-                        return recExist;
-                    }
+                // check if records exist, for delete constraints and audit-log
+                const recExist = await this.getCurrentRecords("queryParams");
+                if (recExist.code !== "success") {
+                    return recExist;
                 }
                 // same-table referential integrity check, sub-items
                 if (this.tableRestrict) {
@@ -261,7 +257,7 @@ class DeleteRecord extends Crud {
                     $in: recordIds,
                 }
             },);
-            if (!removed.acknowledged || removed.deletedCount !== this.recordIds.length) {
+            if (!removed.acknowledged || removed.deletedCount < 1) {
                 throw new Error(`document-remove-error [${removed.deletedCount} of ${this.recordIds.length} removed]`)
             }
             // perform delete cache and audit-log tasks
@@ -308,10 +304,9 @@ class DeleteRecord extends Crud {
         try {
             const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
             const removed = await appDbColl.deleteMany(this.queryParams,);
-            if (!removed.acknowledged || removed.deletedCount !== this.currentRecs.length) {
+            if (!removed.acknowledged || removed.deletedCount < 1) {
                 throw new Error(`document-remove-error [${removed.deletedCount} of ${this.currentRecs.length} removed]`)
             }
-
             // perform delete cache and audit-log tasks
             const cacheParams: QueryHashCacheParamsType = {
                 key : this.cacheKey,

@@ -9,14 +9,12 @@ import { Db, MongoClient, ObjectId } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import {
     CrudParamsType, CrudOptionsType, TaskTypes, QueryParamsType, ActionParamsType,
-    ProjectParamsType, SortParamsType, SubItemsType, ObjectRefType, ActionExistParamsType, FieldValueTypes,
+    ProjectParamsType, SortParamsType, SubItemsType, ActionExistParamsType, FieldValueTypes,
     ActionParamType,
 } from "./types";
 import { AuditLog, newAuditLog } from "../auditlog";
-import { DataTypes, DefaultValueType, FieldDescType, ModelRelationType } from "../orm";
+import { DataTypes, DefaultValueType, FieldDescType, ModelRelationType, RecordDescType, } from "../orm";
 
-class DocDescType {
-}
 
 export class Crud {
     protected params: CrudParamsType;
@@ -54,7 +52,7 @@ export class Crud {
     protected isActive: boolean;
     protected createItems: ActionParamsType;
     protected updateItems: ActionParamsType;
-    protected currentRecs: Array<ObjectRefType>;
+    protected currentRecs: Array<ActionParamType>;
     protected isRecExist: boolean;
     protected actionAuthorized: boolean;
     protected recExistMessage: string;
@@ -94,20 +92,20 @@ export class Crud {
         this.childTables = options?.childTables ? options.childTables : [];
         this.parentRelations = options?.parentRelations ? options.parentRelations : [];
         this.childRelations = options?.childRelations ? options.childRelations : [];
-        this.recursiveDelete = options?.recursiveDelete !== undefined ? options.recursiveDelete : false;
-        this.checkAccess = options?.checkAccess !== undefined ? options.checkAccess : false;
+        this.recursiveDelete = options?.recursiveDelete? options.recursiveDelete : false;
+        this.checkAccess = options?.checkAccess? options.checkAccess : false;
         this.auditTable = options?.auditTable ? options.auditTable : "audits";
         this.auditDb = options?.auditDb ? options.auditDb : this.appDb;
         this.auditDbClient = options?.auditDbClient ? options.auditDbClient : this.dbClient;
         this.auditDbName = options?.auditDbName ? options.auditDbName : this.dbName;
         this.maxQueryLimit = options?.maxQueryLimit ? options.maxQueryLimit : 10000;
-        this.logCrud = options?.logCrud !== undefined ? options.logCrud : false;
-        this.logCreate = options?.logCreate !== undefined ? options.logCreate : false;
-        this.logUpdate = options?.logUpdate !== undefined ? options.logUpdate : false;
-        this.logRead = options?.logRead !== undefined ? options.logRead : false;
-        this.logDelete = options?.logDelete !== undefined ? options.logDelete : false;
-        this.logLogin = options?.logLogin !== undefined ? options.logLogin : false;
-        this.logLogout = options?.logLogout !== undefined ? options.logLogout : false;
+        this.logCrud = options?.logCrud? options.logCrud : false;
+        this.logCreate = options?.logCreate? options.logCreate : false;
+        this.logUpdate = options?.logUpdate? options.logUpdate : false;
+        this.logRead = options?.logRead? options.logRead : false;
+        this.logDelete = options?.logDelete? options.logDelete : false;
+        this.logLogin = options?.logLogin? options.logLogin : false;
+        this.logLogout = options?.logLogout? options.logLogout : false;
         this.cacheExpire = options?.cacheExpire ? options.cacheExpire : 300;
         // unique cache-key
         this.cacheKey = JSON.stringify({
@@ -142,7 +140,7 @@ export class Crud {
         this.appTables = options?.appTables ? options.appTables :
             ["table", "table-mcpa", "table-mcpay", "table-mcship", "table-mctrade", "table-mcproperty",
                 "table-mcinfo", "table-mcbc", "table-mcproject",];
-        this.cacheResult = options?.cacheResult ? options.cacheResult : false;
+        this.cacheResult = options?.cacheResult? options.cacheResult : false;
         this.getAllResults = options?.getAllRecords || false;
     }
 
@@ -296,7 +294,7 @@ export class Crud {
     }
 
     // set null value by DataTypes
-    initializeValues(fieldTypeDesc: DataTypes): any {
+    initializeFieldValue(fieldTypeDesc: DataTypes): any {
         switch (fieldTypeDesc) {
             case DataTypes.STRING:
             case DataTypes.POSTAL_CODE:
@@ -352,7 +350,7 @@ export class Crud {
     async setDefault(defaultValue: FieldValueTypes | DefaultValueType, fieldValue: FieldValueTypes = null): Promise<any> {
         try {
             switch (typeof defaultValue) {
-                // defaultValue may be of types: DefaultValueType(function) or FieldValueTypes(others)
+                // defaultValue may be of types: DefaultValueType(function) or FieldValueTypes(regular-values)
                 case "function":
                     const defValue = defaultValue as DefaultValueType;
                     return await defValue(fieldValue);
@@ -365,15 +363,15 @@ export class Crud {
     }
 
     // computeInitializeValues set the null values for document/actionParam, for allowNull(true)
-    computeInitializeValues(docDesc: DocDescType): ActionParamType {
+    computeInitializeValues(recordDesc: RecordDescType): ActionParamType {
         let nullValues: ActionParamType = {}
-        for (let [field, fieldDesc] of Object.entries(docDesc)) {
+        for (let [field, fieldDesc] of Object.entries(recordDesc)) {
             switch (typeof fieldDesc) {
                 case "string":
                     fieldDesc = fieldDesc as DataTypes
                     // allowNull = true
                     // set null value for DataTypes
-                    nullValues[field] = this.initializeValues(fieldDesc);
+                    nullValues[field] = this.initializeFieldValue(fieldDesc);
                     break;
                 case "object":
                     fieldDesc = fieldDesc as FieldDescType
@@ -382,21 +380,22 @@ export class Crud {
                         continue;
                     }
                     // set null value for DataTypes
-                    nullValues[field] = this.initializeValues(fieldDesc.fieldType);
+                    nullValues[field] = this.initializeFieldValue(fieldDesc.fieldType);
                     break;
             }
         }
         return nullValues;
     }
 
-    async computeDefaultValues(docDesc: DocDescType): Promise<ActionParamType> {
+    async computeRecordDefaultValues(recordDesc: RecordDescType, recordValue: ActionParamType): Promise<ActionParamType> {
         let defaultValues: ActionParamType = {};
-        for (let [field, fieldDesc] of Object.entries(docDesc)) {
+        for (let [field, fieldDesc] of Object.entries(recordDesc)) {
+            const fieldValue = recordValue[field] || null
             switch (typeof fieldDesc) {
                 case "string":
                     fieldDesc = fieldDesc as DataTypes
-                    // set default-value (null value) for DataTypes
-                    defaultValues[field] = this.initializeValues(fieldDesc);
+                    // set default-value to the null-value for the DataTypes
+                    defaultValues[field] = this.initializeFieldValue(fieldDesc);
                     break;
                 case "object":
                     fieldDesc = fieldDesc as FieldDescType
@@ -405,7 +404,7 @@ export class Crud {
                         continue;
                     }
                     // set default value for FieldDescType
-                    defaultValues[field] = await this.setDefault(fieldDesc.defaultValue);
+                    defaultValues[field] = await this.setDefault(fieldDesc.defaultValue, fieldValue);
                     break;
                 default:
                     break;

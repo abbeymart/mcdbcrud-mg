@@ -135,11 +135,11 @@ export interface ModelRelationType {
     onUpdate?: RelationActionTypes;
 }
 
-export interface TableDescType {
+export interface RecordDescType {
     [key: string]: DataTypes | FieldDescType | ModelDescType;       // TODO: ModelDescType case-handling - optional
 }
 
-export const BaseModel: TableDescType = {
+export const BaseModel: RecordDescType = {
     _id        : DataTypes.MONGODB_ID,
     language   : {
         fieldType   : DataTypes.STRING,
@@ -173,21 +173,21 @@ export const BaseModel: TableDescType = {
 
 export interface ModelDescType {
     tableName: string;
-    tableDesc: TableDescType;
+    recordDesc: RecordDescType;
     timeStamp?: boolean;    // auto-add: createdAt and updatedAt | default: true
     actorStamp?: boolean;   // auto-add: createdBy and updatedBy | default: true
     activeStamp?: boolean;  // record active status, isActive (true | false) | default: true
     computedMethods?: ComputedMethodsType;  // model-level functions, e.g fullName(a, b: T): T
     validateMethod?: ValidateMethodResponseType;
     alterSyncTable?: boolean;    // create / alter table / collection and sync existing data, if there was a change to the Coll structure | default: true
-                                // if alterSyncColl: false; it will create/re-create the Coll, with no data sync
+    // if alterSyncColl: false; it will create/re-create the Coll, with no data sync
 }
 
 export interface ModelOptionsType {
     timeStamp?: boolean;        // auto-add: createdAt and updatedAt | default: true
     actorStamp?: boolean;       // auto-add: createdBy and updatedBy | default: true
     activeStamp?: boolean;      // auto-add isActive, if not already set | default: true
-    docValueDesc?: TableDescType;
+    docValueDesc?: RecordDescType;
     docValue?: ValueParamsType;
 }
 

@@ -13,7 +13,7 @@ import { collections } from "./collections";
 
 export const groupModel: ModelDescType = {
     tableName  : collections.GROUPS,
-    tableDesc: {
+    recordDesc: {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -29,7 +29,7 @@ export const groupModel: ModelDescType = {
 
 export const categoryModel: ModelDescType = {
     tableName  : collections.CATEGORIES,
-    tableDesc: {
+    recordDesc: {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,

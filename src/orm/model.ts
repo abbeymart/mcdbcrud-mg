@@ -9,7 +9,7 @@ import validator from "validator";
 import { ObjectId } from "mongodb";
 import { getParamsMessage, getResMessage, MessageObject, ResponseMessage } from "@mconnect/mcresponse";
 import {
-    ComputedMethodsType, DataTypes, DefaultValueType, TableDescType,
+    ComputedMethodsType, DataTypes, DefaultValueType, RecordDescType,
     FieldDescType, ModelCrudOptionsType, ModelDescType, ModelOptionsType,
     ModelRelationType, UniqueFieldsType, ValidateMethodResponseType,
     ValidateResponseType, ValueToDataTypes,
@@ -27,7 +27,7 @@ import { newDeleteRecordTrans, newSaveRecordTrans } from "../crud/transactions";
  */
 export class Model {
     private readonly tableName: string;
-    private readonly tableDesc: TableDescType;
+    private readonly tableDesc: RecordDescType;
     private readonly timeStamp: boolean;
     private readonly actorStamp: boolean;
     private readonly activeStamp: boolean;
@@ -45,7 +45,7 @@ export class Model {
 
     constructor(model: ModelDescType, options: ModelCrudOptionsType = {}) {
         this.tableName = model.tableName || "";
-        this.tableDesc = model.tableDesc || {};
+        this.tableDesc = model.recordDesc || {};
         this.timeStamp = model.timeStamp !== undefined ? model.timeStamp : true;
         this.actorStamp = model.actorStamp !== undefined ? model.actorStamp : true;
         this.activeStamp = model.activeStamp !== undefined ? model.activeStamp : true;
@@ -74,7 +74,7 @@ export class Model {
         return this.tableName;
     }
 
-    get modelTableDesc(): TableDescType {
+    get modelTableDesc(): RecordDescType {
         return this.tableDesc;
     }
 

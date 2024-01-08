@@ -9,7 +9,7 @@ import { DataTypes, ModelDescType, BaseModel } from "../src";
 
 const UserProfileModel: ModelDescType = {
     tableName: "userProfiles",
-    tableDesc: {
+    recordDesc: {
         firstName : {
             fieldType  : DataTypes.STRING,
             fieldLength: 255,
@@ -27,7 +27,7 @@ const UserProfileModel: ModelDescType = {
 
 const UserModel: ModelDescType = {
     tableName: "users",
-    tableDesc: {
+    recordDesc: {
         ...BaseModel,
         _id       : DataTypes.MONGODB_ID,
         acceptTerm: DataTypes.BOOLEAN,

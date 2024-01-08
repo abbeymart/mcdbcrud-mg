@@ -10,7 +10,7 @@ import { ObjectId, UpdateResult, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { deleteHashCache, QueryHashCacheParamsType } from "@mconnect/mccache";
 import { ModelOptionsType, RelationActionTypes } from "../orm";
-import {isEmptyObject} from "./utils";
+import { isEmptyObject } from "./utils";
 import Crud from "./Crud";
 import {
     ActionParamsType, ActionParamTaskType, AuditLogParamsType, CrudOptionsType, CrudParamsType, CrudResultType,
@@ -215,7 +215,7 @@ class SaveRecord extends Crud {
     async computeItems(modelOptions: ModelOptionsType = this.modelOptions): Promise<ActionParamTaskType> {
         let updateItems: ActionParamsType = [],
             createItems: ActionParamsType = [];
-            // recordIds: Array<string> = [];
+        // recordIds: Array<string> = [];
 
         // cases - actionParams.length === 1 OR > 1
         if (this.actionParams.length === 1) {
@@ -337,15 +337,15 @@ class SaveRecord extends Crud {
                     logRecords: this.createItems,
                 }
                 const logParams: AuditLogParamsType = {
-                    logRecords   : logRecs,
-                    tableName    : this.tableName,
-                    logBy        : this.userId,
+                    logRecords: logRecs,
+                    tableName : this.tableName,
+                    logBy     : this.userId,
                 }
                 logRes = await this.transLog.createLog(this.userId, logParams);
             }
             const resultValue: CrudResultType = {
                 recordsCount: insertResult.insertedCount,
-                recordIds: Object.values(insertResult.insertedIds).map(it => it.toString()),
+                recordIds   : Object.values(insertResult.insertedIds).map(it => it.toString()),
                 logRes,
             }
             return getResMessage("success", {
@@ -378,22 +378,19 @@ class SaveRecord extends Crud {
             const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
             for await (const item of this.updateItems) {
                 // destruct _id /other attributes
-                const {
-                    _id,
-                    ...otherParams
-                } = item;
+                const {_id, ...otherParams} = item;
                 const updateResult = await appDbColl.updateOne({
                     _id: new ObjectId(_id as string),
                 }, {
                     $set: otherParams,
                 },);
-                if (!updateResult.acknowledged || updateResult.modifiedCount < 1) {
+                if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
                     continue
                 }
                 updateCount += updateResult.modifiedCount;
                 updateMatchedCount += updateResult.matchedCount
             }
-            if (updateCount < 1 || updateCount != updateMatchedCount) {
+            if (updateCount < 1) {
                 throw new Error("No records updated. Please retry.")
             }
             // perform delete cache and audit-log tasks
@@ -456,12 +453,12 @@ class SaveRecord extends Crud {
             updateResult = await appDbColl.updateMany({_id: {$in: this.recordIds.map(id => new ObjectId(id))}}, {
                 $set: updateParams
             },) as UpdateResult;
-            if (!updateResult.acknowledged || updateResult.modifiedCount < 1) {
+            if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
                 throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
             }
             updateCount += updateResult.modifiedCount;
             updateMatchedCount += updateResult.matchedCount
-            if (updateCount < 1 || updateCount != updateMatchedCount) {
+            if (updateCount < 1) {
                 throw new Error("No records updated. Please retry.")
             }
             // perform delete cache and audit-log tasks
@@ -493,7 +490,7 @@ class SaveRecord extends Crud {
                 logRes,
             }
             return getResMessage("success", {
-                message: "Document updated completed successfully.",
+                message: `Record(s) updated completed: ${updateCount} of ${updateMatchedCount} records updated.`,
                 value  : resultValue,
             });
         } catch (e) {
@@ -524,12 +521,12 @@ class SaveRecord extends Crud {
             updateResult = await appDbColl.updateMany(this.queryParams, {
                 $set: updateParams
             },) as UpdateResult;
-            if (!updateResult.acknowledged || updateResult.modifiedCount < 1) {
+            if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
                 throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
             }
             updateCount += updateResult.modifiedCount;
-            updateMatchedCount += updateResult.matchedCount
-            if (updateCount < 1 || updateCount != updateMatchedCount) {
+            updateMatchedCount += updateResult.matchedCount;
+            if (updateCount < 1) {
                 throw new Error("No records updated. Please retry.")
             }
             // perform delete cache and audit-log tasks
@@ -561,7 +558,7 @@ class SaveRecord extends Crud {
                 logRes,
             }
             return getResMessage("success", {
-                message: "Document updated completed successfully.",
+                message: `Record(s) updated completed: ${updateCount} of ${updateMatchedCount} records updated.`,
                 value  : resultValue,
             });
         } catch (e) {
