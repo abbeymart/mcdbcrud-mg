@@ -310,7 +310,6 @@ class SaveRecordTrans extends Crud {
                 message: this.recExistMessage,
             });
         }
-        // insert/create record(s) and log in audit-collection
         // create a transaction session
         const session = this.dbClient.startSession();
         try {
@@ -384,9 +383,6 @@ class SaveRecordTrans extends Crud {
             // update multiple records
             let updateCount = 0;
             let updateMatchedCount = 0;
-            // let updateResult: UpdateResult = {
-            //     acknowledged: false, matchedCount: 0, modifiedCount: 0, upsertedCount: 0, upsertedId: null
-            // }
             let resultValue: CrudResultType = {}
             // trx starts
             await session.withTransaction(async () => {
@@ -405,6 +401,9 @@ class SaveRecordTrans extends Crud {
                     }, {
                         $set: otherParams,
                     }, {session});
+                    if (updateResult.modifiedCount < 1) {
+                        continue
+                    }
                     if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
                         await session.abortTransaction();
                         throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
@@ -532,10 +531,7 @@ class SaveRecordTrans extends Crud {
                             }
                         }
                     }
-                    if (updateResult.modifiedCount < 1) {
-                        continue
-                    }
-                    updateCount += updateResult.modifiedCount;
+                    updateCount += updateResult.modifiedCount
                     updateMatchedCount += updateResult.matchedCount
                 }
                 // validate overall transaction
@@ -575,7 +571,7 @@ class SaveRecordTrans extends Crud {
             });
             // trx ends
             return getResMessage("success", {
-                message: `Update completed - [${updateCount} of ${updateMatchedCount} updated].`,
+                message: `Update completed successfully: [${updateCount} of ${updateMatchedCount} records updated].`,
                 value  : resultValue,
             });
         } catch (e) {
@@ -610,6 +606,12 @@ class SaveRecordTrans extends Crud {
             let resultValue: CrudResultType = {}
             await session.withTransaction(async () => {
                 const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
+                // current record prior to update
+                const currentRecs = await appDbColl.find({_id: {$in: this.recordIds.map(id => new ObjectId(id))}}, {session,}).toArray();
+                if (!currentRecs || currentRecs.length < 1) {
+                    await session.abortTransaction();
+                    throw new Error("Unable to retrieve current record for update.");
+                }
                 // update by recordIds
                 const updateResult = await appDbColl.updateMany({_id: {$in: this.recordIds.map(id => new ObjectId(id))}}, {
                     $set: updateParams
@@ -744,7 +746,7 @@ class SaveRecordTrans extends Crud {
                 }
                 updateCount += updateResult.modifiedCount;
                 updateMatchedCount += updateResult.matchedCount
-                // commit or abort trx
+                // validate transaction
                 if (updateCount < 1 || updateCount != updateMatchedCount) {
                     await session.abortTransaction()
                     throw new Error("No records updated. Please retry.")
@@ -780,9 +782,8 @@ class SaveRecordTrans extends Crud {
                 await session.commitTransaction()
             });
             // trx ends
-
             return getResMessage("success", {
-                message: "Document updated completed successfully.",
+                message: `Update completed successfully: ${updateCount} of ${updateMatchedCount} records updated.`,
                 value  : resultValue,
             });
         } catch (e) {
@@ -817,6 +818,7 @@ class SaveRecordTrans extends Crud {
             let updateResult: UpdateResult = {
                 acknowledged: false, matchedCount: 0, modifiedCount: 0, upsertedCount: 0, upsertedId: null
             }
+            let resultValue: CrudResultType = {}
             await session.withTransaction(async () => {
                 const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
                 // query current records prior to update
@@ -828,7 +830,7 @@ class SaveRecordTrans extends Crud {
                 updateResult = await appDbColl.updateMany(this.queryParams, {
                     $set: updateParams
                 }, {session,}) as UpdateResult;
-                if (updateResult.modifiedCount !== updateResult.matchedCount) {
+                if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
                     await session.abortTransaction();
                     throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
                 }
@@ -965,47 +967,43 @@ class SaveRecordTrans extends Crud {
                 }
                 updateCount += updateResult.modifiedCount;
                 updateMatchedCount += updateResult.matchedCount
-                // commit or abort trx
+                // validate transaction
                 if (updateCount < 1 || updateCount != updateMatchedCount) {
+                    await session.abortTransaction()
                     throw new Error("No records updated. Please retry.")
                 }
-                await session.abortTransaction()
+                // perform delete cache and audit-log tasks
+                const cacheParams: QueryHashCacheParamsType = {
+                    key : this.cacheKey,
+                    hash: this.tableName,
+                    by  : "hash",
+                }
+                deleteHashCache(cacheParams);
+                // check the audit-log settings - to perform audit-log
+                let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
+                if (this.logUpdate || this.logCrud) {
+                    const logRecs: LogRecordsType = {
+                        logRecords: this.currentRecs,
+                    }
+                    const newLogRecs: LogRecordsType = {
+                        queryParam: updateParams,
+                    }
+                    const logParams: AuditLogParamsType = {
+                        logRecords   : logRecs,
+                        newLogRecords: newLogRecs,
+                        tableName    : this.tableName,
+                        logBy        : this.userId,
+                    }
+                    logRes = await this.transLog.updateLog(this.userId, logParams);
+                }
+                resultValue = {
+                    recordsCount: updateCount,
+                    logRes,
+                }
+                await  session.commitTransaction()
             });
-            updateCount += updateResult.modifiedCount;
-            updateMatchedCount += updateResult.matchedCount
-            if (!updateResult.acknowledged || updateCount != updateMatchedCount) {
-                throw new Error("No records updated. Please retry.")
-            }
-            // perform delete cache and audit-log tasks
-            const cacheParams: QueryHashCacheParamsType = {
-                key : this.cacheKey,
-                hash: this.tableName,
-                by  : "hash",
-            }
-            deleteHashCache(cacheParams);
-            // check the audit-log settings - to perform audit-log
-            let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
-            if (this.logUpdate || this.logCrud) {
-                const logRecs: LogRecordsType = {
-                    logRecords: this.currentRecs,
-                }
-                const newLogRecs: LogRecordsType = {
-                    queryParam: updateParams,
-                }
-                const logParams: AuditLogParamsType = {
-                    logRecords   : logRecs,
-                    newLogRecords: newLogRecs,
-                    tableName    : this.tableName,
-                    logBy        : this.userId,
-                }
-                logRes = await this.transLog.updateLog(this.userId, logParams);
-            }
-            const resultValue: CrudResultType = {
-                recordsCount: updateCount,
-                logRes,
-            }
             return getResMessage("success", {
-                message: "Document updated completed successfully.",
+                message: `Update completed successfully: ${updateCount} of ${updateMatchedCount} records updated.`,
                 value  : resultValue,
             });
         } catch (e) {
