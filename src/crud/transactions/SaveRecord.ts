@@ -321,7 +321,7 @@ class SaveRecordTrans extends Crud {
                 const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
                 insertResult = await appDbColl.insertMany(this.createItems, {session});
                 // commit or abort trx
-                if (insertResult.insertedCount < 1 || !insertResult.acknowledged || insertResult.insertedCount < this.createItems.length) {
+                if (!insertResult.acknowledged || insertResult.insertedCount !== this.createItems.length) {
                     await session.abortTransaction()
                     throw new Error(`Unable to create new record(s), database error [${insertResult.insertedCount} of ${this.createItems.length} set to be created]`)
                 }
@@ -407,7 +407,7 @@ class SaveRecordTrans extends Crud {
                     }, {
                         $set: otherParams,
                     }, {session});
-                    if (updateResult.modifiedCount !== updateResult.matchedCount) {
+                    if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
                         await session.abortTransaction();
                         throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
                     }
@@ -628,7 +628,7 @@ class SaveRecordTrans extends Crud {
                 updateResult = await appDbColl.updateMany({_id: {$in: this.recordIds.map(id => new ObjectId(id))}}, {
                     $set: updateParams
                 }, {session,});
-                if (updateResult.modifiedCount !== updateResult.matchedCount) {
+                if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
                     await session.abortTransaction();
                     throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
                 }
@@ -987,7 +987,7 @@ class SaveRecordTrans extends Crud {
             });
             updateCount += updateResult.modifiedCount;
             updateMatchedCount += updateResult.matchedCount
-            if (updateCount < 1 || updateCount != updateMatchedCount) {
+            if (!updateResult.acknowledged || updateCount != updateMatchedCount) {
                 throw new Error("No records updated. Please retry.")
             }
             // perform delete cache and audit-log tasks
