@@ -360,11 +360,13 @@ class SaveRecord extends Crud {
     }
 
     async updateRecord(): Promise<ResponseMessage> {
+        // validate referential integrity
         if (this.isRecExist) {
             return getResMessage("recExist", {
                 message: this.recExistMessage,
             });
         }
+        // validate update records
         if (this.updateItems.length < 1) {
             return getResMessage("insertError", {
                 message: "Unable to update record(s), due to incomplete/incorrect input-parameters. ",
@@ -434,6 +436,7 @@ class SaveRecord extends Crud {
     }
 
     async updateRecordById(): Promise<ResponseMessage> {
+        // validate referential integrity
         if (this.isRecExist) {
             return getResMessage("recExist", {
                 message: this.recExistMessage,
@@ -502,6 +505,7 @@ class SaveRecord extends Crud {
     }
 
     async updateRecordByParams(): Promise<ResponseMessage> {
+        // validate referential integrity
         if (this.isRecExist) {
             return getResMessage("recExist", {
                 message: this.recExistMessage,

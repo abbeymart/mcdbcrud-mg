@@ -181,9 +181,9 @@ class DeleteRecordTrans extends Crud {
                     }
                 } else {
                     // other source-fields besides _id
-                    const sourceFieldValues = this.currentRecs.map((item: ActionParamType) => item[sourceField]);
+                    const currentFieldValues = this.currentRecs.map((item: ActionParamType) => item[sourceField]);
                     query[targetField] = {
-                        $in: sourceFieldValues,
+                        $in: currentFieldValues,
                     }
                 }
                 const tableRecord = targetDbTable.find(query);
@@ -262,32 +262,32 @@ class DeleteRecordTrans extends Crud {
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${recordIds.length} set to be removed]. Transaction aborted.`)
                 }
                 // optional, update child-table-records(collection-documents) for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
-                if (this.deleteSetDefault && this.childRelations.length > 0) {
+                if (this.deleteSetDefault) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                     // update child/target-tables for each of the currentRecords
                     for await (const currentRec of this.currentRecs) {
                         for await (const cItem of childRelations) {
                             const sourceField = cItem.sourceField;
                             const targetField = cItem.targetField;
-                            // check if targetModel is defined/specified, required to determine default-action
-                            if (!cItem.targetModel) {
+                            // check if source and target models are defined/specified, required to determine default-action
+                            if (!cItem.targetModel || !cItem.sourceModel) {
                                 // handle as error
                                 await session.abortTransaction();
-                                throw new Error("Target model is required to complete the set-default-task");
+                                throw new Error("Source & Target models are required to complete the set-default-task");
                             }
-                            const targetRecordDesc = cItem.targetModel.recordDesc || {};
+                            const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
                             // compute default values for the targetFields
-                            const recordDefaultValues = await this.computeRecordDefaultValues(targetRecordDesc, currentRec);
-                            const sourceFieldValue = currentRec[sourceField] || null;   // current value of the targetField
-                            const targetFieldValue = recordDefaultValues[targetField] || null;  // new value (default-value) of the targetField
-                            if (sourceFieldValue === targetFieldValue) {
+                            const recordDefaultValues = await this.computeRecordDefaultValues(sourceRecordDesc, currentRec);
+                            const currentFieldValue = currentRec[sourceField] || null;          // current value of the targetField
+                            const targetFieldValue = recordDefaultValues[sourceField] || null;  // new value (default-value) of the targetField
+                            if (currentFieldValue === targetFieldValue) {
                                 // skip update
                                 continue;
                             }
                             // update-query/data-set for target table-record update
-                            let updateQuery: QueryParamsType = {};    // to determine the current-value in the target-field
-                            let updateSet: ActionParamType = {};      // to set the new-default-value in the target-field
-                            updateQuery[targetField] = sourceFieldValue;    // targetField current value
+                            const updateQuery: QueryParamsType = {};    // to determine the current-value in the target-field
+                            const updateSet: ActionParamType = {};      // to set the new-default-value in the target-field
+                            updateQuery[targetField] = currentFieldValue;    // targetField current value
                             updateSet[targetField] = targetFieldValue;      // targetField new value
                             const targetTable = cItem.targetModel.tableName || cItem.targetTable;
                             const TargetDbColl = this.dbClient.db(this.dbName).collection(targetTable);
@@ -298,28 +298,29 @@ class DeleteRecordTrans extends Crud {
                             }
                         }
                     }
-                } else if (this.deleteSetNull && this.childRelations.length > 0) {
+                } else if (this.deleteSetNull) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL);
                     // update child/target-tables for each of the currentRecords
                     for await (const currentRec of (this.currentRecs as Array<ActionParamType>)) {
                         for await (const cItem of childRelations) {
                             const sourceField = cItem.sourceField;
                             const targetField = cItem.targetField;
-                            // check if targetModel is defined/specified, required to determine allowNull-action
-                            if (!cItem.targetModel) {
+                            // check if source and target models are defined/specified, required to determine allowNull-action
+                            if (!cItem.targetModel || !cItem.sourceModel) {
                                 // handle as error
                                 await session.abortTransaction();
-                                throw new Error("Target model is required to complete the set-null-task");
+                                throw new Error("Source and Target models are required to complete the set-null-task");
                             }
-                            const targetRecordDesc = cItem.targetModel.recordDesc || {};
-                            const recordInitializedValues = this.computeInitializeValues(targetRecordDesc)
-                            const sourceFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                            const targetFieldValue = recordInitializedValues[targetField] || null; // new value (null-value) of the targetField
-                            if (sourceFieldValue === targetFieldValue) {
+                            const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
+                            const recordInitializedValues = this.computeInitializeValues(sourceRecordDesc)
+                            const currentFieldValue = currentRec[sourceField] || null;      // current value of the targetField
+                            const targetFieldValue = recordInitializedValues[sourceField] || null;  // new value (null-value) of the targetField
+                            if (currentFieldValue === targetFieldValue) {
                                 // skip update
                                 continue;
                             }
                             // validate targetField null value | check if allowNull is permissible for the targetField
+                            const targetRecordDesc = cItem.targetModel.recordDesc || {};
                             let targetFieldDesc = targetRecordDesc[targetField];
                             switch (typeof targetFieldDesc) {
                                 case "object":
@@ -334,9 +335,9 @@ class DeleteRecordTrans extends Crud {
                                     break;
                             }
                             // update-query/data-set for target table-record update
-                            let updateQuery: QueryParamsType = {};  // to determine the current-value in the target-field
-                            let updateSet: ActionParamType = {};    // to set the new-default-value in the target-field
-                            updateQuery[targetField] = sourceFieldValue;
+                            const updateQuery: QueryParamsType = {};  // to determine the current-value in the target-field
+                            const updateSet: ActionParamType = {};    // to set the new-default-value in the target-field
+                            updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = targetFieldValue;
                             const targetTable = cItem.targetModel.tableName || cItem.targetTable;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetTable);
@@ -408,32 +409,32 @@ class DeleteRecordTrans extends Crud {
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]. Transaction aborted.`)
                 }
                 // optional, update child-table-records(collection-documents) for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
-                if (this.deleteSetDefault && this.childRelations.length > 0) {
+                if (this.deleteSetDefault) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                     // update child/target-tables for each of the currentRecords
                     for await (const currentRec of this.currentRecs) {
                         for await (const cItem of childRelations) {
                             const sourceField = cItem.sourceField;
                             const targetField = cItem.targetField;
-                            // check if targetModel is defined/specified, required to determine default-action
-                            if (!cItem.targetModel) {
+                            // check if source and target models are defined/specified, required to determine default-action
+                            if (!cItem.targetModel || !cItem.sourceModel) {
                                 // handle as error
                                 await session.abortTransaction();
-                                throw new Error("Target model is required to complete the set-default-task");
+                                throw new Error("Source and Target models are required to complete the set-default-task");
                             }
-                            const targetRecordDesc = cItem.targetModel.recordDesc || {};
+                            const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
                             // compute default values for the targetFields
-                            const recordDefaultValues = await this.computeRecordDefaultValues(targetRecordDesc, currentRec);
-                            const sourceFieldValue = currentRec[sourceField] || null;   // current value of the targetField
-                            const targetFieldValue = recordDefaultValues[targetField] || null;  // new value (default-value) of the targetField
-                            if (sourceFieldValue === targetFieldValue) {
+                            const recordDefaultValues = await this.computeRecordDefaultValues(sourceRecordDesc, currentRec);
+                            const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
+                            const targetFieldValue = recordDefaultValues[sourceField] || null;  // new value (default-value) of the targetField
+                            if (currentFieldValue === targetFieldValue) {
                                 // skip update
                                 continue;
                             }
                             // update-query/data-set for target table-record update
-                            let updateQuery: QueryParamsType = {};    // to determine the current-value in the target-field
-                            let updateSet: ActionParamType = {};      // to set the new-default-value in the target-field
-                            updateQuery[targetField] = sourceFieldValue;    // targetField current value
+                            const updateQuery: QueryParamsType = {};    // to determine the current-value in the target-field
+                            const updateSet: ActionParamType = {};      // to set the new-default-value in the target-field
+                            updateQuery[targetField] = currentFieldValue;    // targetField current value
                             updateSet[targetField] = targetFieldValue;      // targetField new value
                             const targetTable = cItem.targetModel.tableName || cItem.targetTable;
                             const TargetDbColl = this.dbClient.db(this.dbName).collection(targetTable);
@@ -444,28 +445,29 @@ class DeleteRecordTrans extends Crud {
                             }
                         }
                     }
-                } else if (this.deleteSetNull && this.childRelations.length > 0) {
+                } else if (this.deleteSetNull) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_NULL);
                     // update child/target-tables for each of the currentRecords
                     for await (const currentRec of (this.currentRecs as Array<ActionParamType>)) {
                         for await (const cItem of childRelations) {
                             const sourceField = cItem.sourceField;
                             const targetField = cItem.targetField;
-                            // check if targetModel is defined/specified, required to determine allowNull-action
-                            if (!cItem.targetModel) {
+                            // check if source and target models are defined/specified, required to determine allowNull-action
+                            if (!cItem.targetModel || !cItem.sourceModel) {
                                 // handle as error
                                 await session.abortTransaction();
-                                throw new Error("Target model is required to complete the set-null-task");
+                                throw new Error("Source and Target models are required to complete the set-null-task");
                             }
-                            const targetRecordDesc = cItem.targetModel.recordDesc || {};
-                            const recordInitializedValues = this.computeInitializeValues(targetRecordDesc)
-                            const sourceFieldValue = currentRec[sourceField] || null;  // current value of the targetField
-                            const targetFieldValue = recordInitializedValues[targetField] || null; // new value (null-value) of the targetField
-                            if (sourceFieldValue === targetFieldValue) {
+                            const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
+                            const recordInitializedValues = this.computeInitializeValues(sourceRecordDesc)
+                            const currentFieldValue = currentRec[sourceField] || null;  // current value of the targetField
+                            const targetFieldValue = recordInitializedValues[sourceField] || null; // new value (null-value) of the targetField
+                            if (currentFieldValue === targetFieldValue) {
                                 // skip update
                                 continue;
                             }
                             // validate targetField null value | check if allowNull is permissible for the targetField
+                            const targetRecordDesc = cItem.targetModel.recordDesc || {};
                             let targetFieldDesc = targetRecordDesc[targetField];
                             switch (typeof targetFieldDesc) {
                                 case "object":
@@ -480,9 +482,9 @@ class DeleteRecordTrans extends Crud {
                                     break;
                             }
                             // update-query/data-set for target table-record update
-                            let updateQuery: QueryParamsType = {};  // to determine the current-value in the target-field
-                            let updateSet: ActionParamType = {};    // to set the new-default-value in the target-field
-                            updateQuery[targetField] = sourceFieldValue;
+                            const updateQuery: QueryParamsType = {};  // to determine the current-value in the target-field
+                            const updateSet: ActionParamType = {};    // to set the new-default-value in the target-field
+                            updateQuery[targetField] = currentFieldValue;
                             updateSet[targetField] = targetFieldValue;
                             const targetTable = cItem.targetModel.tableName || cItem.targetTable;
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetTable);
