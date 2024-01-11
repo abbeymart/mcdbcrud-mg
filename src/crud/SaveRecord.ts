@@ -68,8 +68,6 @@ class SaveRecord extends Crud {
             const {_id, ...otherParams} = this.queryParams;
             this.queryParams = otherParams;
         }
-        console.log("create-items: ", this.createItems)
-        console.log("update-items: ", this.updateItems)
         // create records/documents
         if (this.createItems.length > 0) {
             this.taskType = TaskTypes.CREATE

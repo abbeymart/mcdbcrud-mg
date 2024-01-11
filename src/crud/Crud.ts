@@ -190,31 +190,24 @@ class Crud {
             // compute the uniqueness object
             const uniqueObj: ExistParamItemType = {};
             for (const field of fields) {
-                // exclude primary/unique _id field/key
-                if (field === "_id") {
+                // exclude primary/unique _id field/key, for update task
+                if (field === "_id" && (actionParam["_id"] || actionParam["_id"] !== "") ) {
+                    uniqueObj[field] = {
+                        $ne: new ObjectId(actionParam["_id"] as string),
+                    }
                     continue
                 }
-                // transform mongodb-id value to ObjectId
+                // transform mongodb-id value to ObjectId, for fields ending with id/Id/ID/iD
                 if (field.toLowerCase().endsWith("id") && validator.isMongoId(actionParam[field])) {
                     actionParam[field] = new ObjectId(actionParam[field]);
                 }
                 // set item value
                 uniqueObj[field] = actionParam[field]
             }
-            // for update, exclude the existing record/document(update-task)
-            if (actionParam["_id"] || actionParam["_id"] !== "") {
-                existParams.push({
-                    ...uniqueObj,
-                    _id: {
-                        $ne: new ObjectId(actionParam["_id"] as string),
-                    },
-                });
-            } else {
-                // append the uniqueObj for new record/document
-                existParams.push({
-                    ...uniqueObj,
-                });
-            }
+            // append the uniqueObj for new record/document
+            existParams.push({
+                ...uniqueObj,
+            });
         }
         return existParams;
     }
@@ -244,7 +237,6 @@ class Crud {
                     message: "No data integrity condition specified",
                 });
             }
-            console.log("action-params: ", actionParams)
             console.log("exist-params: ", this.existParams)
             // Verify uniqueness of the actionParams
             for (const fields of this.uniqueFields) {

@@ -220,6 +220,7 @@ export class Model {
         }
     }
 
+
     /**
      * @method computeDocValueType computes the record/document-field-value-types (DataTypes).
      * @param docValue
@@ -307,6 +308,8 @@ export class Model {
             throw new Error("Error computing docValue types: " + e.message);
         }
     }
+
+
 
     /**
      * @method setDefaultValues set the default record/document-field-values for no-value fields and if specified, setValue (transform).
@@ -615,6 +618,27 @@ export class Model {
         }
     }
 
+    validateRecordUniqueFields(actionParam: ActionParamType): ValidateResponseType {
+        const errors: MessageObject = {}
+        for (const fields of this.modelUniqueFields) {
+            for (const field of fields) {
+                if(!Object.keys(actionParam).includes(field)) {
+                    errors[field] = `record [${actionParam}] missing unique field [${field}]`
+                }
+            }
+        }
+        if (!isEmptyObject(errors)) {
+            return {
+                ok: false,
+                errors,
+            }
+        }
+        return {
+            ok: true,
+            errors,
+        }
+    }
+
     // ***** crud operations / methods : interface to the CRUD modules *****
 
     async save(params: CrudParamsType, options: CrudOptionsType = {}): Promise<ResponseMessage> {
@@ -650,6 +674,11 @@ export class Model {
             // validate actionParams (docValues), prior to saving, via this.validateDocValue
             let actParams: ActionParamsType = []
             for (const docValue of params.actionParams) {
+                // validate uniqueFields
+                const validUniqueFields = this.validateRecordUniqueFields(docValue)
+                if (!validUniqueFields.ok || !isEmptyObject(validUniqueFields.errors)) {
+                    return getParamsMessage(validUniqueFields.errors);
+                }
                 // set defaultValues, prior to save
                 const modelDocValue = await this.setDefaultValues(docValue);
                 // validate actionParam-item (docValue) field-values
@@ -807,6 +836,10 @@ export class Model {
             // validate actionParams (docValues), prior to saving, via this.validateDocValue
             let actParams: ActionParamsType = []
             for (const docValue of params.actionParams) {
+                const validUniqueFields = this.validateRecordUniqueFields(docValue)
+                if (!validUniqueFields.ok || !isEmptyObject(validUniqueFields.errors)) {
+                    return getParamsMessage(validUniqueFields.errors);
+                }
                 // set defaultValues, prior to save
                 const modelDocValue = await this.setDefaultValues(docValue);
                 // validate actionParam-item (docValue) field-values
