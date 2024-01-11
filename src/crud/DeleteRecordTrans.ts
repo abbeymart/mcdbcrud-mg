@@ -1,14 +1,14 @@
-// 2024-01-07
+// 2024-01-07 | requires mongodb-replicas
 import { ObjectId, DeleteResult, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
-import { isEmptyObject } from "../utils";
+import { isEmptyObject } from "./utils";
 import { deleteHashCache, QueryHashCacheParamsType, } from "@mconnect/mccache";
-import Crud from "../Crud";
+import Crud from "./Crud";
 import {
     ActionParamType, AuditLogParamsType, CrudOptionsType, CrudParamsType,
     CrudResultType, LogRecordsType, QueryParamsType, SubItemsType,
-} from "../types";
-import { FieldDescType, RelationActionTypes, } from "../../orm";
+} from "./types";
+import { FieldDescType, RelationActionTypes, } from "../orm";
 
 class DeleteRecordTrans extends Crud {
     protected tableRestrict: boolean;
@@ -280,8 +280,8 @@ class DeleteRecordTrans extends Crud {
                             const recordDefaultValues = await this.computeRecordDefaultValues(sourceRecordDesc, currentRec);
                             const currentFieldValue = currentRec[sourceField] || null;          // current value of the targetField
                             const targetFieldValue = recordDefaultValues[sourceField] || null;  // new value (default-value) of the targetField
-                            if (currentFieldValue === targetFieldValue) {
-                                // skip update
+                            if (!targetFieldValue || currentFieldValue === targetFieldValue) {
+                                // skip update for null targetFieldValue or no change in current and target values
                                 continue;
                             }
                             // update-query/data-set for target table-record update
@@ -294,7 +294,7 @@ class DeleteRecordTrans extends Crud {
                             const updateRes = await TargetDbColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
-                                throw new Error(`Unable to update(cascade default-value) the specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
+                                throw new Error(`Unable to update(default-value) the specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
                     }
@@ -309,7 +309,7 @@ class DeleteRecordTrans extends Crud {
                             if (!cItem.targetModel || !cItem.sourceModel) {
                                 // handle as error
                                 await session.abortTransaction();
-                                throw new Error("Source and Target models are required to complete the set-null-task");
+                                throw new Error("Source and Target models are required to complete the set-null/zero-value-task");
                             }
                             const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
                             const recordInitializedValues = this.computeInitializeValues(sourceRecordDesc)
@@ -325,8 +325,8 @@ class DeleteRecordTrans extends Crud {
                             switch (typeof targetFieldDesc) {
                                 case "object":
                                     targetFieldDesc = targetFieldDesc as FieldDescType
-                                    // handle non-null-field
-                                    if (!targetFieldDesc.allowNull || !Object.keys(targetFieldDesc).includes("allowNull")) {
+                                    // handle non-null-field (allowNull is default to true, if not defined/specified)
+                                    if (targetFieldDesc.allowNull !== undefined && !targetFieldDesc.allowNull) {
                                         await session.abortTransaction();
                                         throw new Error("Target/foreignKey allowNull is required to complete the set-null task");
                                     }
@@ -344,7 +344,7 @@ class DeleteRecordTrans extends Crud {
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
-                                throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
+                                throw new Error(`Unable to update(null-value) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
                     }
@@ -427,8 +427,8 @@ class DeleteRecordTrans extends Crud {
                             const recordDefaultValues = await this.computeRecordDefaultValues(sourceRecordDesc, currentRec);
                             const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
                             const targetFieldValue = recordDefaultValues[sourceField] || null;  // new value (default-value) of the targetField
-                            if (currentFieldValue === targetFieldValue) {
-                                // skip update
+                            if (!targetFieldValue || currentFieldValue === targetFieldValue) {
+                                // skip update for null targetFieldValue or no change in current and target values
                                 continue;
                             }
                             // update-query/data-set for target table-record update
@@ -441,7 +441,7 @@ class DeleteRecordTrans extends Crud {
                             const updateRes = await TargetDbColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
-                                throw new Error(`Unable to update(cascade default-value) the specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
+                                throw new Error(`Unable to update(default-value) the specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
                     }
@@ -473,7 +473,7 @@ class DeleteRecordTrans extends Crud {
                                 case "object":
                                     targetFieldDesc = targetFieldDesc as FieldDescType
                                     // handle non-null-field
-                                    if (!targetFieldDesc.allowNull || !Object.keys(targetFieldDesc).includes("allowNull")) {
+                                    if (targetFieldDesc.allowNull !== undefined && !targetFieldDesc.allowNull) {
                                         await session.abortTransaction();
                                         throw new Error("Target/foreignKey allowNull is required to complete the set-null task");
                                     }
@@ -491,7 +491,7 @@ class DeleteRecordTrans extends Crud {
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
                                 await session.abortTransaction();
-                                throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
+                                throw new Error(`Unable to update(set-null) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
                     }

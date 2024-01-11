@@ -13,7 +13,7 @@ import { collections } from "./collections";
 
 export const groupModel: ModelDescType = {
     tableName  : collections.GROUPS,
-    recordDesc: {
+    recordDesc : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -29,7 +29,7 @@ export const groupModel: ModelDescType = {
 
 export const categoryModel: ModelDescType = {
     tableName  : collections.CATEGORIES,
-    recordDesc: {
+    recordDesc : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -69,6 +69,7 @@ export const groupRelations: Array<ModelRelationType> = [
         targetTable : collections.CATEGORIES,
         sourceField : "_id",
         targetField : "groupId",
+        sourceModel : groupModel,
         targetModel : categoryModel,
         relationType: RelationTypes.ONE_TO_MANY,
         foreignField: "groupId",
@@ -80,6 +81,7 @@ export const groupRelations: Array<ModelRelationType> = [
         targetTable : collections.CATEGORIES,
         sourceField : "name",
         targetField : "groupName",
+        sourceModel : groupModel,
         targetModel : categoryModel,
         relationType: RelationTypes.ONE_TO_MANY,
         foreignField: "groupName",
@@ -94,6 +96,7 @@ export const categoryRelations: Array<ModelRelationType> = [
         targetTable : collections.CATEGORIES,
         sourceField : "_id",
         targetField : "parentId",
+        sourceModel: categoryModel,
         targetModel : categoryModel,
         relationType: RelationTypes.ONE_TO_MANY,
         foreignField: "parentId",

@@ -75,7 +75,6 @@ class GetRecord extends Crud {
                 }
                 const cacheRes = getHashCache<GetResultType>(cacheParams);
                 if (cacheRes.ok && cacheRes.value) {
-                    // console.log("cache-items-before-query: ", cacheRes.value?.records[0]);
                     return getResMessage("success", {
                         value  : cacheRes.value,
                         message: "from cache",

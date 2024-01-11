@@ -73,7 +73,6 @@ class GetRecordStream extends Crud {
                     .sort(this.sortParams)
                     .stream();
             } catch (error) {
-                console.error(error);
                 throw new Error(`notFound: ${error.message}`);
             }
         }
@@ -88,7 +87,6 @@ class GetRecordStream extends Crud {
                     .sort(this.sortParams)
                     .stream();
             } catch (error) {
-                console.error(error);
                 throw new Error(`notFound: ${error.message}`);
             }
         }
@@ -103,7 +101,6 @@ class GetRecordStream extends Crud {
                 .sort(this.sortParams)
                 .stream();
         } catch (error) {
-            console.error(error);
             throw new Error(`notFound: ${error.message}`);
         }
     }

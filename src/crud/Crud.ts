@@ -6,17 +6,20 @@
 
 // Import required module/function(s)/types
 import { Db, MongoClient, ObjectId } from "mongodb";
+import validator from "validator";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import {
     CrudParamsType, CrudOptionsType, TaskTypes, QueryParamsType, ActionParamsType,
     ProjectParamsType, SortParamsType, SubItemsType, ActionExistParamsType, FieldValueTypes,
-    ActionParamType,
+    ActionParamType, ExistParamItemType,
 } from "./types";
 import { AuditLog, newAuditLog } from "../auditlog";
-import { DataTypes, DefaultValueType, FieldDescType, ModelRelationType, RecordDescType, } from "../orm";
+import {
+    DataTypes, DefaultValueType, FieldDescType, ModelRelationType, RecordDescType, UniqueFieldsType,
+} from "../orm";
 
 
-export class Crud {
+class Crud {
     protected params: CrudParamsType;
     protected readonly appDb: Db;
     protected readonly tableName: string;
@@ -25,7 +28,7 @@ export class Crud {
     protected recordIds: Array<string>;       // to capture string-id | ObjectId
     protected actionParams: ActionParamsType;
     protected queryParams: QueryParamsType;
-    protected readonly existParams: ActionExistParamsType;
+    protected existParams: ActionExistParamsType;
     protected readonly projectParams: ProjectParamsType;
     protected readonly sortParams: SortParamsType | {};
     protected taskType: TaskTypes | string;
@@ -60,9 +63,10 @@ export class Crud {
     protected subItems: Array<SubItemsType>;
     protected cacheExpire: number;
     protected readonly parentTables: Array<string>;
-    protected readonly childTables: Array<string>;
+    protected childTables: Array<string>;
     protected readonly parentRelations: Array<ModelRelationType>;
     protected readonly childRelations: Array<ModelRelationType>;
+    protected readonly uniqueFields: UniqueFieldsType;
     protected readonly queryFieldType: string;
     protected readonly appDbs: Array<string>;
     protected readonly appTables: Array<string>;
@@ -92,20 +96,21 @@ export class Crud {
         this.childTables = options?.childTables ? options.childTables : [];
         this.parentRelations = options?.parentRelations ? options.parentRelations : [];
         this.childRelations = options?.childRelations ? options.childRelations : [];
-        this.recursiveDelete = options?.recursiveDelete? options.recursiveDelete : false;
-        this.checkAccess = options?.checkAccess? options.checkAccess : false;
+        this.uniqueFields = options?.uniqueFields ? options.uniqueFields : [];
+        this.recursiveDelete = options?.recursiveDelete ? options.recursiveDelete : false;
+        this.checkAccess = options?.checkAccess ? options.checkAccess : false;
         this.auditTable = options?.auditTable ? options.auditTable : "audits";
         this.auditDb = options?.auditDb ? options.auditDb : this.appDb;
         this.auditDbClient = options?.auditDbClient ? options.auditDbClient : this.dbClient;
         this.auditDbName = options?.auditDbName ? options.auditDbName : this.dbName;
         this.maxQueryLimit = options?.maxQueryLimit ? options.maxQueryLimit : 10000;
-        this.logCrud = options?.logCrud? options.logCrud : false;
-        this.logCreate = options?.logCreate? options.logCreate : false;
-        this.logUpdate = options?.logUpdate? options.logUpdate : false;
-        this.logRead = options?.logRead? options.logRead : false;
-        this.logDelete = options?.logDelete? options.logDelete : false;
-        this.logLogin = options?.logLogin? options.logLogin : false;
-        this.logLogout = options?.logLogout? options.logLogout : false;
+        this.logCrud = options?.logCrud ? options.logCrud : false;
+        this.logCreate = options?.logCreate ? options.logCreate : false;
+        this.logUpdate = options?.logUpdate ? options.logUpdate : false;
+        this.logRead = options?.logRead ? options.logRead : false;
+        this.logDelete = options?.logDelete ? options.logDelete : false;
+        this.logLogin = options?.logLogin ? options.logLogin : false;
+        this.logLogout = options?.logLogout ? options.logLogout : false;
         this.cacheExpire = options?.cacheExpire ? options.cacheExpire : 300;
         // unique cache-key
         this.cacheKey = JSON.stringify({
@@ -140,7 +145,7 @@ export class Crud {
         this.appTables = options?.appTables ? options.appTables :
             ["table", "table-mcpa", "table-mcpay", "table-mcship", "table-mctrade", "table-mcproperty",
                 "table-mcinfo", "table-mcbc", "table-mcproject",];
-        this.cacheResult = options?.cacheResult? options.cacheResult : false;
+        this.cacheResult = options?.cacheResult ? options.cacheResult : false;
         this.getAllResults = options?.getAllRecords || false;
     }
 
@@ -170,8 +175,68 @@ export class Crud {
         }
     }
 
-    // checkRecExist method checks if items/documents exist: document uniqueness
-    async noRecordDuplication(): Promise<ResponseMessage> {
+    /**
+     * @method computeExistParam computes the query-object(s) for checking document uniqueness based on model-unique-fields constraints,
+     * for create and update (not by ids or queryParams) tasks
+     * @param actionParam
+     */
+    computeExistParam(actionParam: ActionParamType): Array<ExistParamItemType> {
+        if (this.uniqueFields.length < 1) {
+            return []
+        }
+        // set the existParams for create and/or update action to determine document uniqueness
+        const existParams: Array<ExistParamItemType> = [];
+        for (const fields of this.uniqueFields) {
+            // compute the uniqueness object
+            const uniqueObj: ExistParamItemType = {};
+            for (const field of fields) {
+                // exclude primary/unique _id field/key
+                if (field === "_id") {
+                    continue
+                }
+                // transform mongodb-id value to ObjectId
+                if (field.toLowerCase().endsWith("id") && validator.isMongoId(actionParam[field])) {
+                    actionParam[field] = new ObjectId(actionParam[field]);
+                }
+                // set item value
+                uniqueObj[field] = actionParam[field]
+            }
+            // for update, exclude the existing record/document(update-task)
+            if (actionParam["_id"] || actionParam["_id"] !== "") {
+                existParams.push({
+                    ...uniqueObj,
+                    _id: {
+                        $ne: new ObjectId(actionParam["_id"] as string),
+                    },
+                });
+            } else {
+                // append the uniqueObj for new record/document
+                existParams.push({
+                    ...uniqueObj,
+                });
+            }
+        }
+        return existParams;
+    }
+
+    /**
+     * @method computeExistParams computes the query-object(s) for checking records/documents uniqueness based on model-unique-fields constraints,
+     * for create and update (not by ids or queryParams) tasks
+     * @param actionParams
+     */
+    computeExistParams(actionParams: ActionParamsType): ActionExistParamsType {
+        // set the existParams for create or update action to determine records/documents uniqueness
+        const recordExistParams: ActionExistParamsType = [];
+        for (const item of actionParams) {
+            const existParam = this.computeExistParam(item)
+            recordExistParams.push(existParam)
+        }
+        return recordExistParams;
+    }
+
+
+    // checkRecExist method checks if records/documents exist: record/document uniqueness, for create or update task.
+    async noRecordDuplication(actionParams: ActionParamsType): Promise<ResponseMessage> {
         try {
             // check if existParams condition is specified
             if (this.existParams.length < 1) {
@@ -179,7 +244,28 @@ export class Crud {
                     message: "No data integrity condition specified",
                 });
             }
-            // check record existence/uniqueness for the record/actionParams
+            console.log("action-params: ", actionParams)
+            console.log("exist-params: ", this.existParams)
+            // Verify uniqueness of the actionParams
+            for (const fields of this.uniqueFields) {
+                for (const recordItem of actionParams) {
+                    const recordFields = Object.keys(recordItem)
+                    // validate unique fields in recordItem
+                    for (const field of fields) {
+                        if (!recordFields.includes(field)) {
+                            throw new Error(`Missing unique field [${field}] in record [${recordItem}]`)
+                        }
+                    }
+                    // check that actionParams record is uniquely composed
+                    const queryRecords = actionParams.filter(it => {
+                        return fields.every(field => it[field] === recordItem[field])
+                    } )
+                    if (queryRecords.length > 1) {
+                        throw new Error(`Unique fields violation [${fields.join(", ")}] in records [${[...queryRecords]}]`)
+                    }
+                }
+            }
+            // check record existence/uniqueness for the record/actionParams in the database
             const appDbColl = this.appDb.collection(this.tableName);
             let attributesMessage = "";
             for (const actionExistParams of this.existParams) {
@@ -214,15 +300,14 @@ export class Crud {
                 });
             }
         } catch (e) {
-            console.error(e);
             return getResMessage("saveError", {
-                message: "Unable to verify data integrity (duplication) conflict",
+                message: `Unable to verify data integrity (duplication) conflict: ${e.message}`,
             });
         }
     }
 
     // getCurrentRecords fetch documents by recordIds, queryParams or all limited by this.limit and this.skip, if applicable
-    async getCurrentRecords(by = ""): Promise<ResponseMessage> {
+    async getCurrentRecords(by = ""): Promise<ResponseMessage>{
         try {
             // validate models
             const validDb = this.checkDb(this.appDb);
@@ -286,9 +371,8 @@ export class Crud {
                 });
             }
         } catch (e) {
-            console.error(e);
             return getResMessage("notFound", {
-                message: "Error retrieving current document/record(s)",
+                message: `Error retrieving current document/record(s): ${e.message}`,
             });
         }
     }

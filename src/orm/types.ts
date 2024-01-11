@@ -126,8 +126,8 @@ export interface ModelRelationType {
     sourceField: string;
     targetField: string;
     relationType: RelationTypes;
-    sourceModel?: ModelDescType;
-    targetModel?: ModelDescType;
+    sourceModel: ModelDescType;
+    targetModel: ModelDescType;
     foreignField?: string;  // source-to-targetField map
     relationField?: string; // relation-targetField, for many-to-many
     relationTable?: string;  // optional tableName for many-to-many | default: sourceTarget or source_target
@@ -157,13 +157,13 @@ export const BaseModel: RecordDescType = {
     updatedBy  : DataTypes.STRING,
     createdAt  : {
         fieldType   : DataTypes.DATETIME,
-        defaultValue: new Date(),
+        defaultValue: new Date(), // new Date().toString(),
     },
     updatedAt  : {
         fieldType   : DataTypes.DATETIME,
         defaultValue: new Date(),
     },
-    deletedAt  : DataTypes.DATETIME,
+    deletedAt  : DataTypes.STRING,
     appId      : {
         fieldType: DataTypes.STRING,
         allowNull: true,

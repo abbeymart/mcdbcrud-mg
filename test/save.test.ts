@@ -138,5 +138,5 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     await postTestResult();
     await appDbInstance?.closeDb();
     await auditDbInstance?.closeDb();
-
+    process.exit(0)
 })();

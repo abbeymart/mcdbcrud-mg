@@ -10,7 +10,7 @@ import { MessageObject } from "../orm";
 export const isProvided = (param: any): boolean => {
     // Verify the Required status
     // Validate that the item is not empty / null / undefined
-    return !(param === '' || param === null || param === undefined || Object.keys(param).length === 0);
+    return !(param === "" || param === null || param === undefined || Object.keys(param).length === 0);
 };
 
 export const isEven = (num: number): boolean => {
@@ -36,7 +36,7 @@ export const isNumberFloat = (num: number): boolean => {
 export const isObjectType = (param: object): boolean => {
     "use strict";
     // Validate param is an object, {}
-    return (typeof param === 'object' && !Array.isArray(param));
+    return (typeof param === "object" && !Array.isArray(param));
 };
 
 export const isArrayType = (param: Array<any>): boolean => {
@@ -65,7 +65,7 @@ export const isUsername = (param: string): boolean => {
 
 export const isEmpty = (param: any): boolean => {
     "use strict";
-    return (param === '' || param === null || param === undefined ||
+    return (param === "" || param === null || param === undefined ||
         Object.keys(param).length === 0 ||
         (Array.isArray(param) && param.length === 0));
 };
@@ -119,7 +119,7 @@ export const isPostalCodeUK = (param: string): boolean => {
 };
 
 export const isName = (param: string): boolean => {
-    const namePattern = /^[a-zA-Z'\-]+(\s[a-zA-Z'\-])*[a-zA-Z'\-]*/;   // Abi Charles Africa America
+    const namePattern = /^[a-zA-Z"\-]+(\s[a-zA-Z"\-])*[a-zA-Z"\-]*/;   // Abi Charles Africa America
     return namePattern.test(param);
 };
 
@@ -156,7 +156,7 @@ export const isLanguageCode = (param: string): boolean => {
 
 export const isWordSpace = (param: string): boolean => {
     // words with spaces and hyphens, no numbers
-    const wordSpacePattern = /^[a-zA-Z0-9,()'._&]+[\s\-a-zA-Z0-9,()'._&]*[a-zA-Z0-9,()'._?]*$/;
+    const wordSpacePattern = /^[a-zA-Z0-9,()"._&]+[\s\-a-zA-Z0-9,()"._&]*[a-zA-Z0-9,()"._?]*$/;
     return wordSpacePattern.test(param);
 };
 
@@ -275,8 +275,7 @@ export function validateSaveParams(crudParams: CrudParamsType) {
         //     errors.tokenRequired = "token or userInfo is required";
         // }
     } catch (e) {
-        console.error("Error validating save-record(s) inputs");
-        errors.validationError = "Error validating save-record(s) inputs";
+        errors.validationError = `Error validating save-record(s) inputs: ${e.message}`;
     }
 
     return errors;
@@ -342,8 +341,7 @@ export function validateDeleteParams(crudParams: CrudParamsType) {
         // }
 
     } catch (e) {
-        console.error("Error validating delete-record(s) inputs");
-        errors.validationError = "Error validating delete-record(s) inputs";
+        errors.validationError = `Error validating delete-record(s) inputs: ${e.message}`;
     }
 
     return errors;
@@ -419,8 +417,7 @@ export function validateGetParams(crudParams: CrudParamsType) {
         // }
 
     } catch (e) {
-        console.error("Error validating get-record(s) inputs");
-        errors.validationError = "Error validating get-record(s) inputs";
+        errors.validationError = `Error validating get-record(s) inputs: ${e.message}`;
     }
 
     return errors;
@@ -435,24 +432,23 @@ export function validateLoadParams(crudParams: CrudParamsType) {
             // Check input formats/patterns
             const testItem = isStringAlpha(crudParams.tableName);
             if (!testItem) {
-                errors.coll = 'format-error, collection name should be a string/alphanumeric';
+                errors.coll = "format-error, collection name should be a string/alphanumeric";
             }
         } else {
-            errors.coll = 'required-error, info is required';
+            errors.coll = "required-error, info is required";
         }
 
         if (crudParams.actionParams) {
             // Check input formats/patterns
             const testItem = isArrayType(crudParams.actionParams);
             if (!testItem) {
-                errors.actionParams = 'format-error, actionParams should be an array';
+                errors.actionParams = "format-error, actionParams should be an array";
             }
         } else {
-            errors.actionParams = 'required-error; info is required';
+            errors.actionParams = "required-error; info is required";
         }
     } catch (e) {
-        console.error('Error validating load-record(s) inputs');
-        errors.validationError = 'Error validating load-record(s) inputs';
+        errors.validationError = `Error validating load-record(s) inputs: ${e.message}`;
     }
 
     return errors;

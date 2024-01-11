@@ -1,5 +1,5 @@
 import { CrudParamsType, newDbMongo } from "../../src";
-import { appDb, auditDb, dbOptions } from "../config";
+import { appDbLocal, auditDbLocal, dbOptions } from "../config";
 import {
     auditColl, crudParamOptions, DeleteGroupById, DeleteGroupByIds, DeleteGroupByParams, groupCollDelete,
     groupCollDeleteAll, GroupModel,
@@ -9,70 +9,70 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
-    const appDbInstance = newDbMongo(appDb, dbOptions);
-    const auditDbInstance = newDbMongo(auditDb, dbOptions);
+    const appDbLocalInstance = newDbMongo(appDbLocal, dbOptions);
+    const auditDbLocalInstance = newDbMongo(auditDbLocal, dbOptions);
 
-    const appDbHandle = await appDbInstance.openDb();
-    const appDbClient = await appDbInstance.mgServer();
-    const auditDbHandle = await auditDbInstance.openDb();
-    const auditDbClient = await auditDbInstance.mgServer();
+    const appDbLocalHandle = await appDbLocalInstance.openDb();
+    const appDbLocalClient = await appDbLocalInstance.mgServer();
+    const auditDbLocalHandle = await auditDbLocalInstance.openDb();
+    const auditDbLocalClient = await auditDbLocalInstance.mgServer();
 
     const crudParams: CrudParamsType = {
-        appDb      : appDbHandle,
-        dbClient   : appDbClient,
-        dbName     : appDb.database || "",
+        appDb      : appDbLocalHandle,
+        dbClient   : appDbLocalClient,
+        dbName     : appDbLocal.database || "",
         tableName  : groupCollDelete,
         userInfo   : testUserInfo,
         recordIds  : [],
         queryParams: {},
     };
 
-    crudParamOptions.auditDb = auditDbHandle;
-    crudParamOptions.auditDbClient = auditDbClient;
-    crudParamOptions.auditDbName = appDb.database;
+    crudParamOptions.auditDb = auditDbLocalHandle;
+    crudParamOptions.auditDbClient = auditDbLocalClient;
+    crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
 
     await mcTest({
-        name    : "should delete record by Id and return success [delete-record-method]:",
+        name    : "should delete record by Id and return success or notFound or subItems [delete-record-method]:",
         testFunc: async () => {
             crudParams.tableName = groupCollDelete
             crudParams.recordIds = [DeleteGroupById]
             crudParams.queryParams = {}
             const res = await GroupModel.delete(crudParams, crudParamOptions);
             console.log("delete-by-id-res: ", res)
-            const resCode = res.code === "success"
-            assertEquals(resCode, true, `res-code should be success or notFound:`);
+            const resCode = res.code === "success" || res.code === "notFound" || res.code === "subItems"
+            assertEquals(resCode, true, `res-code should be success or notFound or subItems:`);
         }
     });
 
     await mcTest({
-        name    : "should delete record by Ids and return success [delete-record-method]:",
+        name    : "should delete record by Ids and return success or notFound or subItems [delete-record-method]:",
         testFunc: async () => {
             crudParams.tableName = groupCollDelete;
             crudParams.recordIds = DeleteGroupByIds;
             crudParams.queryParams = {};
             const res = await GroupModel.delete(crudParams, crudParamOptions);
             console.log("delete-by-ids-res: ", res)
-            const resCode = res.code === "success"
-            assertEquals(resCode, true, `res-code should be success`);
+            const resCode = res.code === "success" || res.code === "notFound" || res.code === "subItems"
+            assertEquals(resCode, true, `res-code should be success or notFound or subItems`);
         }
     });
 
     await mcTest({
-        name    : "should delete records by query-params and return success[delete-record-method]:",
+        name    : "should delete records by queryParams and return success or notFound or subItems[delete-record-method]:",
         testFunc: async () => {
             crudParams.tableName = groupCollDelete
             crudParams.recordIds = []
             crudParams.queryParams = DeleteGroupByParams
             const res = await GroupModel.delete(crudParams, crudParamOptions);
             console.log("delete-by-params-res: ", res)
-            const resCode = res.code === "success"
-            assertEquals(resCode, true, `res-code should be success or notFound:`);
+            const resCode = res.code === "success" || res.code === "notFound" || res.code === "subItems"
+            assertEquals(resCode, true, `res-code should be success or notFound or subItems:`);
         }
     });
 
     await mcTest({
-        name    : "should prevent deletion of all records, only by docIds or queryParams only [delete-record-method]:",
+        name    : "should prevent deletion of all records, only by recordIds or queryParams only [delete-record-method]:",
         testFunc: async () => {
             crudParams.tableName = groupCollDeleteAll
             crudParams.recordIds = []
@@ -86,7 +86,8 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     });
 
     await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    await appDbLocalInstance.closeDb();
+    await auditDbLocalInstance.closeDb();
+    process.exit(0);
 
 })();

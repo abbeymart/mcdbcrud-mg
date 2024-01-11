@@ -83,7 +83,7 @@ class DeleteRecord extends Crud {
                         return refIntegrity;
                     }
                 }
-                // delete/remove records, and apply deleteSetDefault and deleteSetNull constraints
+                // delete/remove records
                 return await this.removeRecordById();
             } catch (error) {
                 return getResMessage("removeError", {
@@ -114,7 +114,7 @@ class DeleteRecord extends Crud {
                         return refIntegrity;
                     }
                 }
-                // delete/remove records, and apply deleteSetDefault and deleteSetNull constraints
+                // delete/remove records
                 return await this.removeRecordByParams();
             } catch (error) {
                 return getResMessage("removeError", {
@@ -130,6 +130,13 @@ class DeleteRecord extends Crud {
 
     // checkSubItemById checks referential integrity for same table, by id
     async checkSubItemById(): Promise<ResponseMessage> {
+        // compute unique values of the child/target-tables
+        const cTablesSet = new Set<string>()
+        this.childRelations.forEach(it => {
+            const tableName = it.targetModel.tableName || it.targetTable
+            cTablesSet.add(tableName)
+        })
+        this.childTables =  [...cTablesSet]
         // check if any/some of the table contain at least a sub-item/document
         const appDbColl = this.appDb.collection(this.tableName);
         const docWithSubItems = await appDbColl.findOne({
@@ -139,7 +146,7 @@ class DeleteRecord extends Crud {
         });
         if (docWithSubItems && !isEmptyObject(docWithSubItems)) {
             return getResMessage("subItems", {
-                message: "A record that includes sub-items cannot be deleted. Delete/remove the sub-items or update/remove the parentId field-value, first.",
+                message: `A record that includes sub-items cannot be deleted. Delete/remove the sub-items [from ${this.childTables.join(", ")} table/document(s)] or update/remove the parentId field-value, first.`,
             });
         } else {
             return getResMessage("success", {
@@ -175,6 +182,13 @@ class DeleteRecord extends Crud {
         if (this.recordIds.length > 0) {
             // prevent item delete, if child/target-table-items reference parent/source-table itemId
             let subItems: Array<SubItemsType> = []
+            // compute unique values of the child/target-tables
+            const cTablesSet = new Set<string>()
+            this.childRelations.forEach(it => {
+                const tableName = it.targetModel.tableName || it.targetTable
+                cTablesSet.add(tableName)
+            })
+            this.childTables = [...cTablesSet]
             // recordIds ref-check
             const childExist = this.childRelations.some(async (relation) => {
                 const targetDbTable = this.appDb.collection(relation.targetTable);
@@ -211,7 +225,7 @@ class DeleteRecord extends Crud {
             this.subItems = subItems;
             if (childExist) {
                 return getResMessage("subItems", {
-                    message: `A record that contains sub-items cannot be deleted. Delete/remove the sub-items [from ${this.childTables.join(", ")} table(s)], first.`,
+                    message: `A record that contains sub-items cannot be deleted. Delete/remove the sub-items [from ${this.childTables.join(", ")} table/document(s)], first.`,
                     value  : subItems,
                 });
             } else {

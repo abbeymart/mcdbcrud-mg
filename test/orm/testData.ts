@@ -56,28 +56,33 @@ export interface CategoryType extends BaseModelType {
 }
 
 export const groupModel: ModelDescType = {
-    tableName   : collections.GROUPS,
-    recordDesc: {
-        ...BaseModel,
-        name: {
-            fieldType  : DataTypes.STRING,
-            fieldLength: 25,
-            allowNull  : false,
-        },
-    },
-    timeStamp  : true,
-    activeStamp: true,
-    actorStamp : true,
-};
-
-export const categoryModel: ModelDescType = {
-    tableName   : collections.CATEGORIES,
-    recordDesc: {
+    tableName  : collections.GROUPS,
+    recordDesc : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
             fieldLength: 100,
             allowNull  : false,
+        },
+        iconStyle: DataTypes.STRING,
+    },
+    timeStamp  : true,
+    activeStamp: true,
+    actorStamp : true,
+}
+
+export const categoryModel: ModelDescType = {
+    tableName  : collections.CATEGORIES,
+    recordDesc : {
+        ...BaseModel,
+        name     : {
+            fieldType  : DataTypes.STRING,
+            fieldLength: 100,
+            allowNull  : false,
+        },
+        groupId  : {
+            fieldType: DataTypes.MONGODB_ID,
+            allowNull: false,
         },
         groupName: {
             fieldType: DataTypes.STRING,
@@ -100,14 +105,27 @@ export const categoryModel: ModelDescType = {
     timeStamp  : true,
     activeStamp: true,
     actorStamp : true,
-};
+}
 
 export const groupRelations: Array<ModelRelationType> = [
     {
         sourceTable : collections.GROUPS,
         targetTable : collections.CATEGORIES,
+        sourceField : "_id",
+        targetField : "groupId",
+        sourceModel : groupModel,
+        targetModel : categoryModel,
+        relationType: RelationTypes.ONE_TO_MANY,
+        foreignField: "groupId",
+        onDelete    : RelationActionTypes.RESTRICT,
+        onUpdate    : RelationActionTypes.NO_ACTION,
+    },
+    {
+        sourceTable : collections.GROUPS,
+        targetTable : collections.CATEGORIES,
         sourceField : "name",
         targetField : "groupName",
+        sourceModel : groupModel,
         targetModel : categoryModel,
         relationType: RelationTypes.ONE_TO_MANY,
         foreignField: "groupName",
@@ -122,13 +140,14 @@ export const categoryRelations: Array<ModelRelationType> = [
         targetTable : collections.CATEGORIES,
         sourceField : "_id",
         targetField : "parentId",
+        sourceModel: categoryModel,
         targetModel : categoryModel,
         relationType: RelationTypes.ONE_TO_MANY,
         foreignField: "parentId",
         onDelete    : RelationActionTypes.RESTRICT,
         onUpdate    : RelationActionTypes.NO_ACTION,
     },
-];
+]
 
 export const centralRelations: Array<ModelRelationType> = [
     ...groupRelations,
@@ -158,10 +177,13 @@ export const CategoryModel = newModel(categoryModel, categoryOptions);
 
 export const auditColl = collections.AUDITS;
 export const groupColl = collections.GROUPS;
+
+export const groupCollCreate = "groups_create";
 export const groupCollUpdate = "groups_update";
 export const groupCollDelete = "groups_delete";
 export const groupCollDeleteAll = "groups_delete_all";
 export const categoryColl = collections.CATEGORIES;
+export const categoryCollCreate = "categories_create";
 export const categoryCollUpdate = "categories_update";
 export const categoryCollDelete = "categories_delete";
 export const categoryCollDeleteAll = "categories_delete_all";
@@ -211,7 +233,7 @@ export const GroupCreateRec10: GroupType = {
 }
 
 export const GroupCreateRecNameConstraint: GroupType = {
-    name: "Group name length greater than the model specified length",
+    name: "Group name length greater than the model specified length - Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing",
 }
 
 export const GroupCreateActionParams: Array<GroupType> = [
@@ -267,7 +289,7 @@ export const GroupUpdateRecordById: GroupType = {
 // change Location to Locations
 export const GroupUpdateRecordByParam: GroupType = {
     "name"   : "Locations",
-    updatedAt: new Date("2022-12-10T02:58:59.188Z"),
+    updatedAt: new Date(),
 }
 
 export const UpdateGroupById = "6393ef7f9a2eeb643b67e7d4"
@@ -280,14 +302,14 @@ export const UpdateGroupByIds: Array<string> = [
 ]
 
 export const UpdateGroupByParams: QueryParamsType = {
-    "name": "Location",
+    "name": "Locations",
 }
 
 export const GetGroupById = "6393ef7f9a2eeb643b67e7d4"
 export const GetGroupByIds = ["6393ef7f9a2eeb643b67e7d4",
-    "6393ef7f9a2eeb643b67e7d5"] as Array<string>
+    "6393ef7f9a2eeb643b67e7d6"] as Array<string>
 export const GetGroupByParams: QueryParamsType = {
-    "name": "Locale",
+    "name": "Locations",
 }
 
 export const DeleteGroupById = "6393ef7f9a2eeb643b67e7d9";

@@ -6,7 +6,7 @@
  */
 
 // Import required module/function(s)
-import { ObjectId, UpdateResult, } from "mongodb";
+import { ObjectId, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { deleteHashCache, QueryHashCacheParamsType } from "@mconnect/mccache";
 import { ModelOptionsType, RelationActionTypes } from "../orm";
@@ -68,35 +68,17 @@ class SaveRecord extends Crud {
             const {_id, ...otherParams} = this.queryParams;
             this.queryParams = otherParams;
         }
-
-        // Ensure the _id and fields ending in Id for existParams are of type mongoDb-new ObjectId, for create / update actions
-        if (this.existParams && this.existParams.length > 0) {
-            this.existParams.forEach((item: any) => {
-                // transform/cast id, from string, to mongoDB-new ObjectId
-                Object.keys(item).forEach((itemKey: string) => {
-                    if (itemKey.toString().toLowerCase().endsWith("id")) {
-                        // create
-                        if (typeof item[itemKey] === "string" && item[itemKey] !== "" &&
-                            item[itemKey] !== null && item[itemKey].length <= 24) {
-                            item[itemKey] = new ObjectId(item[itemKey]);
-                        }
-                        // update
-                        if (typeof item[itemKey] === "object" && item[itemKey]["$ne"] &&
-                            (item[itemKey]["$ne"] !== "" || item[itemKey]["$ne"] !== null)) {
-                            item[itemKey]["$ne"] = new ObjectId(item[itemKey]["$ne"])
-                        }
-                    }
-                });
-            });
-        }
-
+        console.log("create-items: ", this.createItems)
+        console.log("update-items: ", this.updateItems)
         // create records/documents
         if (this.createItems.length > 0) {
             this.taskType = TaskTypes.CREATE
             try {
                 // check duplicate records, i.e. if similar records exist
-                if (this.existParams.length > 0) {
-                    const noDuplication = await this.noRecordDuplication();
+                // compute existParams for create task
+                this.existParams = this.computeExistParams(this.createItems)
+                if (this.existParams.length > 0 && this.existParams[0].length > 0) {
+                    const noDuplication = await this.noRecordDuplication(this.createItems);
                     if (noDuplication.code !== "success") {
                         return noDuplication;
                     }
@@ -104,9 +86,8 @@ class SaveRecord extends Crud {
                 // create records
                 return await this.createRecord();
             } catch (e) {
-                console.error(e);
                 return getResMessage("insertError", {
-                    message: "Error-inserting/creating new record.",
+                    message: `Error-inserting/creating new record: ${e.message}`,
                 });
             }
         }
@@ -123,9 +104,11 @@ class SaveRecord extends Crud {
         if (this.updateItems.length > 0) {
             this.taskType = TaskTypes.UPDATE
             try {
+                // compute existParams for update task
+                this.existParams = this.computeExistParams(this.updateItems)
                 // check duplicate records, i.e. if similar records exist
-                if (this.existParams.length > 0) {
-                    const noDuplication = await this.noRecordDuplication();
+                if (this.existParams.length > 0 && this.existParams[0].length > 0) {
+                    const noDuplication = await this.noRecordDuplication(this.updateItems);
                     if (noDuplication.code !== "success") {
                         return noDuplication;
                     }
@@ -141,7 +124,6 @@ class SaveRecord extends Crud {
                 // update records
                 return await this.updateRecord();
             } catch (e) {
-                console.error(e);
                 return getResMessage("updateError", {
                     message: `Error updating record(s): ${e.message ? e.message : ""}`,
                 });
@@ -153,24 +135,44 @@ class SaveRecord extends Crud {
             this.actionParams.length === 1) {
             this.taskType = TaskTypes.UPDATE
             try {
+                // compute/check current-records
+                const currentRec = await this.getCurrentRecords("queryparams");
+                if (currentRec.code !== "success") {
+                    return currentRec;
+                }
+                // compute updateItems from currentRecords, and include changes from actionParams
+                const updateItem = this.actionParams[0]
+                const updateItems: ActionParamsType = []
+                for (const recordItem of this.currentRecs) {
+                    // apply changes
+                    for (const [key, val] of Object.entries(updateItem)) {
+                        // exclude _id field/key from updateItem
+                        if (key !== "_id") {
+                            recordItem[key] = val
+                        }
+                    }
+                    updateItems.push(recordItem)
+                }
+                this.updateItems = updateItems
+                // compute existParams for update task
+                this.existParams = this.computeExistParams(this.updateItems)
+                // Prevent multiple updates with the same record(actionParam)
+                if (this.currentRecs.length > 1 && this.existParams.length > 0 && this.existParams[0].length > 0 ) {
+                    return getResMessage("paramsError", {
+                        message: `Updates of multiple records[${this.currentRecs.length}] with unique constraints[${this.existParams.length}] not allowed`
+                    })
+                }
                 // check duplicate records, i.e. if similar records exist
-                if (this.existParams.length > 0) {
-                    const recExist = await this.noRecordDuplication();
-                    if (recExist.code !== "success") {
-                        return recExist;
+                if (this.existParams.length > 0 && this.existParams[0].length > 0) {
+                    const noDuplication = await this.noRecordDuplication(this.updateItems);
+                    if (noDuplication.code !== "success") {
+                        return noDuplication;
                     }
                 }
-                // get current records update and audit log
-                if (this.logUpdate || this.logCrud || this.updateCascade || this.updateSetNull || this.updateSetDefault) {
-                    const currentRec = await this.getCurrentRecords("queryparams");
-                    if (currentRec.code !== "success") {
-                        return currentRec;
-                    }
-                }
+                this.recordIds = this.updateItems.map(it => it["_id"] as string)
                 // update records
-                return await this.updateRecordByParams();
+                return await this.updateRecord();
             } catch (e) {
-                console.error(e);
                 return getResMessage("updateError", {
                     message: `Error updating record(s): ${e.message ? e.message : ""}`,
                 });
@@ -181,24 +183,43 @@ class SaveRecord extends Crud {
         if (this.recordIds && this.recordIds.length > 0 && this.actionParams.length === 1) {
             this.taskType = TaskTypes.UPDATE
             try {
-                // check duplicate records, i.e. if similar records exist
-                if (this.existParams.length > 0) {
-                    const recExist = await this.noRecordDuplication();
-                    if (recExist.code !== "success") {
-                        return recExist;
-                    }
+                // compute/check current-records
+                const currentRec = await this.getCurrentRecords("id");
+                if (currentRec.code !== "success") {
+                    return currentRec;
                 }
-                // get current records update and audit log
-                if (this.logUpdate || this.logCrud || this.updateCascade || this.updateSetNull || this.updateSetDefault) {
-                    const currentRec = await this.getCurrentRecords("id");
-                    if (currentRec.code !== "success") {
-                        return currentRec;
+                // compute updateItems from currentRecords, and include changes from actionParams
+                const updateItem = this.actionParams[0]
+                const updateItems: ActionParamsType = []
+                for (const recordItem of this.currentRecs) {
+                    // apply changes
+                    for (const [key, val] of Object.entries(updateItem)) {
+                        // exclude _id field/key from updateItem
+                        if (key !== "_id") {
+                            recordItem[key] = val
+                        }
+                    }
+                    updateItems.push(recordItem)
+                }
+                this.updateItems = updateItems
+                // compute existParams for update task
+                this.existParams = this.computeExistParams(this.updateItems)
+                // Prevent multiple updates with the same record(actionParam)
+                if (this.currentRecs.length > 1 && this.existParams.length > 0 && this.existParams[0].length > 0 ) {
+                    return getResMessage("paramsError", {
+                        message: `Updates of multiple records[${this.currentRecs.length}] with unique constraints[${this.existParams.length}] not allowed`
+                    })
+                }
+                // check duplicate records, i.e. if similar records exist
+                if (this.existParams.length > 0 && this.existParams[0].length > 0) {
+                    const noDuplication = await this.noRecordDuplication(this.updateItems);
+                    if (noDuplication.code !== "success") {
+                        return noDuplication;
                     }
                 }
                 // update records
-                return await this.updateRecordById();
+                return await this.updateRecord();
             } catch (e) {
-                console.error(e);
                 return getResMessage("updateError", {
                     message: `Error updating record(s): ${e.message ? e.message : ""}`,
                 });
@@ -435,143 +456,6 @@ class SaveRecord extends Crud {
         }
     }
 
-    async updateRecordById(): Promise<ResponseMessage> {
-        // validate referential integrity
-        if (this.isRecExist) {
-            return getResMessage("recExist", {
-                message: this.recExistMessage,
-            });
-        }
-        let updateResult: UpdateResult;
-        try {
-            // destruct _id /other attributes
-            const item = this.actionParams[0];
-            const {_id, ...updateParams} = item;
-            // include item stamps: userId and date
-            updateParams.updatedBy = this.userId;
-            updateParams.updatedAt = new Date();
-            let updateCount = 0;
-            let updateMatchedCount = 0;
-            const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
-            updateResult = await appDbColl.updateMany({_id: {$in: this.recordIds.map(id => new ObjectId(id))}}, {
-                $set: updateParams
-            },) as UpdateResult;
-            if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
-                throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
-            }
-            updateCount += updateResult.modifiedCount;
-            updateMatchedCount += updateResult.matchedCount
-            if (updateCount < 1) {
-                throw new Error("No records updated. Please retry.")
-            }
-            // perform delete cache and audit-log tasks
-            const cacheParams: QueryHashCacheParamsType = {
-                key : this.cacheKey,
-                hash: this.tableName,
-                by  : "hash",
-            }
-            deleteHashCache(cacheParams);
-            // check the audit-log settings - to perform audit-log
-            let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
-            if (this.logUpdate || this.logCrud) {
-                const logRecs: LogRecordsType = {
-                    logRecords: this.currentRecs,
-                }
-                const newLogRecs: LogRecordsType = {
-                    queryParam: updateParams,
-                }
-                const logParams: AuditLogParamsType = {
-                    logRecords   : logRecs,
-                    newLogRecords: newLogRecs,
-                    tableName    : this.tableName,
-                    logBy        : this.userId,
-                }
-                logRes = await this.transLog.updateLog(this.userId, logParams);
-            }
-            const resultValue: CrudResultType = {
-                recordsCount: updateCount,
-                logRes,
-            }
-            return getResMessage("success", {
-                message: `Record(s) updated completed: ${updateCount} of ${updateMatchedCount} records updated.`,
-                value  : resultValue,
-            });
-        } catch (e) {
-            return getResMessage("updateError", {
-                message: `Error updating record(s): ${e.message ? e.message : ""}`,
-                value  : e,
-            });
-        }
-    }
-
-    async updateRecordByParams(): Promise<ResponseMessage> {
-        // validate referential integrity
-        if (this.isRecExist) {
-            return getResMessage("recExist", {
-                message: this.recExistMessage,
-            });
-        }
-        let updateResult: UpdateResult;
-        try {
-            // destruct _id /other attributes
-            const item = this.actionParams[0];
-            const {_id, ...updateParams} = item;
-            // include item stamps: userId and date
-            updateParams.updatedBy = this.userId;
-            updateParams.updatedAt = new Date();
-            let updateCount = 0;
-            let updateMatchedCount = 0;
-            const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
-            updateResult = await appDbColl.updateMany(this.queryParams, {
-                $set: updateParams
-            },) as UpdateResult;
-            if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
-                throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
-            }
-            updateCount += updateResult.modifiedCount;
-            updateMatchedCount += updateResult.matchedCount;
-            if (updateCount < 1) {
-                throw new Error("No records updated. Please retry.")
-            }
-            // perform delete cache and audit-log tasks
-            const cacheParams: QueryHashCacheParamsType = {
-                key : this.cacheKey,
-                hash: this.tableName,
-                by  : "hash",
-            }
-            deleteHashCache(cacheParams);
-            // check the audit-log settings - to perform audit-log
-            let logRes = {code: "unknown", message: "", value: {}, resCode: 200, resMessage: ""};
-            if (this.logUpdate || this.logCrud) {
-                const logRecs: LogRecordsType = {
-                    logRecords: this.currentRecs,
-                }
-                const newLogRecs: LogRecordsType = {
-                    queryParam: updateParams,
-                }
-                const logParams: AuditLogParamsType = {
-                    logRecords   : logRecs,
-                    newLogRecords: newLogRecs,
-                    tableName    : this.tableName,
-                    logBy        : this.userId,
-                }
-                logRes = await this.transLog.updateLog(this.userId, logParams);
-            }
-            const resultValue: CrudResultType = {
-                recordsCount: updateCount,
-                logRes,
-            }
-            return getResMessage("success", {
-                message: `Record(s) updated completed: ${updateCount} of ${updateMatchedCount} records updated.`,
-                value  : resultValue,
-            });
-        } catch (e) {
-            return getResMessage("updateError", {
-                message: `Error updating record(s): ${e.message ? e.message : ""}`,
-                value  : e,
-            });
-        }
-    }
 }
 
 // factory function/constructor

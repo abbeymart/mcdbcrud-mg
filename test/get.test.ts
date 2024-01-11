@@ -132,7 +132,11 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
     });
 
     await postTestResult();
+    console.log("app-db: ", appDbInstance.dbUri)
     await appDbInstance?.closeDb();
+    console.log("app-db-closed")
+    console.log("audit-db: ", auditDbInstance.dbUri)
     await auditDbInstance?.closeDb();
-
+    console.log("audit-db-closed")
+    process.exit(0)
 })();

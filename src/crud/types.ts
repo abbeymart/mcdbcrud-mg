@@ -6,7 +6,9 @@
  */
 
 import { Db, MongoClient, SortDirection } from "mongodb";
-import { ModelRelationType, ModelOptionsType, ValidateMethodResponseType, RecordDescType } from "../orm";
+import {
+    ModelRelationType, ModelOptionsType, ValidateMethodResponseType, RecordDescType, UniqueFieldsType
+} from "../orm";
 import { ResponseMessage } from "@mconnect/mcresponse";
 
 export interface ObjectRefType {
@@ -292,7 +294,7 @@ export interface CrudParamsType {
     tableName: string;
     dbClient: MongoClient;
     dbName: string;
-    tableDesc?: RecordDescType;
+    recordDesc?: RecordDescType;
     userInfo?: UserInfoType;
     nullValues?: ActionParamType;
     defaultValues?: ActionParamType;
@@ -318,6 +320,7 @@ export interface CrudOptionsType {
     childTables?: Array<string>;
     parentRelations?: Array<ModelRelationType>;
     childRelations?: Array<ModelRelationType>;
+    uniqueFields?: UniqueFieldsType;
     recursiveDelete?: boolean;
     checkAccess?: boolean
     auditTable?: string;

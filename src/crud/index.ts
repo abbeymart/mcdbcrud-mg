@@ -12,3 +12,5 @@ export * from "./GetRecord";
 export * from "./GetRecordStream";
 export * from "./DeleteRecord";
 export * from "./LoadRecord";
+export * from "./SaveRecordTrans";
+export * from "./DeleteRecordTrans";
