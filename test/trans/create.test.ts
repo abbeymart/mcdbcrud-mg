@@ -1,7 +1,7 @@
 import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
 import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
 import {
-    auditColl, crudParamOptions, groupCollCreate, GroupCreateActionParams, GroupCreateRec1,
+    auditColl, crudParamOptions, groupColl, GroupCreateActionParams, GroupCreateRec1,
     GroupCreateRecNameConstraint, GroupModel, testUserInfo,
 } from "./testData";
 import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
@@ -20,7 +20,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
         appDb      : appDbHandle,
         dbClient   : appDbClient,
         dbName     : appDbLocal.database || "",
-        tableName  : groupCollCreate,
+        tableName  : groupColl,
         userInfo   : testUserInfo,
         recordIds  : [],
         queryParams: {},
@@ -38,7 +38,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
             crudParams.recordIds = [];
             crudParams.queryParams = {};
             const recLen = crudParams.actionParams?.length || 0;
-            const res = await GroupModel.save(crudParams, crudParamOptions);
+            const res = await GroupModel.saveTrans(crudParams, crudParamOptions);
             console.log("create-result: ", res);
             const resValue = res.value as unknown as CrudResultType;
             const idLen = resValue.recordIds?.length || 0;
@@ -55,7 +55,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
             crudParams.actionParams = [GroupCreateRec1];
             crudParams.recordIds = [];
             crudParams.queryParams = {};
-            const res = await GroupModel.save(crudParams, crudParamOptions);
+            const res = await GroupModel.saveTrans(crudParams, crudParamOptions);
             console.log("create-result: ", res);
             assertEquals(res.code === "exists" || res.code === "recordExist", true, `create-task should return recordExist`);
             assertEquals(res.code !== "success", true, `create-task should return existError`);
@@ -68,7 +68,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
             crudParams.actionParams = [GroupCreateRecNameConstraint];
             crudParams.recordIds = [];
             crudParams.queryParams = {};
-            const res = await GroupModel.save(crudParams, crudParamOptions);
+            const res = await GroupModel.saveTrans(crudParams, crudParamOptions);
             console.log("create-result: ", res);
             assertEquals(res.code === "paramsError", true, `create-task should return paramsError`);
             assertEquals(res.code !== "success", true, `create-task should return paramsError`);
