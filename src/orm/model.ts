@@ -618,6 +618,22 @@ export class Model {
         }
     }
 
+    uniqueFieldsSetArray(): Array<string> {
+        const uniqueFieldsSet = new Set<string>()
+        for (const fields of this.modelUniqueFields) {
+            for (const field of fields) {
+                uniqueFieldsSet.add(field)
+            }
+        }
+        return [...uniqueFieldsSet]
+    }
+
+    /**
+     * @deprecated - CRUD-save-methods will skip uniqueness validation, for records with non-specified-unique-field
+     * @method validateRecordUniqueFields
+     * @param actionParam
+     * @return ValidateResponseType
+     */
     validateRecordUniqueFields(actionParam: ActionParamType): ValidateResponseType {
         const errors: MessageObject = {}
         for (const fields of this.modelUniqueFields) {
@@ -674,11 +690,11 @@ export class Model {
             // validate actionParams (docValues), prior to saving, via this.validateDocValue
             let actParams: ActionParamsType = []
             for (const docValue of params.actionParams) {
-                // validate uniqueFields
-                const validUniqueFields = this.validateRecordUniqueFields(docValue)
-                if (!validUniqueFields.ok || !isEmptyObject(validUniqueFields.errors)) {
-                    return getParamsMessage(validUniqueFields.errors);
-                }
+                // validate uniqueFields - removed
+                // const validUniqueFields = this.validateRecordUniqueFields(docValue)
+                // if (!validUniqueFields.ok || !isEmptyObject(validUniqueFields.errors)) {
+                //     return getParamsMessage(validUniqueFields.errors);
+                // }
                 // set defaultValues, prior to save
                 const modelDocValue = await this.setDefaultValues(docValue);
                 // validate actionParam-item (docValue) field-values
@@ -836,10 +852,6 @@ export class Model {
             // validate actionParams (docValues), prior to saving, via this.validateDocValue
             let actParams: ActionParamsType = []
             for (const docValue of params.actionParams) {
-                const validUniqueFields = this.validateRecordUniqueFields(docValue)
-                if (!validUniqueFields.ok || !isEmptyObject(validUniqueFields.errors)) {
-                    return getParamsMessage(validUniqueFields.errors);
-                }
                 // set defaultValues, prior to save
                 const modelDocValue = await this.setDefaultValues(docValue);
                 // validate actionParam-item (docValue) field-values

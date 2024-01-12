@@ -32,7 +32,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditTable = auditColl;
 
     await mcTest({
-        name    : "should return recordExist or updateError for creating duplicate documents:",
+        name    : "should return record-exists or saveError for creating duplicate documents:",
         testFunc: async () => {
             crudParams.actionParams = GroupCreateNonUniqueDocuments;
             crudParams.recordIds = [];
@@ -42,8 +42,8 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
             console.log("create-result: ", res);
             const resValue = res.value as unknown as CrudResultType;
             const recCount = resValue.recordsCount || 0;
-            assertEquals(res.code === "recordExist" || res.code === "updateError", true, `create-task should return recordExist`);
-            assertEquals(res.code !== "success", true, `create-task should return existError or updateError`);
+            assertEquals(res.code === "exists" || res.code === "recordExist" || res.code === "saveError", true, `create-task should return record-exists or saveError`);
+            assertEquals(res.code !== "success", true, `create-task should return record-exists or saveError`);
             assertEquals(recCount < recLen, true, `response-value-recordsCount < ${recLen} should be true`);
         }
     });

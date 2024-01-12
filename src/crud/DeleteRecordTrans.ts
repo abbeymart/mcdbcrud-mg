@@ -3,14 +3,14 @@ import { ObjectId, DeleteResult, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { isEmptyObject } from "./utils";
 import { deleteHashCache, QueryHashCacheParamsType, } from "@mconnect/mccache";
-import Crud from "./Crud";
 import {
     ActionParamType, AuditLogParamsType, CrudOptionsType, CrudParamsType,
     CrudResultType, LogRecordsType, QueryParamsType, SubItemsType,
 } from "./types";
 import { FieldDescType, RelationActionTypes, } from "../orm";
+import { DeleteRecord } from "./DeleteRecord";
 
-class DeleteRecordTrans extends Crud {
+class DeleteRecordTrans extends DeleteRecord {
     protected tableRestrict: boolean;
     protected deleteRestrict: boolean;
     protected deleteSetNull: boolean;
@@ -119,121 +119,6 @@ class DeleteRecordTrans extends Crud {
         return getResMessage("removeError", {
             message: "Unable to perform the requested action(s), due to incomplete/incorrect delete conditions. You may perform delete tasks by record-ids of queryParams only. ",
         });
-    }
-
-    // checkSubItemById checks referential integrity for same table, by id
-    async checkSubItemById(): Promise<ResponseMessage> {
-        // check if any/some of the table contain at least a sub-item/document
-        const appDbColl = this.appDb.collection(this.tableName);
-        const docWithSubItems = await appDbColl.findOne({
-            parentId: {
-                $in: this.recordIds,
-            }
-        });
-        if (docWithSubItems && !isEmptyObject(docWithSubItems)) {
-            return getResMessage("subItems", {
-                message: "A record that includes sub-items cannot be deleted. Delete/remove the sub-items or update/remove the parentId field-value, first.",
-            });
-        } else {
-            return getResMessage("success", {
-                message: "no data integrity issue",
-            });
-        }
-    }
-
-    // checkSubItemByParams checks referential integrity for same table, by queryParam
-    async checkSubItemByParams(): Promise<ResponseMessage> {
-        // check if any/some of the table contain at least a sub-item/document
-        if (this.queryParams && !isEmptyObject(this.queryParams)) {
-            await this.getCurrentRecords("queryParams")
-            this.recordIds = [];          // reset recordIds instance value
-            this.currentRecs.forEach((item: ActionParamType) => {
-                this.recordIds.push(item["_id"] as string);
-            });
-            return await this.checkSubItemById();
-        }
-        return getResMessage("paramsError", {
-            message: "queryParams is required",
-        })
-    }
-
-    // checkRefIntegrityById checks referential integrity for parent-child tables, by document-Id
-    async checkRefIntegrityById(): Promise<ResponseMessage> {
-        // required-inputs: parent/child-tables and current item-id/item-name
-        if (this.childRelations.length < 1) {
-            return getResMessage("success", {
-                message: "no data integrity condition specified or required",
-            });
-        }
-        if (this.recordIds.length > 0) {
-            // prevent item delete, if child/target-table-items reference parent/source-table itemId
-            let subItems: Array<SubItemsType> = []
-            // recordIds ref-check
-            const childExist = this.childRelations.some(async (relation) => {
-                const targetDbTable = this.appDb.collection(relation.targetTable);
-                // include foreign-key/target as the query condition
-                const targetField = relation.targetField;
-                const sourceField = relation.sourceField;
-                const query: QueryParamsType = {}
-                if (sourceField === "_id") {
-                    query[targetField] = {
-                        $in: this.recordIds,
-                    }
-                } else {
-                    // other source-fields besides _id
-                    const currentFieldValues = this.currentRecs.map((item: ActionParamType) => item[sourceField]);
-                    query[targetField] = {
-                        $in: currentFieldValues,
-                    }
-                }
-                const tableRecord = targetDbTable.find(query);
-                if (tableRecord && !isEmptyObject(tableRecord)) {
-                    subItems.push({
-                        tableName         : relation.targetTable,
-                        hasRelationRecords: true,
-                    });
-                    return true;
-                } else {
-                    subItems.push({
-                        tableName         : relation.targetTable,
-                        hasRelationRecords: false,
-                    });
-                    return false;
-                }
-            });
-            this.subItems = subItems;
-            if (childExist) {
-                return getResMessage("subItems", {
-                    message: `A record that contains sub-items cannot be deleted. Delete/remove the sub-items [from ${this.childTables.join(", ")} table(s)], first.`,
-                    value  : subItems,
-                });
-            } else {
-                return getResMessage("success", {
-                    message: "no data integrity issue",
-                    value  : subItems,
-                });
-            }
-        } else {
-            return getResMessage("success", {
-                message: "recordIds parameter is required for referential integrity check/validation",
-            });
-        }
-    }
-
-    // checkRefIntegrityByParams checks referential integrity for parent-child tables, by queryParams
-    async checkRefIntegrityByParams(): Promise<ResponseMessage> {
-        // required-inputs: parent/child-tables and current item-id/item-name
-        if (this.queryParams && !isEmptyObject(this.queryParams)) {
-            await this.getCurrentRecords("queryParams")
-            this.recordIds = [];
-            this.currentRecs.forEach((item: ActionParamType) => {
-                this.recordIds.push(item["_id"] as string);
-            });
-            return await this.checkRefIntegrityById();
-        }
-        return getResMessage("paramsError", {
-            message: "queryParams is required",
-        })
     }
 
     async removeRecordById(): Promise<ResponseMessage> {

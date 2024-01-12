@@ -1,15 +1,15 @@
 import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
-import { appDb, auditDb, dbOptions } from "../config";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
 import {
-    auditColl, crudParamOptions,
-    groupColl, GroupCreateActionParams, GroupCreateRec1, GroupCreateRecNameConstraint, GroupModel, testUserInfo
+    auditColl, crudParamOptions, groupCollCreate, GroupCreateActionParams, GroupCreateRec1,
+    GroupCreateRecNameConstraint, GroupModel, testUserInfo,
 } from "./testData";
 import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
-    const appDbInstance = newDbMongo(appDb, dbOptions);
-    const auditDbInstance = newDbMongo(auditDb, dbOptions);
+    const appDbInstance = newDbMongo(appDbLocal, dbOptionsLocal);
+    const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
 
     const appDbHandle = await appDbInstance.openDb();
     const appDbClient = await appDbInstance.mgServer();
@@ -19,8 +19,8 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     const crudParams: CrudParamsType = {
         appDb      : appDbHandle,
         dbClient   : appDbClient,
-        dbName     : appDb.database || "",
-        tableName  : groupColl,
+        dbName     : appDbLocal.database || "",
+        tableName  : groupCollCreate,
         userInfo   : testUserInfo,
         recordIds  : [],
         queryParams: {},
@@ -28,7 +28,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
 
     crudParamOptions.auditDb = auditDbHandle;
     crudParamOptions.auditDbClient = auditDbClient;
-    crudParamOptions.auditDbName = appDb.database;
+    crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
 
     await mcTest({
@@ -50,33 +50,34 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     });
 
     await mcTest({
-        name    : "should return error creating a non-unique/existing document:",
+        name    : "should return error creating a non-unique/existing record/document:",
         testFunc: async () => {
             crudParams.actionParams = [GroupCreateRec1];
             crudParams.recordIds = [];
             crudParams.queryParams = {};
             const res = await GroupModel.save(crudParams, crudParamOptions);
             console.log("create-result: ", res);
-            assertEquals(res.code === "recordExist", true, `create-task should return recordExist`);
+            assertEquals(res.code === "exists" || res.code === "recordExist", true, `create-task should return recordExist`);
             assertEquals(res.code !== "success", true, `create-task should return existError`);
         }
     });
 
     await mcTest({
-        name    : "should return error creating a document due to name-length constraint error:",
+        name    : "should return error creating a record/document due to name-length constraint error:",
         testFunc: async () => {
             crudParams.actionParams = [GroupCreateRecNameConstraint];
             crudParams.recordIds = [];
             crudParams.queryParams = {};
             const res = await GroupModel.save(crudParams, crudParamOptions);
             console.log("create-result: ", res);
-            assertEquals(res.code === "paramsError", true, `create-task should return existError`);
-            assertEquals(res.code !== "success", true, `create-task should return createError`);
+            assertEquals(res.code === "paramsError", true, `create-task should return paramsError`);
+            assertEquals(res.code !== "success", true, `create-task should return paramsError`);
         }
     });
 
     await postTestResult();
     await appDbInstance.closeDb();
     await auditDbInstance.closeDb();
+    process.exit(0);
 
 })();

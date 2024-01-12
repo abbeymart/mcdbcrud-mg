@@ -10,8 +10,9 @@ import {
     CrudResultType,
     LogRecordsType, QueryParamsType, TaskTypes
 } from "./types";
+import { SaveRecord } from "./SaveRecord";
 
-class SaveRecordTrans extends Crud {
+class SaveRecordTrans extends SaveRecord {
     protected modelOptions: ModelOptionsType;
     protected updateCascade: boolean;
     protected updateSetNull: boolean;
@@ -210,100 +211,6 @@ class SaveRecordTrans extends Crud {
         return getResMessage("saveError", {
             message: "Error performing the requested operation(s). Please retry",
         });
-    }
-
-    // helper methods:
-    async computeItems(modelOptions: ModelOptionsType = this.modelOptions): Promise<ActionParamTaskType> {
-        let updateItems: ActionParamsType = [],
-            createItems: ActionParamsType = [];
-        // recordIds: Array<string> = [];
-
-        // cases - actionParams.length === 1 OR > 1
-        if (this.actionParams.length === 1) {
-            let item = this.actionParams[0]
-            if (!item["_id"]) {
-                if (this.recordIds.length > 0 || !isEmptyObject(this.queryParams)) {
-                    // update existing record(s), by recordIds or queryParams
-                    if (modelOptions.actorStamp) {
-                        item["updatedBy"] = this.userId;
-                    }
-                    if (modelOptions.timeStamp) {
-                        item["updatedAt"] = new Date();
-                    }
-                    if (modelOptions.activeStamp && item.isActive === undefined) {
-                        item["isActive"] = modelOptions.activeStamp;
-                    }
-                } else {
-                    // create new record
-                    // exclude any traces/presence of id, especially without concrete value ("", null, undefined)
-                    const {_id, ...itemRec} = item;
-                    if (modelOptions.actorStamp) {
-                        itemRec["createdBy"] = this.userId;
-                    }
-                    if (modelOptions.timeStamp) {
-                        itemRec["createdAt"] = new Date();
-                    }
-                    if (modelOptions.activeStamp && itemRec.isActive === undefined) {
-                        itemRec["isActive"] = modelOptions.activeStamp;
-                    }
-                    createItems.push(itemRec);
-                }
-            } else {
-                // update existing document/record, by recordId
-                this.recordIds = [];
-                this.queryParams = {};
-                if (modelOptions.actorStamp) {
-                    item["updatedBy"] = this.userId;
-                }
-                if (modelOptions.timeStamp) {
-                    item["updatedAt"] = new Date();
-                }
-                if (modelOptions.activeStamp && item.isActive === undefined) {
-                    item["isActive"] = modelOptions.activeStamp;
-                }
-                updateItems.push(item);
-            }
-        } else if (this.actionParams.length > 1) {
-            // multiple/batch creation or update of document/records
-            this.recordIds = [];
-            this.queryParams = {};
-            for (const item of this.actionParams) {
-                if (item["_id"]) {
-                    // update existing document/record
-                    if (modelOptions.actorStamp) {
-                        item["updatedBy"] = this.userId;
-                    }
-                    if (modelOptions.timeStamp) {
-                        item["updatedAt"] = new Date();
-                    }
-                    if (modelOptions.activeStamp && item.isActive === undefined) {
-                        item["isActive"] = modelOptions.activeStamp;
-                    }
-                    updateItems.push(item);
-                } else {
-                    // create new document/record
-                    // exclude any traces/presence of id, especially without concrete value ("", null, undefined)
-                    const {_id, ...itemRec} = item;
-                    if (modelOptions.actorStamp) {
-                        itemRec["createdBy"] = this.userId;
-                    }
-                    if (modelOptions.timeStamp) {
-                        itemRec["createdAt"] = new Date();
-                    }
-                    if (modelOptions.activeStamp && itemRec.isActive === undefined) {
-                        itemRec["isActive"] = modelOptions.activeStamp;
-                    }
-                    createItems.push(itemRec);
-                }
-            }
-        }
-        this.createItems = createItems;
-        this.updateItems = updateItems;
-        return {
-            createItems,
-            updateItems,
-            recordIds: this.recordIds,
-        };
     }
 
     async createRecord(): Promise<ResponseMessage> {

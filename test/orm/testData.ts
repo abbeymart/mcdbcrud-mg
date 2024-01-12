@@ -463,11 +463,11 @@ export const CategoryUpdateCategoryCascade: CategoryType = {
     parentId : "",
 }
 
-// TODO: test delete constraint group-category, update ID
-export const DeleteGroupWithCategoriesById = "6393ef7f9a2eeb643b67e7d5";
+// TODO: test delete constraint group-category, update ID | 6393ef7f9a2eeb643b67e7d5 | 6393ef7f9a2eeb643b67e7dd
+export const DeleteGroupWithCategoriesById = "6393ef7f9a2eeb643b67e7dd"; // Project
 
-// TODO: with sub-items in categories collection, i.e. same collection, update ID
-export const DeleteCategoryWithSubItemById = "63992eb9c97fa04b78e8f047";
+// TODO: with sub-items in categories collection, i.e. same collection, update ID | 63992eb9c97fa04b78e8f047
+export const DeleteCategoryWithSubItemById = "63992eb9c97fa04b78e8f047"; //
 
 
 

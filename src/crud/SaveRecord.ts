@@ -13,8 +13,8 @@ import { ModelOptionsType, RelationActionTypes } from "../orm";
 import { isEmptyObject } from "./utils";
 import Crud from "./Crud";
 import {
-    ActionParamsType, ActionParamTaskType, AuditLogParamsType, CrudOptionsType, CrudParamsType, CrudResultType,
-    LogRecordsType, TaskTypes
+    ActionParamsType, ActionParamTaskType, AuditLogParamsType, CrudOptionsType, CrudParamsType,
+    CrudResultType, LogRecordsType, TaskTypes
 } from "./types";
 
 class SaveRecord extends Crud {
@@ -157,7 +157,7 @@ class SaveRecord extends Crud {
                 // Prevent multiple updates with the same record(actionParam)
                 if (this.currentRecs.length > 1 && this.existParams.length > 0 && this.existParams[0].length > 0 ) {
                     return getResMessage("paramsError", {
-                        message: `Updates of multiple records[${this.currentRecs.length}] with unique constraints[${this.existParams.length}] not allowed`
+                        message: `Updates of multiple records[${this.currentRecs.length}] with unique constraints[${this.uniqueFields}] not allowed`
                     })
                 }
                 // check duplicate records, i.e. if similar records exist

@@ -175,6 +175,14 @@ class Crud {
         }
     }
 
+    fieldsSetArray(fields: Array<string>): Array<string> {
+        const fieldsSet = new Set<string>()
+        for (const field of fields) {
+            fieldsSet.add(field)
+        }
+        return [...fieldsSet]
+    }
+
     /**
      * @method computeExistParam computes the query-object(s) for checking document uniqueness based on model-unique-fields constraints,
      * for create and update (not by ids or queryParams) tasks
@@ -186,28 +194,33 @@ class Crud {
         }
         // set the existParams for create and/or update action to determine document uniqueness
         const existParams: Array<ExistParamItemType> = [];
-        for (const fields of this.uniqueFields) {
+        for (let fields of this.uniqueFields) {
+            // ensure fields uniqueness - avoid duplicate
+            fields = this.fieldsSetArray(fields)
             // compute the uniqueness object
             const uniqueObj: ExistParamItemType = {};
+            let validUniqueObject = true
             for (const field of fields) {
-                // exclude primary/unique _id field/key, for update task
-                if (field === "_id" && (actionParam["_id"] || actionParam["_id"] !== "") ) {
-                    uniqueObj[field] = {
-                        $ne: new ObjectId(actionParam["_id"] as string),
-                    }
-                    continue
+                // skip primary/unique _id field/key or record with no unique key/field-value setting
+                if (field === "_id" || !actionParam[field]) {
+                    validUniqueObject = false
+                    break
                 }
-                // transform mongodb-id value to ObjectId, for fields ending with id/Id/ID/iD
-                if (field.toLowerCase().endsWith("id") && validator.isMongoId(actionParam[field])) {
-                    actionParam[field] = new ObjectId(actionParam[field]);
-                }
-                // set item value
+                // set unique-query value
                 uniqueObj[field] = actionParam[field]
             }
+            if (!validUniqueObject || fields.length !== Object.keys(uniqueObj).length) {
+                // skip to next fields set
+                continue
+            }
+            // for update task
+            if (actionParam["_id"] && actionParam["_id"] != "") {
+                uniqueObj["_id"] = {
+                    $ne: new ObjectId(actionParam["_id"] as string),
+                }
+            }
             // append the uniqueObj for new record/document
-            existParams.push({
-                ...uniqueObj,
-            });
+            existParams.push(uniqueObj);
         }
         return existParams;
     }
@@ -237,21 +250,27 @@ class Crud {
                     message: "No data integrity condition specified",
                 });
             }
-            console.log("exist-params: ", this.existParams)
             // Verify uniqueness of the actionParams
             for (const fields of this.uniqueFields) {
                 for (const recordItem of actionParams) {
                     const recordFields = Object.keys(recordItem)
                     // validate unique fields in recordItem
+                    let uniqueRequired = true
                     for (const field of fields) {
                         if (!recordFields.includes(field)) {
-                            throw new Error(`Missing unique field [${field}] in record [${recordItem}]`)
+                            // skip uniqueness validation for the recordItem
+                            uniqueRequired = false;
+                            // throw new Error(`Missing unique field [${field}] in record [${recordItem}]`)
                         }
+                    }
+                    if (!uniqueRequired) {
+                        // continue with the next record
+                        continue
                     }
                     // check that actionParams record is uniquely composed
                     const queryRecords = actionParams.filter(it => {
                         return fields.every(field => it[field] === recordItem[field])
-                    } )
+                    })
                     if (queryRecords.length > 1) {
                         throw new Error(`Unique fields violation [${fields.join(", ")}] in records [${[...queryRecords]}]`)
                     }
@@ -299,7 +318,7 @@ class Crud {
     }
 
     // getCurrentRecords fetch documents by recordIds, queryParams or all limited by this.limit and this.skip, if applicable
-    async getCurrentRecords(by = ""): Promise<ResponseMessage>{
+    async getCurrentRecords(by = ""): Promise<ResponseMessage> {
         try {
             // validate models
             const validDb = this.checkDb(this.appDb);
