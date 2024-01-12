@@ -4,6 +4,7 @@
 
 - Release date: Jan-12-2024
 - Refactor-db-types-crud-and-transaction-methods-v0.3.0
+- Transaction-methods not tested, required a replica set member or mongos - TBD
 
 ## Version 0.2.0
 

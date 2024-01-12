@@ -31,7 +31,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditTable = auditColl;
 
     await mcTest({
-        name    : "should create ten new category documents and return success:",
+        name    : "should create ten new category documents and return success[transactional]:",
         testFunc: async () => {
             crudParams.actionParams = CategoryCreateActionParams;
             crudParams.recordIds = []

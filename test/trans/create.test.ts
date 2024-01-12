@@ -32,7 +32,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditTable = auditColl;
 
     await mcTest({
-        name    : "should create ten new records and return success:",
+        name    : "should create ten new records and return success[transactional]:",
         testFunc: async () => {
             crudParams.actionParams = GroupCreateActionParams;
             crudParams.recordIds = [];
@@ -50,7 +50,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     });
 
     await mcTest({
-        name    : "should return error creating a non-unique/existing record/document:",
+        name    : "should return error creating a non-unique/existing record/document[transactional]:",
         testFunc: async () => {
             crudParams.actionParams = [GroupCreateRec1];
             crudParams.recordIds = [];
@@ -63,7 +63,7 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     });
 
     await mcTest({
-        name    : "should return error creating a record/document due to name-length constraint error:",
+        name    : "should return error creating a record/document due to name-length constraint error[transactional]:",
         testFunc: async () => {
             crudParams.actionParams = [GroupCreateRecNameConstraint];
             crudParams.recordIds = [];

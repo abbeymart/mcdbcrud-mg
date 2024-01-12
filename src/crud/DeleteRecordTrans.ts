@@ -48,7 +48,6 @@ class DeleteRecordTrans extends DeleteRecord {
                 }, {session});
                 // validate transaction
                 if (!removed.acknowledged || removed.deletedCount !== recordIds.length) {
-                    await session.abortTransaction();
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${recordIds.length} set to be removed]. Transaction aborted.`)
                 }
                 // optional, update child-table-records(collection-documents) for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
@@ -61,8 +60,6 @@ class DeleteRecordTrans extends DeleteRecord {
                             const targetField = cItem.targetField;
                             // check if source and target models are defined/specified, required to determine default-action
                             if (!cItem.targetModel || !cItem.sourceModel) {
-                                // handle as error
-                                await session.abortTransaction();
                                 throw new Error("Source & Target models are required to complete the set-default-task");
                             }
                             const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
@@ -83,7 +80,6 @@ class DeleteRecordTrans extends DeleteRecord {
                             const TargetDbColl = this.dbClient.db(this.dbName).collection(targetTable);
                             const updateRes = await TargetDbColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
                                 throw new Error(`Unable to update(default-value) the specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
@@ -97,8 +93,6 @@ class DeleteRecordTrans extends DeleteRecord {
                             const targetField = cItem.targetField;
                             // check if source and target models are defined/specified, required to determine allowNull-action
                             if (!cItem.targetModel || !cItem.sourceModel) {
-                                // handle as error
-                                await session.abortTransaction();
                                 throw new Error("Source and Target models are required to complete the set-null/zero-value-task");
                             }
                             const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
@@ -117,7 +111,6 @@ class DeleteRecordTrans extends DeleteRecord {
                                     targetFieldDesc = targetFieldDesc as FieldDescType
                                     // handle non-null-field (allowNull is default to true, if not defined/specified)
                                     if (targetFieldDesc.allowNull !== undefined && !targetFieldDesc.allowNull) {
-                                        await session.abortTransaction();
                                         throw new Error("Target/foreignKey allowNull is required to complete the set-null task");
                                     }
                                     break;
@@ -133,7 +126,6 @@ class DeleteRecordTrans extends DeleteRecord {
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetTable);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
                                 throw new Error(`Unable to update(null-value) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
@@ -169,7 +161,7 @@ class DeleteRecordTrans extends DeleteRecord {
                 value  : deleteResultValue,
             });
         } catch (e) {
-            await session.abortTransaction()
+            // await session.abortTransaction()
             return getResMessage("removeError", {
                 message: `Error removing/deleting record(s): ${e.message ? e.message : ""}`,
                 value  : e,
@@ -195,7 +187,6 @@ class DeleteRecordTrans extends DeleteRecord {
                 const appDbColl = this.dbClient.db(this.dbName).collection(this.tableName);
                 removed = await appDbColl.deleteMany(this.queryParams, {session});
                 if (!removed.acknowledged || removed.deletedCount !== this.currentRecs.length) {
-                    await session.abortTransaction();
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]. Transaction aborted.`)
                 }
                 // optional, update child-table-records(collection-documents) for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
@@ -208,8 +199,6 @@ class DeleteRecordTrans extends DeleteRecord {
                             const targetField = cItem.targetField;
                             // check if source and target models are defined/specified, required to determine default-action
                             if (!cItem.targetModel || !cItem.sourceModel) {
-                                // handle as error
-                                await session.abortTransaction();
                                 throw new Error("Source and Target models are required to complete the set-default-task");
                             }
                             const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
@@ -230,7 +219,6 @@ class DeleteRecordTrans extends DeleteRecord {
                             const TargetDbColl = this.dbClient.db(this.dbName).collection(targetTable);
                             const updateRes = await TargetDbColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
                                 throw new Error(`Unable to update(default-value) the specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
@@ -244,8 +232,6 @@ class DeleteRecordTrans extends DeleteRecord {
                             const targetField = cItem.targetField;
                             // check if source and target models are defined/specified, required to determine allowNull-action
                             if (!cItem.targetModel || !cItem.sourceModel) {
-                                // handle as error
-                                await session.abortTransaction();
                                 throw new Error("Source and Target models are required to complete the set-null-task");
                             }
                             const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
@@ -264,7 +250,6 @@ class DeleteRecordTrans extends DeleteRecord {
                                     targetFieldDesc = targetFieldDesc as FieldDescType
                                     // handle non-null-field
                                     if (targetFieldDesc.allowNull !== undefined && !targetFieldDesc.allowNull) {
-                                        await session.abortTransaction();
                                         throw new Error("Target/foreignKey allowNull is required to complete the set-null task");
                                     }
                                     break;
@@ -280,7 +265,6 @@ class DeleteRecordTrans extends DeleteRecord {
                             const TargetColl = this.dbClient.db(this.dbName).collection(targetTable);
                             const updateRes = await TargetColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
                                 throw new Error(`Unable to update(set-null) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
@@ -316,11 +300,13 @@ class DeleteRecordTrans extends DeleteRecord {
                 value  : deleteResultValue,
             });
         } catch (e) {
-            await session.abortTransaction()
+            // await session.abortTransaction()
             return getResMessage("removeError", {
                 message: `Error removing/deleting record(s): ${e.message ? e.message : ""}`,
                 value  : e,
             });
+        } finally {
+            await session.endSession();
         }
     }
 }

@@ -54,7 +54,6 @@ class SaveRecordTrans extends SaveRecord {
                 insertResult = await appDbColl.insertMany(this.createItems, {session});
                 // commit or abort trx
                 if (!insertResult.acknowledged || insertResult.insertedCount !== this.createItems.length) {
-                    await session.abortTransaction()
                     throw new Error(`Unable to create new record(s), database error [${insertResult.insertedCount} of ${this.createItems.length} set to be created]. Transaction aborted.`)
                 }
                 // perform delete cache and audit-log tasks
@@ -88,7 +87,7 @@ class SaveRecordTrans extends SaveRecord {
                 value  : resultValue,
             });
         } catch (e) {
-            await session.abortTransaction()
+            // await session.abortTransaction()
             return getResMessage("insertError", {
                 message: `Error inserting/creating new record(s): ${e.message ? e.message : ""}`,
             });
@@ -126,7 +125,6 @@ class SaveRecordTrans extends SaveRecord {
                     // current record prior to update
                     const currentRec = await appDbColl.findOne({_id: new ObjectId(_id as string)}, {session,}) as ActionParamType;
                     if (!currentRec || isEmptyObject(currentRec)) {
-                        await session.abortTransaction();
                         throw new Error("Unable to retrieve current record for update.");
                     }
                     const updateResult = await appDbColl.updateOne({
@@ -135,7 +133,6 @@ class SaveRecordTrans extends SaveRecord {
                         $set: otherParams,
                     }, {session});
                     if (!updateResult.acknowledged || updateResult.modifiedCount !== updateResult.matchedCount) {
-                        await session.abortTransaction();
                         throw new Error(`Error updating record(s) [${updateResult.modifiedCount} of ${updateResult.matchedCount} set to be updated]`)
                     }
                     // optional step, update the child-collections (update-cascade) | from current and new update-field-values
@@ -146,8 +143,6 @@ class SaveRecordTrans extends SaveRecord {
                             const targetField = cItem.targetField;
                             // check if target model is defined/specified, required to determine update-cascade-action
                             if (!cItem.targetModel) {
-                                // handle as error
-                                await session.abortTransaction();
                                 throw new Error("Target model is required to complete the update-cascade-task");
                             }
                             const currentFieldValue = currentRec[sourceField] || null;   // current value of the targetField
@@ -164,7 +159,6 @@ class SaveRecordTrans extends SaveRecord {
                             const TargetDbColl = this.dbClient.db(this.dbName).collection(targetTable);
                             const updateRes = await TargetDbColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
                                 throw new Error(`Unable to update(cascade) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
@@ -176,8 +170,6 @@ class SaveRecordTrans extends SaveRecord {
                             const targetField = cItem.targetField;
                             // check if source and target models are defined/specified, required to determine default-action
                             if (!cItem.targetModel || !cItem.sourceModel) {
-                                // handle as error
-                                await session.abortTransaction();
                                 throw new Error("Source and Target models are required to complete the set-default-task");
                             }
                             const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
@@ -197,7 +189,6 @@ class SaveRecordTrans extends SaveRecord {
                             const TargetDbColl = this.dbClient.db(this.dbName).collection(targetTable);
                             const updateRes = await TargetDbColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
                                 throw new Error(`Unable to update(set-default) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
@@ -209,8 +200,6 @@ class SaveRecordTrans extends SaveRecord {
                             const targetField = cItem.targetField;
                             // check if source and target models are defined/specified, required to determine allowNull-action
                             if (!cItem.targetModel || !cItem.sourceModel) {
-                                // handle as error
-                                await session.abortTransaction();
                                 throw new Error("Source and Target models are required to complete the set-null-task");
                             }
                             const sourceRecordDesc = cItem.sourceModel.recordDesc || {};
@@ -229,7 +218,6 @@ class SaveRecordTrans extends SaveRecord {
                                     targetFieldDesc = targetFieldDesc as FieldDescType
                                     // handle non-null-field
                                     if (targetFieldDesc.allowNull !== undefined && !targetFieldDesc.allowNull) {
-                                        await session.abortTransaction();
                                         throw new Error("Target/foreignKey allowNull is required to complete the set-null task");
                                     }
                                     break;
@@ -244,7 +232,6 @@ class SaveRecordTrans extends SaveRecord {
                             const TargetDbColl = this.dbClient.db(this.dbName).collection(targetTable);
                             const updateRes = await TargetDbColl.updateMany(updateQuery, updateSet, {session,});
                             if (!updateRes.acknowledged || updateRes.modifiedCount !== updateRes.matchedCount) {
-                                await session.abortTransaction();
                                 throw new Error(`Unable to update(null/zero-value) all specified records [${updateRes.modifiedCount} of ${updateRes.matchedCount} set to be updated]. Transaction aborted.`)
                             }
                         }
@@ -254,7 +241,6 @@ class SaveRecordTrans extends SaveRecord {
                 }
                 // validate overall transaction
                 if (updateCount < 1 || updateCount != updateMatchedCount) {
-                    await session.abortTransaction()
                     throw new Error("No records updated. Please retry.")
                 }
                 // perform delete cache and audit-log tasks
@@ -293,7 +279,7 @@ class SaveRecordTrans extends SaveRecord {
                 value  : resultValue,
             });
         } catch (e) {
-            await session.abortTransaction()
+            // await session.abortTransaction()
             return getResMessage("updateError", {
                 message: `Error updating record(s): ${e.message ? e.message : ""}`,
                 value  : e,
