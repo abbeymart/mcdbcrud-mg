@@ -34,7 +34,19 @@ export function validateActionParams(actParams: ActionParamsType = []): Response
     return getResMessage("success")
 }
 
-// deprecated??
+export function shortString(str: string, maxLength = 20): string {
+    return str.toString().length > maxLength ? str.toString().substring(0, maxLength) + "..." : str.toString();
+}
+
+export function strToBool(val: string | number = "n"): boolean {
+    const strVal = val.toString().toLowerCase();
+    if (strVal === "true" || strVal === "t" || strVal === "yes" || strVal === "y") {
+        return true;
+    } else {
+        return Number(strVal) > 0;
+    }
+}
+
 export function camelToUnderscore(key: string): string {
     return key.replace(/([A-Z])/g, "_$1").toLowerCase();
 }

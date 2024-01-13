@@ -10,7 +10,7 @@ import { Db } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { checkDb } from "../dbc";
 import { AuditLogTypes, AuditLogParamsType, LogRecordsType, ActionParamType } from "../crud";
-import {isEmptyObject} from "../crud/utils";
+import {isEmptyObject} from "../crud";
 
 //types
 export interface AuditParamsType {

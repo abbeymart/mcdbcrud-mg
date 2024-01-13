@@ -1,5 +1,10 @@
 # Historical logs
 
+## Version 0.3.1
+
+- Release date: Jan-13-2024
+- Cleanup-and-export-crud-utils-funcs-v0.3.1
+
 ## Version 0.3.0
 
 - Release date: Jan-12-2024

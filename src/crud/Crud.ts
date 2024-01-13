@@ -6,7 +6,6 @@
 
 // Import required module/function(s)/types
 import { Db, MongoClient, ObjectId } from "mongodb";
-import validator from "validator";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import {
     CrudParamsType, CrudOptionsType, TaskTypes, QueryParamsType, ActionParamsType,
