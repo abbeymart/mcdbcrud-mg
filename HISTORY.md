@@ -1,5 +1,12 @@
 # Historical logs
 
+
+## Version 0.4.0
+
+- Release date: Jan-17-2024
+- Refactor-function-types-v0.4.0
+
+
 ## Version 0.3.1
 
 - Release date: Jan-13-2024

@@ -5,7 +5,8 @@
  * @Description: mc-orm types
  */
 
-import { FieldValueTypes } from "../crud";
+import { FieldValueTypes, ObjectType } from "../crud";
+import { ValueType } from "@mconnect/mcresponse";
 
 export enum DataTypes {
     STRING = "string",
@@ -80,12 +81,19 @@ export interface ValueToDataTypes {
     [key: string]: DataTypes;
 }
 
-export type GetValueType = (<T>() => T);
-export type SetValueType = (<T>(fieldValue: T) => T);   // receive docValue-object as parameter
-export type DefaultValueType = (<T, R>(fieldValue?: T) => R);   // may/optionally receive fieldValue as parameter
-export type ValidateMethodType = (<T>(docValue?: T) => boolean);    // may/optionally receive docValue-object as parameter
-export type ValidateMethodResponseType = (<T>(docValue: T) => ValidateResponseType) | undefined;  // receive docValue-object as parameter
-export type ComputedValueType = (<T, R>(docValue: T) => R); // receive docValue-object as parameter
+// export type GetValueType = (<T>() => T);
+// export type SetValueType = (<T>(fieldValue: T) => T);   // receive docValue-object as parameter
+// export type DefaultValueType = (<T, R>(fieldValue?: T) => R);   // may/optionally receive fieldValue as parameter
+// export type ValidateMethodType = (<T>(docValue?: T) => boolean);    // may/optionally receive docValue-object as parameter
+// export type ValidateMethodResponseType = (<T>(docValue: T) => ValidateResponseType) | undefined;  // receive docValue-object as parameter
+// export type ComputedValueType = (<T, R>(docValue: T) => R); // receive docValue-object as parameter
+
+export type GetValueType = () => any;
+export type SetValueType = (fieldValue: ValueType | Date) => void;   // receive docValue-object as parameter
+export type DefaultValueType = (fieldValue?: ValueType | Date) => ValueType | Date;   // may/optionally receive fieldValue as parameter
+export type ValidateMethodType = (docValue: ObjectType) => boolean;    // receive docValue-object as parameter
+export type ValidateMethodResponseType = (docValue: ObjectType) => ValidateResponseType;  // receive docValue-object as parameter
+export type ComputedValueType = (docValue: ObjectType) => ValueType | Date; // receive docValue-object as parameter
 
 export interface ValidateMethodsType {
     [key: string]: ValidateMethodResponseType;
