@@ -37,7 +37,7 @@ export const mcMessages = {
     urlFormat            : "URL should contain alphanumeric only",
     usernameFormat       : "Username should contains character/letters only",
     langRequired         : "Language is required",
-    nameRequired         : "Name ( is required - cannot be empty",
+    nameRequired         : "Name is required - cannot be empty",
     descRequired         : "Description is required - cannot be empty",
     catRequired          : "Category is required - cannot be empty",
     codeRequired         : "Code is required - cannot be empty",

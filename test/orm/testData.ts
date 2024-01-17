@@ -3,9 +3,13 @@
 import {
     ActionParamType, QueryParamsType, ModelRelationType, RelationTypes, RelationActionTypes,
     ModelDescType, BaseModel, DataTypes, ModelCrudOptionsType, newModel,
-    BaseModelType, UserInfoType, CrudOptionsType
+    BaseModelType, UserInfoType, CrudOptionsType, ValidateResponseType, isEmptyObject
 } from "../../src"
 import { collections } from "../collections";
+import { MessageObject } from "@mconnect/mcresponse";
+import { mcMessages } from "../../src/messages";
+import { ObjectType } from "@mconnect/mccache";
+import { GroupTable } from "../testData";
 
 // Models
 
@@ -55,6 +59,65 @@ export interface CategoryType extends BaseModelType {
     path?: string;
 }
 
+export function validateGroup(params: ObjectType): ValidateResponseType {
+    const record: GroupType = params as GroupType
+    console.log("rec-object: ", record)
+
+    // Initialise error object:
+
+    const errors: MessageObject = {};
+
+    if (!record.name) {
+        errors.name = "Group name is required";
+    }
+
+    // if (!record.description) {
+    //     errors.description = "Group name is required";
+    // }
+
+    if (!isEmptyObject(errors)) {
+        return {
+            ok: false,
+            errors,
+        }
+    }
+    return {
+        ok: true,
+        errors,
+    }
+}
+
+export function validateCategory(params: ObjectType): ValidateResponseType {
+    const record: CategoryType = params as CategoryType
+    // Initialise error object:
+
+    const errors: MessageObject = {};
+
+    if (!record.name) {
+        errors.name = "Category name is required";
+    }
+
+    if (!record.groupName) {
+        errors.groupName = "Group name is required";
+    }
+
+    // if (!record.description) {
+    //     errors.description = "Group name is required";
+    // }
+
+    if (!isEmptyObject(errors)) {
+        return {
+            ok: false,
+            errors,
+        }
+    }
+    return {
+        ok: true,
+        errors,
+    }
+}
+
+
 export const groupModel: ModelDescType = {
     tableName  : collections.GROUPS,
     recordDesc : {
@@ -66,6 +129,7 @@ export const groupModel: ModelDescType = {
         },
         iconStyle: DataTypes.STRING,
     },
+    validateMethod: validateGroup,
     timeStamp  : true,
     activeStamp: true,
     actorStamp : true,
@@ -102,6 +166,7 @@ export const categoryModel: ModelDescType = {
         path     : DataTypes.STRING,
 
     },
+    validateMethod: validateCategory,
     timeStamp  : true,
     activeStamp: true,
     actorStamp : true,
