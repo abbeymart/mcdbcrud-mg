@@ -17,7 +17,7 @@ import {
     ActionParamsType, ActionParamType, CrudOptionsType, CrudParamsType, newDeleteRecord, newGetRecord,
     newGetRecordStream, newSaveRecord, TaskTypes, newDeleteRecordTrans, newSaveRecordTrans,
 } from "../crud";
-import { isEmptyObject } from "../crud/utils";
+import { isEmptyObject } from "../crud";
 
 /**
  * @class Model - the model class for the mongodb
@@ -357,7 +357,7 @@ export class Model {
                         docFieldDesc = docFieldDesc as FieldDescType;
                         const fieldValue = setDocValue[key];    // set applies to existing field-value only
                         if (fieldValue && docFieldDesc.setValue) {
-                            setDocValue[key] = await docFieldDesc.setValue(fieldValue);
+                            setDocValue[key] = docFieldDesc.setValue(fieldValue);
                         }
                         break;
                     default:
@@ -548,10 +548,10 @@ export class Model {
                 }
             }
             // perform user-defined document validation
-            const modelValidateMethod = this.modelValidateMethod || null;
+            const modelValidateMethod = this.validateMethod?  this.modelValidateMethod : null;
             if (modelValidateMethod) {
                 const valRes = modelValidateMethod(docValue);
-                if (!isEmptyObject(valRes.errors) || !valRes.ok) {
+                if (valRes && (!isEmptyObject(valRes.errors) || !valRes.ok)) {
                     // update docValue validation errors object
                     errors = {...errors, ...valRes.errors}
                 }

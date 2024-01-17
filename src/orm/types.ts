@@ -89,10 +89,10 @@ export interface ValueToDataTypes {
 // export type ComputedValueType = (<T, R>(docValue: T) => R); // receive docValue-object as parameter
 
 export type GetValueType = () => any;
-export type SetValueType = (fieldValue: ValueType | Date) => void;   // receive docValue-object as parameter
+export type SetValueType = (fieldValue: ValueType | Date) => ValueType | Date;   // receive docValue-object as parameter
 export type DefaultValueType = (fieldValue?: ValueType | Date) => ValueType | Date;   // may/optionally receive fieldValue as parameter
 export type ValidateMethodType = (docValue: ObjectType) => boolean;    // receive docValue-object as parameter
-export type ValidateMethodResponseType = (docValue: ObjectType) => ValidateResponseType;  // receive docValue-object as parameter
+export type ValidateMethodResponseType = ((docValue: ObjectType) => ValidateResponseType) | undefined;  // receive docValue-object as parameter
 export type ComputedValueType = (docValue: ObjectType) => ValueType | Date; // receive docValue-object as parameter
 
 export interface ValidateMethodsType {

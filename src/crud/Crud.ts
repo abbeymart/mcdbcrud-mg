@@ -6,7 +6,7 @@
 
 // Import required module/function(s)/types
 import { Db, MongoClient, ObjectId } from "mongodb";
-import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
+import { getResMessage, ResponseMessage, ValueType } from "@mconnect/mcresponse";
 import {
     CrudParamsType, CrudOptionsType, TaskTypes, QueryParamsType, ActionParamsType,
     ProjectParamsType, SortParamsType, SubItemsType, ActionExistParamsType, FieldValueTypes,
@@ -441,13 +441,13 @@ class Crud {
     }
 
     // set default value based on FieldDescType
-    async setDefault(defaultValue: FieldValueTypes | DefaultValueType, fieldValue: FieldValueTypes = null): Promise<any> {
+    async setDefault(defaultValue: FieldValueTypes | DefaultValueType, fieldValue?: ValueType): Promise<any> {
         try {
             switch (typeof defaultValue) {
                 // defaultValue may be of types: DefaultValueType(function) or FieldValueTypes(regular-values)
                 case "function":
                     const defValue = defaultValue as DefaultValueType;
-                    return await defValue(fieldValue);
+                    return defValue(fieldValue);
                 default:
                     return defaultValue || null;
             }
