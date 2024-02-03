@@ -39,11 +39,11 @@ class GetRecordStream extends Crud {
         }
 
         // exclude _id, if present, from the queryParams
-        if (this.queryParams && Object.keys(this.queryParams).length > 0) {
-            const qParams: any = this.queryParams;
-            const {_id, ...otherParams} = qParams; // exclude _id, if present
-            this.queryParams = otherParams;
-        }
+        // if (this.queryParams && Object.keys(this.queryParams).length > 0) {
+        //     const qParams: any = this.queryParams;
+        //     const {_id, ...otherParams} = qParams; // exclude _id, if present
+        //     this.queryParams = otherParams;
+        // }
 
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
         if (this.logRead || this.logCrud) {

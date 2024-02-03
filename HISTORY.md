@@ -1,8 +1,13 @@
 # Historical logs
 
+## Version 0.4.2
+
+- Release date: Feb-03-2024
+- Removed-queryParams-ID-field-exclusion-step-v0.4.2
+
 ## Version 0.4.1
 
-- Release date: TBD
+- Release date: Jan-17-2024
 - Test-function-types-changes-and-refactoring-v0.4.1
 
 ## Version 0.4.0

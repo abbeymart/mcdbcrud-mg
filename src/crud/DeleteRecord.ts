@@ -45,11 +45,11 @@ class DeleteRecord extends Crud {
         }
 
         // for queryParams, exclude _id, if present
-        if (this.queryParams && !isEmptyObject(this.queryParams)) {
-            let querySpec = this.queryParams;
-            const {_id, ...otherParams} = querySpec;
-            this.queryParams = otherParams;
-        }
+        // if (this.queryParams && !isEmptyObject(this.queryParams)) {
+        //     let querySpec = this.queryParams;
+        //     const {_id, ...otherParams} = querySpec;
+        //     this.queryParams = otherParams;
+        // }
         /**
          * compute/set table-constraints settings for delete task.
          * @param deleteRestrict - for same-table referential integrity checking

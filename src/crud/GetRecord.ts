@@ -45,11 +45,11 @@ class GetRecord extends Crud {
         }
 
         // exclude _id, if present, from the queryParams
-        if (this.queryParams && !isEmptyObject(this.queryParams)) {
-            const qParams = this.queryParams;
-            const {_id, ...otherParams} = qParams; // exclude _id, if present
-            this.queryParams = otherParams;
-        }
+        // if (this.queryParams && !isEmptyObject(this.queryParams)) {
+        //     const qParams = this.queryParams;
+        //     const {_id, ...otherParams} = qParams; // exclude _id, if present
+        //     this.queryParams = otherParams;
+        // }
 
         // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
         let logRes = getResMessage("noLog");

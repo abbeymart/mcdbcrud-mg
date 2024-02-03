@@ -64,10 +64,10 @@ class SaveRecord extends Crud {
             });
         }
         // for queryParams, exclude _id, if present
-        if (this.queryParams && !isEmptyObject(this.queryParams)) {
-            const {_id, ...otherParams} = this.queryParams;
-            this.queryParams = otherParams;
-        }
+        // if (this.queryParams && !isEmptyObject(this.queryParams)) {
+        //     const {_id, ...otherParams} = this.queryParams;
+        //     this.queryParams = otherParams;
+        // }
         // create records/documents
         if (this.createItems.length > 0) {
             this.taskType = TaskTypes.CREATE
