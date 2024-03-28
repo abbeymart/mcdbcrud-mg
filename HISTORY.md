@@ -1,5 +1,10 @@
 # Historical logs
 
+## Version 0.4.3
+
+- Release date: Mar-28-2024
+- Added-proxy(id)-field-for-mongodb-_id-field-v0.4.3
+
 ## Version 0.4.2
 
 - Release date: Feb-03-2024

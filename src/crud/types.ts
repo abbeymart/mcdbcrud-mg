@@ -46,6 +46,7 @@ export type ObjectType = ObjectRefType | object;
 
 export interface BaseModelType {
     _id?: string;
+    id?: string;    // proxy-field for mongodb _id field
     language?: string;
     description?: string;
     appId?: string;
@@ -139,6 +140,7 @@ export interface AuditLogParamsType {
 
 export interface AuditType {
     _id?: string;
+    id?: string;    // proxy-field for mongodb _id field
     tableName?: string;
     logRecords?: LogRecordsType;
     newLogRecords?: LogRecordsType;

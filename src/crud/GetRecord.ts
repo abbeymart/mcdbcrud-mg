@@ -92,12 +92,14 @@ class GetRecord extends Crud {
                 const recordIds = this.recordIds.map(id => new ObjectId(id));
                 // use / activate database
                 const appDbColl = this.appDb.collection(this.tableName);
-                const result = await appDbColl.find({_id: {$in: recordIds}})
+                let result = await appDbColl.find({_id: {$in: recordIds}})
                     .skip(this.skip)
                     .limit(this.limit)
                     .project(this.projectParams)
                     .sort(this.sortParams)
                     .toArray();
+                // add the mongodb _id proxy field(id) value
+                result = result.map(it => Object.assign(it, {id: it["_id"]}))
                 const totalDocsCount = await appDbColl.countDocuments();
                 if (result.length > 0) {
                     // save copy in the cache
@@ -135,12 +137,14 @@ class GetRecord extends Crud {
             try {
                 // use / activate database
                 const appDbColl = this.appDb.collection(this.tableName);
-                const result = await appDbColl.find(this.queryParams)
+                let result = await appDbColl.find(this.queryParams)
                     .skip(this.skip)
                     .limit(this.limit)
                     .project(this.projectParams)
                     .sort(this.sortParams)
                     .toArray();
+                // add the mongodb _id proxy field(id) value
+                result = result.map(it => Object.assign(it, {id: it["_id"]}))
                 const totalDocsCount = await appDbColl.countDocuments();
                 if (result.length > 0) {
                     // save copy in the cache
@@ -177,12 +181,14 @@ class GetRecord extends Crud {
         try {
             // use / activate database
             const appDbColl = this.appDb.collection(this.tableName);
-            const result = await appDbColl.find()
+            let result = await appDbColl.find()
                 .skip(this.skip)
                 .limit(this.limit)
                 .project(this.projectParams)
                 .sort(this.sortParams)
                 .toArray();
+            // add the mongodb _id proxy field(id) value
+            result = result.map(it => Object.assign(it, {id: it["_id"]}))
             const totalDocsCount = await appDbColl.countDocuments();
             if (result.length > 0) {
                 // save copy in the cache

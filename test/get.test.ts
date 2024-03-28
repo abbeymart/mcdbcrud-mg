@@ -1,6 +1,6 @@
 import { assertEquals, assertNotEquals, mcTest, postTestResult } from '@mconnect/mctest';
 import { appDbLocal, auditDbLocal, dbOptionsLocal } from "./config";
-import { CrudOptionsType, CrudParamsType, GetResultType, newDbMongo, newGetRecord } from "../src";
+import { AuditType, CrudOptionsType, CrudParamsType, GetResultType, newDbMongo, newGetRecord } from "../src";
 import {
     GetTable, TestUserInfo, GetAuditById, GetAuditByIds, GetAuditByParams, AuditTable,
 } from "./testData";
@@ -50,7 +50,9 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
             const resValue = res.value as GetResultType
             const recLen = resValue.records?.length || 0
             const recCount = resValue.stats?.recordsCount || 0
+            const record = resValue.records[0] as AuditType
             assertEquals(res.code, "success", `response-code should be: success`);
+            assertEquals(record._id, record.id, "mongodb _id field value must match proxy id field value")
             assertNotEquals(res.code, 'unAuthorized', `response-code should be: success not unAuthorized`);
             assertEquals(recLen, 1, `response-value-records-length should be: 1`);
             assertEquals(recCount, 1, `response-value-stats-recordsCount should be: 1`);
