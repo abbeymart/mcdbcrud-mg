@@ -45,7 +45,7 @@ export const categoryModel: ModelDescType = {
             allowNull: false,
         },
         priority : {
-            fieldType   : DataTypes.INTEGER,
+            fieldType   : DataTypes.NUMBER,
             allowNull   : false,
             defaultValue: 100,
         },

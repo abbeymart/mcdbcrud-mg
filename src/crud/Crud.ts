@@ -407,14 +407,7 @@ class Crud {
             case DataTypes.CURRENCY:
             case DataTypes.IMEI:
                 return "";
-            case DataTypes.INTEGER:
-            case DataTypes.POSITIVE:
-            case DataTypes.BIGINT:
-                return 0;
             case DataTypes.NUMBER:
-            case DataTypes.DECIMAL:
-            case DataTypes.FLOAT:
-            case DataTypes.BIGFLOAT:
                 return 0.00;
             case DataTypes.ARRAY:
             case DataTypes.ARRAY_NUMBER:

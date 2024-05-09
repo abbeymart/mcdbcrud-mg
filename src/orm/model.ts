@@ -282,15 +282,16 @@ export class Model {
                         computedTypes[key] = DataTypes.STRING;
                     }
                 } else if (typeof val === "number") {
-                    if (validator.isDecimal(val.toString())) {
-                        computedTypes[key] = DataTypes.DECIMAL;
-                    } else if (validator.isFloat(val.toString())) {
-                        computedTypes[key] = DataTypes.FLOAT;
-                    } else if (validator.isInt(val.toString())) {
-                        computedTypes[key] = DataTypes.INTEGER;
-                    } else {
-                        computedTypes[key] = DataTypes.NUMBER;
-                    }
+                    computedTypes[key] = DataTypes.NUMBER;
+                    // if (validator.isDecimal(val.toString())) {
+                    //     computedTypes[key] = DataTypes.DECIMAL;
+                    // } else if (validator.isFloat(val.toString())) {
+                    //     computedTypes[key] = DataTypes.FLOAT;
+                    // } else if (validator.isInt(val.toString())) {
+                    //     computedTypes[key] = DataTypes.INTEGER;
+                    // } else {
+                    //     computedTypes[key] = DataTypes.NUMBER;
+                    // }
                 } else if (typeof val === "boolean") {
                     computedTypes[key] = DataTypes.BOOLEAN;
                 } else if (typeof val === "object") {
@@ -403,7 +404,7 @@ export class Model {
                         fieldDesc = fieldDesc as FieldDescType;
                         if (fieldValue && docValueTypes[key] !== fieldDesc.fieldType) {
                             errors[key] = fieldDesc.validateMessage ? fieldDesc.validateMessage :
-                                `Invalid Type for: ${key}. Expected ${fieldDesc.fieldType}, Got ${docValueTypes[key]}`;
+                                `Invalid type for: ${key}. Expected ${fieldDesc.fieldType}, Got ${docValueTypes[key]}`;
                         }
                         // validate allowNull, fieldLength, min/maxValues and pattern matching
                         // null-validation
@@ -422,9 +423,7 @@ export class Model {
                             }
                         }
                         // min/maxValues-validation for number-types and date-type field-values
-                        if (fieldValue && (docValueTypes[key] === DataTypes.NUMBER || docValueTypes[key] === DataTypes.INTEGER ||
-                            docValueTypes[key] === DataTypes.FLOAT || docValueTypes[key] === DataTypes.BIGFLOAT ||
-                            docValueTypes[key] === DataTypes.DECIMAL)) {
+                        if (fieldValue && (docValueTypes[key] === DataTypes.NUMBER)) {
                             // number value for comparison
                             const numFieldValue = Number(fieldValue);
                             if (fieldDesc.minValue && fieldDesc.maxValue) {

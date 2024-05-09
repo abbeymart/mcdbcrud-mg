@@ -1,5 +1,10 @@
 # Historical logs
 
+## Version 0.4.4
+
+- Release date: April-09-2024
+- streamlined-number-types-and-validations-v0.4.4
+
 ## Version 0.4.3
 
 - Release date: Mar-28-2024
