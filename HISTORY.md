@@ -1,5 +1,10 @@
 # Historical logs
 
+## Version 0.4.5
+
+- Release date: April-12-2024
+- streamlined-model-validations-v0.4.5
+
 ## Version 0.4.4
 
 - Release date: April-09-2024

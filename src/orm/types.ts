@@ -206,6 +206,8 @@ export interface ModelCrudOptionsType extends ModelOptionsType {
     uniqueFields?: UniqueFieldsType;        // composite unique-fields
     primaryFields?: Array<string>;          // composite primary-fields
     requiredFields?: Array<string>;         // may be computed from FieldDesc allowNull attributes
+    isValidateFields?: boolean;             // allow model-fields validation
+    isValidateMethod?: boolean;             // allow model-method validation
 }
 
 export interface ErrorType {

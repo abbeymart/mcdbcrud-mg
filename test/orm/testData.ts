@@ -119,8 +119,8 @@ export function validateCategory(params: ObjectType): ValidateResponseType {
 
 
 export const groupModel: ModelDescType = {
-    tableName  : collections.GROUPS,
-    recordDesc : {
+    tableName     : collections.GROUPS,
+    recordDesc    : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -130,14 +130,14 @@ export const groupModel: ModelDescType = {
         iconStyle: DataTypes.STRING,
     },
     validateMethod: validateGroup,
-    timeStamp  : true,
-    activeStamp: true,
-    actorStamp : true,
+    timeStamp     : true,
+    activeStamp   : true,
+    actorStamp    : true,
 }
 
 export const categoryModel: ModelDescType = {
-    tableName  : collections.CATEGORIES,
-    recordDesc : {
+    tableName     : collections.CATEGORIES,
+    recordDesc    : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -153,7 +153,7 @@ export const categoryModel: ModelDescType = {
             allowNull: false,
         },
         priority : {
-            fieldType   : DataTypes.INTEGER,
+            fieldType   : DataTypes.NUMBER,
             allowNull   : false,
             defaultValue: 100,
         },
@@ -167,9 +167,9 @@ export const categoryModel: ModelDescType = {
 
     },
     validateMethod: validateCategory,
-    timeStamp  : true,
-    activeStamp: true,
-    actorStamp : true,
+    timeStamp     : true,
+    activeStamp   : true,
+    actorStamp    : true,
 }
 
 export const groupRelations: Array<ModelRelationType> = [
@@ -205,7 +205,7 @@ export const categoryRelations: Array<ModelRelationType> = [
         targetTable : collections.CATEGORIES,
         sourceField : "_id",
         targetField : "parentId",
-        sourceModel: categoryModel,
+        sourceModel : categoryModel,
         targetModel : categoryModel,
         relationType: RelationTypes.ONE_TO_MANY,
         foreignField: "parentId",
@@ -220,15 +220,19 @@ export const centralRelations: Array<ModelRelationType> = [
 ];
 
 const groupOptions: ModelCrudOptionsType = {
-    relations   : centralRelations,
-    uniqueFields: [
+    relations       : centralRelations,
+    isValidateMethod: true,
+    isValidateFields: true,
+    uniqueFields    : [
         ["name"],
     ],
 };
 
 const categoryOptions: ModelCrudOptionsType = {
-    relations   : centralRelations,
-    uniqueFields: [
+    relations       : centralRelations,
+    isValidateMethod: true,
+    isValidateFields: true,
+    uniqueFields    : [
         ["name", "parentId",],
         ["name", "groupName",],
     ]
