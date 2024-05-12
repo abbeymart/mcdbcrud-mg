@@ -368,7 +368,7 @@ class SaveRecord extends Crud {
                 logRes,
             }
             return getResMessage("success", {
-                message: `Record(s) created successfully: ${insertResult.insertedCount} of ${this.createItems.length} items created.`,
+                message: `Record(s) created successfully: ${insertResult.insertedCount} of ${this.createItems.length} item(s) created.`,
                 value  : resultValue,
             });
         } catch (e) {

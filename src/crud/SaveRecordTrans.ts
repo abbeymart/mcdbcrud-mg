@@ -83,7 +83,7 @@ class SaveRecordTrans extends SaveRecord {
                 await session.commitTransaction();
             });
             return getResMessage("success", {
-                message: `Record(s) created successfully: ${insertResult.insertedCount} of ${this.createItems.length} items created.`,
+                message: `Record(s) created successfully: ${insertResult.insertedCount} of ${this.createItems.length} item(s) created.`,
                 value  : resultValue,
             });
         } catch (e) {
