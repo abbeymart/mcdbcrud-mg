@@ -1,13 +1,18 @@
 # Historical logs
 
+## Version 0.4.6
+
+- Release date: May-12-2024
+- corrected-items-to-item(s)-and-history-dates-v0.4.6
+
 ## Version 0.4.5
 
-- Release date: April-12-2024
+- Release date: May-12-2024
 - streamlined-model-validations-v0.4.5
 
 ## Version 0.4.4
 
-- Release date: April-09-2024
+- Release date: May-09-2024
 - streamlined-number-types-and-validations-v0.4.4
 
 ## Version 0.4.3
