@@ -1,6 +1,6 @@
 {
   "name": "@mconnect/mcdbcrud-mg",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "description": "mConnect CRUD Operations for Mongo DB",
   "main": "lib/cjs/index.js",
   "module": "lib/esm/index.js",

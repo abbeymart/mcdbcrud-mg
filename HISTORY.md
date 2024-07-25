@@ -1,5 +1,10 @@
 # Historical logs
 
+## Version 0.5.0
+
+- Release date: July-24-2024
+- refactor-model-setDefault-validate-boolean-optional-fields-v0.5.0
+
 ## Version 0.4.6
 
 - Release date: May-12-2024

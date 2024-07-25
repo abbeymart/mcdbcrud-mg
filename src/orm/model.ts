@@ -8,16 +8,14 @@
 import validator from "validator";
 import { getParamsMessage, getResMessage, MessageObject, ResponseMessage } from "@mconnect/mcresponse";
 import {
-    ComputedMethodsType, DataTypes, DefaultValueType, RecordDescType,
-    FieldDescType, ModelCrudOptionsType, ModelDescType, ModelOptionsType,
-    ModelRelationType, UniqueFieldsType, ValidateMethodResponseType,
+    ComputedMethodsType, DataTypes, DefaultValueType, FieldDescType, ModelCrudOptionsType, ModelDescType,
+    ModelOptionsType, ModelRelationType, RecordDescType, UniqueFieldsType, ValidateMethodResponseType,
     ValidateResponseType, ValueToDataTypes,
 } from "./types";
 import {
-    ActionParamsType, ActionParamType, CrudOptionsType, CrudParamsType, newDeleteRecord, newGetRecord,
-    newGetRecordStream, newSaveRecord, TaskTypes, newDeleteRecordTrans, newSaveRecordTrans,
+    ActionParamsType, ActionParamType, CrudOptionsType, CrudParamsType, isEmptyObject, newDeleteRecord,
+    newDeleteRecordTrans, newGetRecord, newGetRecordStream, newSaveRecord, newSaveRecordTrans, TaskTypes,
 } from "../crud";
-import { isEmptyObject } from "../crud";
 
 /**
  * @class Model - the model class for the mongodb
@@ -315,58 +313,106 @@ export class Model {
     }
 
     /**
-     * @method setDefaultValues set the default record/document-field-values for no-value fields and if specified, setValue (transform).
+     * @method setDefaultValues set the default record/document-field-values for required fields will null-values and if specified, setValue (transform).
      * @param docValue
      */
     async setDefaultValues(docValue: ActionParamType): Promise<ActionParamType> {
         try {
-            // set base docValue
+            // set base docValue | valueTypes: ValueToDataTypes
             const setDocValue = docValue;
             // perform defaultValue task
-            for (const [key, val] of Object.entries(docValue)) {
-                // defaultValue setting applies to FieldDescType only | otherwise, the value is null (by default, i.e. allowNull=>true)
-                let docFieldDesc = this.modelRecordDesc[key];
-                const docFieldValue = val || null;
-                // set default values for no-value field only
-                if (!docFieldValue) {
-                    switch (typeof docFieldDesc) {
-                        case "object":
-                            docFieldDesc = docFieldDesc as FieldDescType;
-                            let defaultValue = docFieldDesc?.defaultValue ? docFieldDesc.defaultValue : null;
-                            // type of defaultValue and docFieldValue must be equivalent (re: validateMethod)
-                            if (defaultValue) {
-                                switch (typeof defaultValue) {
-                                    // defaultValue may be of types: FieldValueTypes or DefaultValueType
-                                    case "function":
-                                        defaultValue = defaultValue as DefaultValueType;
-                                        if (typeof defaultValue === "function") {
-                                            setDocValue[key] = await defaultValue(docValue[key]);
-                                        }
-                                        break;
-                                    default:
-                                        // defaultValue = defaultValue as FieldValueTypes
-                                        setDocValue[key] = defaultValue;
-                                        break;
-                                }
+            // TODO: July-24-2024 - refactor model setDefault-validate-value handle boolean value of true or false
+            const modelFields = Object.keys(this.modelRecordDesc);
+            const docFields = Object.keys(docValue);
+            for (const [field, documentFieldDesc] of Object.entries(this.modelRecordDesc)) {
+                const val = docFields.includes(field) && docValue[field];
+                const fieldValue = typeof val === "boolean"? val : !!val ? val :  null
+                const validValue = fieldValue !== null
+                switch (typeof documentFieldDesc) {
+                    case "object":
+                        const docFieldDesc = documentFieldDesc as FieldDescType;
+                        let defaultValue = docFieldDesc?.defaultValue !== undefined ? docFieldDesc.defaultValue : null;
+                        const validDefaultValue = defaultValue !== null
+                        // type of defaultValue and docFieldValue must be equivalent (re: validateMethod)
+                        if ( !validValue && validDefaultValue) {
+                            switch (typeof defaultValue) {
+                                // defaultValue may be of types: FieldValueTypes or DefaultValueType
+                                case "function":
+                                    defaultValue = defaultValue as DefaultValueType;
+                                    if (typeof defaultValue === "function") {
+                                        setDocValue[field] = await defaultValue(fieldValue);
+                                    }
+                                    break;
+                                default:
+                                    // defaultValue = defaultValue as FieldValueTypes
+                                    setDocValue[field] = defaultValue;
+                                    break;
                             }
-                            break;
-                        default:
-                            break;
-                    }
+                        }
+                        break;
+                    default:
+                        break;
                 }
                 // setValue / transform field-value prior-to/before save-task (create / update)
-                switch (typeof docFieldDesc) {
+                switch (typeof documentFieldDesc) {
                     case "object":
-                        docFieldDesc = docFieldDesc as FieldDescType;
-                        const fieldValue = setDocValue[key];    // set applies to existing field-value only
-                        if (fieldValue && docFieldDesc.setValue) {
-                            setDocValue[key] = docFieldDesc.setValue(fieldValue);
+                        const docFieldDesc = documentFieldDesc as FieldDescType;
+                        if (docFieldDesc.setValue) {
+                            setDocValue[field] = docFieldDesc.setValue(fieldValue);
                         }
                         break;
                     default:
                         break;
                 }
             }
+
+            // for (const [key, val] of Object.entries(docValue)) {
+            //     // defaultValue setting applies to FieldDescType only | otherwise, the value is null (by default, i.e. allowNull=>true)
+            //     let docFieldDesc = this.modelRecordDesc[key];
+            //     const fieldValue = typeof val === "boolean"? val : !!val ? val :  null
+            //     const validValue = fieldValue !== null
+            //     // set default values for null-value & required fields only, with model-default-value
+            //     if (!validValue) {
+            //     }
+            //     switch (typeof docFieldDesc) {
+            //         case "object":
+            //             docFieldDesc = docFieldDesc as FieldDescType;
+            //             let defaultValue = docFieldDesc?.defaultValue !== undefined ? docFieldDesc.defaultValue : null;
+            //             const validDefaultValue = defaultValue !== null
+            //             // type of defaultValue and docFieldValue must be equivalent (re: validateMethod)
+            //             if (defaultValue !== null) {
+            //                 switch (typeof defaultValue) {
+            //                     // defaultValue may be of types: FieldValueTypes or DefaultValueType
+            //                     case "function":
+            //                         defaultValue = defaultValue as DefaultValueType;
+            //                         if (typeof defaultValue === "function") {
+            //                             setDocValue[key] = await defaultValue(docValue[key]);
+            //                         }
+            //                         break;
+            //                     default:
+            //                         // defaultValue = defaultValue as FieldValueTypes
+            //                         setDocValue[key] = defaultValue;
+            //                         break;
+            //                 }
+            //             }
+            //             break;
+            //         default:
+            //             break;
+            //     }
+            //     // setValue / transform field-value prior-to/before save-task (create / update)
+            //     switch (typeof docFieldDesc) {
+            //         case "object":
+            //             docFieldDesc = docFieldDesc as FieldDescType;
+            //             const fieldValue = setDocValue[key];    // set applies to existing field-value only
+            //             if (docFieldDesc.setValue) {
+            //                 setDocValue[key] = docFieldDesc.setValue(fieldValue);
+            //             }
+            //             break;
+            //         default:
+            //             break;
+            //     }
+            // }
+
             return setDocValue;
         } catch (e) {
             throw new Error(e.message);
@@ -389,7 +435,8 @@ export class Model {
             if(this.isValidateFields) {
                 for (const [key, val] of Object.entries(docValue)) {
                     let fieldDesc = recordDesc[key] || null;
-                    const fieldValue = val || null
+                    const fieldValue = typeof val === "boolean"? val : !!val ? val :  null
+                    const validValue = fieldValue !== null
                     // check field description / definition in the model-field-description
                     if (!fieldDesc) {
                         errors[key] = `Invalid field: ${key} is not defined in the model`;
@@ -398,26 +445,26 @@ export class Model {
                     switch (typeof fieldDesc) {
                         case "string":
                             // validate field-value-type
-                            if (fieldValue && docValueTypes[key] !== fieldDesc) {
+                            if (validValue && docValueTypes[key] !== fieldDesc) {
                                 errors[key] = `Invalid type for: ${key}. Expected ${fieldDesc}. Got ${docValueTypes[key]}.`;
                             }
                             break;
                         case "object":
                             // validate field-value-type,
                             fieldDesc = fieldDesc as FieldDescType;
-                            if (fieldValue && docValueTypes[key] !== fieldDesc.fieldType) {
+                            if (validValue && docValueTypes[key] !== fieldDesc.fieldType) {
                                 errors[key] = fieldDesc.validateMessage ? fieldDesc.validateMessage :
                                     `Invalid type for: ${key}. Expected ${fieldDesc.fieldType}, Got ${docValueTypes[key]}`;
                             }
                             // validate allowNull, fieldLength, min/maxValues and pattern matching
                             // null-validation
-                            if (!fieldValue && !fieldDesc.allowNull) {
+                            if (!validValue && !fieldDesc.allowNull) {
                                 errors[`${key}-nullValidation`] = fieldDesc.validateMessage ?
-                                    fieldDesc.validateMessage + ` | Value is required for: ${key}.}` :
-                                    `Value is required for: ${key}.}`;
+                                    fieldDesc.validateMessage + ` | Value is required for: ${key}.` :
+                                    `Value is required for: ${key}.`;
                             }
                             // fieldLength-validation
-                            if (fieldValue && fieldDesc.fieldLength && fieldDesc.fieldLength > 0) {
+                            if (validValue && fieldDesc.fieldLength && fieldDesc.fieldLength > 0) {
                                 const fieldLength = (fieldValue as string).length;
                                 if (fieldLength > fieldDesc.fieldLength) {
                                     errors[`${key}-lengthValidation`] = fieldDesc.validateMessage ?
@@ -426,7 +473,7 @@ export class Model {
                                 }
                             }
                             // min/maxValues-validation for number-types and date-type field-values
-                            if (fieldValue && (docValueTypes[key] === DataTypes.NUMBER)) {
+                            if (validValue && (docValueTypes[key] === DataTypes.NUMBER)) {
                                 // number value for comparison
                                 const numFieldValue = Number(fieldValue);
                                 if (fieldDesc.minValue && fieldDesc.maxValue) {
@@ -452,7 +499,7 @@ export class Model {
                                             `Value of: ${key} cannot be greater than ${numMaxValue}.`;
                                     }
                                 }
-                            } else if (fieldValue && (docValueTypes[key] === DataTypes.STRING || docValueTypes[key] === DataTypes.DATETIME)) {
+                            } else if (validValue && (docValueTypes[key] === DataTypes.STRING || docValueTypes[key] === DataTypes.DATETIME)) {
                                 // date value, compare using milliseconds since epoch, Jan-01-1970
                                 // const dateFieldValue = (new Date(fieldValue as string)).setHours(0, 0, 0, 0);
                                 const dateFieldValue = (new Date(fieldValue as string)).getTime();
@@ -481,7 +528,7 @@ export class Model {
                                 }
                             }
                             // pattern matching validation
-                            if (fieldValue && fieldDesc.fieldPattern) {
+                            if (validValue && fieldDesc.fieldPattern) {
                                 const testPattern = (fieldDesc.fieldPattern as unknown as RegExp).test(fieldValue as string);
                                 if (!testPattern) {
                                     errors[`${key}-patternMatchValidation`] = fieldDesc.validateMessage ?
@@ -490,7 +537,7 @@ export class Model {
                                 }
                             }
                             // startsWith
-                            if (fieldValue && fieldDesc.startsWith) {
+                            if (validValue && fieldDesc.startsWith) {
                                 const testPattern = fieldValue.toString().startsWith(fieldDesc.startsWith);
                                 if (!testPattern) {
                                     errors[`${key}-startsWithValidation`] = fieldDesc.validateMessage ?
@@ -499,7 +546,7 @@ export class Model {
                                 }
                             }
                             // notStartsWith
-                            if (fieldValue && fieldDesc.notStartsWith) {
+                            if (validValue && fieldDesc.notStartsWith) {
                                 const testPattern = fieldValue.toString().startsWith(fieldDesc.notStartsWith);
                                 if (testPattern) {
                                     errors[`${key}-notStartsWithValidation`] = fieldDesc.validateMessage ?
@@ -508,7 +555,7 @@ export class Model {
                                 }
                             }
                             // endsWith
-                            if (fieldValue && fieldDesc.endsWith) {
+                            if (validValue && fieldDesc.endsWith) {
                                 const testPattern = fieldValue.toString().endsWith(fieldDesc.endsWith);
                                 if (!testPattern) {
                                     errors[`${key}-endsWithValidation`] = fieldDesc.validateMessage ?
@@ -517,7 +564,7 @@ export class Model {
                                 }
                             }
                             // notEndsWith
-                            if (fieldValue && fieldDesc.notEndsWith) {
+                            if (validValue && fieldDesc.notEndsWith) {
                                 const testPattern = fieldValue.toString().endsWith(fieldDesc.notEndsWith);
                                 if (testPattern) {
                                     errors[`${key}-notEndsWithValidation`] = fieldDesc.validateMessage ?
@@ -526,7 +573,7 @@ export class Model {
                                 }
                             }
                             // includes
-                            if (fieldValue && fieldDesc.includes) {
+                            if (validValue && fieldDesc.includes) {
                                 const testPattern = fieldValue.toString().includes(fieldDesc.includes);
                                 if (!testPattern) {
                                     errors[`${key}-includeValidation`] = fieldDesc.validateMessage ?
@@ -535,7 +582,7 @@ export class Model {
                                 }
                             }
                             // excludes
-                            if (fieldValue && fieldDesc.excludes) {
+                            if (validValue && fieldDesc.excludes) {
                                 const testPattern = fieldValue.toString().includes(fieldDesc.excludes);
                                 if (testPattern) {
                                     errors[`${key}-includeValidation`] = fieldDesc.validateMessage ?

@@ -152,13 +152,13 @@ export const BaseModel: RecordDescType = {
     language   : {
         fieldType   : DataTypes.STRING,
         fieldLength : 12,
-        allowNull   : false,
+        allowNull   : true,
         defaultValue: "en-US",
     },
     description: DataTypes.STRING,
     isActive   : {
         fieldType   : DataTypes.BOOLEAN,
-        allowNull   : false,
+        allowNull   : true,
         defaultValue: true,
     },
     createdBy  : DataTypes.STRING,
