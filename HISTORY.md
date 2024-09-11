@@ -1,5 +1,10 @@
 # Historical logs
 
+## Version 0.6.0
+
+- Release date: Sep-11-2024
+- refactor-checkTaskType-function-v0.6.0
+
 ## Version 0.5.0
 
 - Release date: July-24-2024

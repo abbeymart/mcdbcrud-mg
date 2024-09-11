@@ -7,11 +7,12 @@ export function isEmptyObject(val: ObjectRefType): boolean {
     return !(Object.keys(val).length > 0 && Object.values(val).length > 0);
 }
 
-export function checkTaskType(params: CrudParamsType): string {
+export function checkTaskTypeV1(params: CrudParamsType): string {
     let taskType = TaskTypes.UNKNOWN
     if (params.actionParams && params.actionParams.length > 0) {
         const actParam = params.actionParams[0]
-        if (!actParam["id"] || actParam["id"] === "") {
+        const recId = actParam["_id"] || actParam["id"]
+        if (!recId || recId === "") {
             if (params.actionParams.length === 1 && (params.recordIds && params.recordIds?.length > 0) || params.queryParams && !isEmptyObject(params.queryParams)) {
                 taskType = TaskTypes.UPDATE
             } else {
@@ -22,6 +23,50 @@ export function checkTaskType(params: CrudParamsType): string {
         }
     }
     return taskType
+}
+
+export function checkTaskType(params: CrudParamsType): string {
+    if (!params.actionParams || params.actionParams.length < 1) {
+        return TaskTypes.UNKNOWN
+    }
+    // check task-types for actionParams === 1 or > 1
+    if (params.actionParams.length === 1) {
+        const actParam = params.actionParams[0]
+        const recId = actParam["_id"] || actParam["id"]
+        if (!recId || recId === "") {
+            if (params.recordIds && params.recordIds?.length > 0 || params.queryParams && !isEmptyObject(params.queryParams)) {
+                return TaskTypes.UPDATE
+            } else {
+                return TaskTypes.CREATE
+            }
+        } else {
+            return TaskTypes.UPDATE
+        }
+    }
+    if (params.actionParams.length > 1) {
+        let updateCount = 0
+        let createCount = 0
+        for (const rec of params.actionParams) {
+            const recId = rec["_id"] || rec["id"]
+            if (!recId || recId === "") {
+                createCount += 1
+            } else {
+                updateCount += 1
+            }
+        }
+        // determine task-type
+        if (updateCount > 0 && createCount > 0) {
+            return TaskTypes.UNKNOWN
+        }
+        if (createCount > 0) {
+            return TaskTypes.CREATE
+        }
+        if (updateCount > 0) {
+            return TaskTypes.UPDATE
+        }
+    }
+
+    return TaskTypes.UNKNOWN
 }
 
 export function validateActionParams(actParams: ActionParamsType = []): ResponseMessage {

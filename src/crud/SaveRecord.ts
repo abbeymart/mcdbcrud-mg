@@ -10,7 +10,7 @@ import { ObjectId, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { deleteHashCache, QueryHashCacheParamsType } from "@mconnect/mccache";
 import { ModelOptionsType, RelationActionTypes } from "../orm";
-import { isEmptyObject } from "./utils";
+import { checkTaskType, isEmptyObject } from "./utils";
 import Crud from "./Crud";
 import {
     ActionParamsType, ActionParamTaskType, AuditLogParamsType, CrudOptionsType, CrudParamsType,
@@ -50,6 +50,13 @@ class SaveRecord extends Crud {
 
         // determine update / create (new) items from actionParams
         await this.computeItems();
+        const taskType = checkTaskType(this.params) // CREATE / UPDATE
+        if (taskType === TaskTypes.UNKNOWN) {
+            return getResMessage("saveError", {
+                message: "Unable to determine task type (unknown)",
+                value  : {},
+            });
+        }
         // validate createItems and updateItems
         if (this.createItems.length > 0 && this.updateItems.length > 0) {
             return getResMessage("saveError", {
@@ -155,7 +162,7 @@ class SaveRecord extends Crud {
                 // compute existParams for update task
                 this.existParams = this.computeExistParams(this.updateItems)
                 // Prevent multiple updates with the same record(actionParam)
-                if (this.currentRecs.length > 1 && this.existParams.length > 0 && this.existParams[0].length > 0 ) {
+                if (this.currentRecs.length > 1 && this.existParams.length > 0 && this.existParams[0].length > 0) {
                     return getResMessage("paramsError", {
                         message: `Updates of multiple records[${this.currentRecs.length}] with unique constraints[${this.uniqueFields}] not allowed`
                     })
@@ -203,7 +210,7 @@ class SaveRecord extends Crud {
                 // compute existParams for update task
                 this.existParams = this.computeExistParams(this.updateItems)
                 // Prevent multiple updates with the same record(actionParam)
-                if (this.currentRecs.length > 1 && this.existParams.length > 0 && this.existParams[0].length > 0 ) {
+                if (this.currentRecs.length > 1 && this.existParams.length > 0 && this.existParams[0].length > 0) {
                     return getResMessage("paramsError", {
                         message: `Updates of multiple records[${this.currentRecs.length}] with unique constraints[${this.existParams.length}] not allowed`
                     })
