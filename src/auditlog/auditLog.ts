@@ -1,6 +1,6 @@
 /**
  * @Author: abbeymart | Abi Akindele | @Created: 2020-07-15 | @Updated: 2023-11-22, 2024-01-06
- * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
+ * @Company: Copyright 2020 Abi Akindele | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: mcdbcrud-mg audit-log (mongodb) entry point | auditLog
  */
@@ -9,8 +9,7 @@
 import { Db } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { checkDb } from "../dbc";
-import { AuditLogTypes, AuditLogParamsType, LogRecordsType, ActionParamType } from "../crud";
-import {isEmptyObject} from "../crud";
+import { ActionParamType, AuditLogParamsType, AuditLogTypes, isEmptyObject, LogRecordsType } from "../crud";
 
 //types
 export interface AuditParamsType {

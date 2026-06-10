@@ -1,12 +1,12 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-07-17 | @Updated: 2024-01-06
- * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-07-17 | @Updated: 2024-01-06, 2026-06-01
+ * @Company: Copyright 2020 Abi Akindele | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: mcdbcrud-mg db-server-connect & db-handle for mongoDB
  */
 
-import {Db, MongoClient, MongoClientOptions} from "mongodb";
-import {DbOptionsType, DbParamsType, Replicas,} from "./types";
+import { Db, MongoClient, MongoClientOptions } from "mongodb";
+import { DbOptionsType, DbParamsType, Replicas, } from "./types";
 
 export class DbMongo {
     private readonly username: string;
@@ -22,28 +22,36 @@ export class DbMongo {
     private dbConnect?: MongoClient;
     private readonly replicaName: string
     private readonly replicas: Replicas;
+    private readonly host: string;
+    private readonly port: number | string;
+    private readonly retryWrites: boolean;
 
     constructor(dbConfig: DbParamsType, options?: DbOptionsType) {
         this.username = dbConfig?.username || "";
         this.password = dbConfig?.password || "";
         this.database = dbConfig?.database || "";
         this.minPoolSize = dbConfig?.poolSize || 20;
-        this.checkAccess = options?.checkAccess !== false;
+        this.checkAccess = options?.checkAccess || false;
         this.user = encodeURIComponent(this.username);
         this.pass = encodeURIComponent(this.password);
-        this.replicas = dbConfig.replicas || [];
-        this.replicaName = dbConfig.replicaName || "";
+        this.replicas = dbConfig?.replicas || [];
+        this.replicaName = dbConfig?.replicaName || "";
+        this.host = dbConfig?.host || "";
+        this.port = dbConfig?.port || "";
+        this.retryWrites = options?.retryWrites || false;
+
         // set default dbUrl and serverUrl - standard standalone DB | include ?directConnection=true for remote DB access
         this.dbUrl = this.checkAccess ?
-            `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?directConnection=true` :
-            `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?directConnection=true`;
-        this.serverUrl = this.checkAccess ? `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}?directConnection=true` :
-            `mongodb://${dbConfig.host}:${dbConfig.port}?directConnection=true`;
+            `mongodb://${this.user}:${this.pass}@${this.host}:${this.port}/${this.database}?directConnection=true` :
+            `mongodb://${this.host}:${this.port}/${this.database}?directConnection=true`;
+        this.serverUrl = this.checkAccess ?
+            `mongodb://${this.user}:${this.pass}@${this.host}:${this.port}?directConnection=true` :
+            `mongodb://${this.host}:${this.port}?directConnection=true`;
         // For replica set, include the replica set hostUrl/name and a seedlist of the members in the URI string
         if (this.replicas.length > 0 && this.replicaName !== "") {
             // check and set access
             if (this.checkAccess) {
-                // this.dbUrl = `mongodb://${this.user}:${this.pass}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database},`
+                // this.dbUrl = `mongodb://${this.user}:${this.pass}@${this.host}:${this.port}/${this.database},`
                 this.dbUrl = `mongodb://`
                 this.serverUrl = `mongodb://`
                 // compute the replica-uris
@@ -51,7 +59,7 @@ export class DbMongo {
                 const repLength = this.replicas.length
                 for (const rep of this.replicas) {
                     repCount += 1
-                    this.dbUrl = `${this.dbUrl}${this.user}:${this.pass}@${rep.hostUrl}/${dbConfig.database}`
+                    this.dbUrl = `${this.dbUrl}${this.user}:${this.pass}@${rep.hostUrl}/${this.database}`
                     this.serverUrl = `${this.serverUrl}${this.user}:${this.pass}@${rep.hostUrl}`
                     if (repCount < repLength) {
                         this.dbUrl = `${this.dbUrl},`
@@ -62,7 +70,7 @@ export class DbMongo {
                 this.dbUrl = `${this.dbUrl}/?replicaSet=${this.replicaName}?directConnection=true`
                 this.serverUrl = `${this.serverUrl}/?replicaSet=${this.replicaName}?directConnection=true`
             } else {
-                // this.dbUrl = `mongodb://${dbConfig.host}:${dbConfig.port}/${dbConfig.database},`
+                // this.dbUrl = `mongodb://${this.host}:${this.port}/${this.database},`
                 this.dbUrl = `mongodb://`
                 this.serverUrl = `mongodb://`
                 // compute the replica-uris
@@ -70,7 +78,7 @@ export class DbMongo {
                 const repLength = this.replicas.length
                 for (const rep of this.replicas) {
                     repCount += 1
-                    this.dbUrl = `${this.dbUrl}${rep.hostUrl}/${dbConfig.database}`
+                    this.dbUrl = `${this.dbUrl}${rep.hostUrl}/${this.database}`
                     this.serverUrl = `${this.serverUrl}${rep.hostUrl}`
                     if (repCount < repLength) {
                         this.dbUrl = `${this.dbUrl},`
@@ -86,6 +94,7 @@ export class DbMongo {
             replicaSet : this.replicaName,
             minPoolSize: options?.minPoolSize || this.minPoolSize,
             maxPoolSize: (options?.minPoolSize || this.minPoolSize) * 6,
+            retryWrites: this.retryWrites,
         };
     }
 

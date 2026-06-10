@@ -1,11 +1,10 @@
 import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../../src/config/secure/config";
 import {
-    auditColl, crudParamOptions, groupCollUpdate, GroupModel,
-    GroupUpdateActionParams, GroupUpdateRecordById, GroupUpdateRecordByParam,
-    testUserInfo, UpdateGroupById, UpdateGroupByIds, UpdateGroupByParams
-} from "./testData";
-import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
+    auditColl, crudParamOptions, groupCollUpdate, GroupModel, GroupUpdateActionParams, GroupUpdateRecordById,
+    GroupUpdateRecordByParam, testUserInfo, UpdateGroupById, UpdateGroupByIds, UpdateGroupByParams
+} from "../../src/config/transTestData";
+import { assertEquals, mcTest, testResult, UnitTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -31,6 +30,8 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditDbClient = auditDbClient;
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
+
+    const results: Array<UnitTestResult> = []
 
     await mcTest({
         name    : "should update two existing documents and return success[transactional]:",
@@ -115,9 +116,9 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
         }
     });
 
-    await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    testResult(results);
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
     process.exit(0);
 
 })();

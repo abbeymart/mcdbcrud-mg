@@ -1,10 +1,10 @@
-import { assertEquals, mcTest, postTestResult } from '@mconnect/mctest';
-import {CrudOptionsType, CrudParamsType, newDbMongo, newDeleteRecord,} from "../src";
+import { newTest, testResult, UnitTestResult } from '@mconnect/mctest';
+import { CrudOptionsType, CrudParamsType, newDbMongo, newDeleteRecord, } from "../src";
 import {
-    AuditTable, DeleteAllTable, DeleteAuditById, DeleteAuditByIds, DeleteAuditByParams, DeleteTable,
-    GetTable, TestUserInfo,
-} from "./testData";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "./config";
+    AuditTable, DeleteAllTable, DeleteAuditById, DeleteAuditByIds, DeleteAuditByParams, DeleteTable, GetTable,
+    TestUserInfo,
+} from "../src/config/testData";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../src/config/secure/config";
 
 const appDbInstance = newDbMongo(appDbLocal, dbOptionsLocal);
 const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
@@ -40,63 +40,73 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
         logUpdate    : true,
         cacheResult  : false,
     }
-    
-    await mcTest({
-        name    : 'should prevent the delete of all table records and return removeError:',
-        testFunc: async () => {
-            crudParams.tableName = DeleteAllTable
-            crudParams.recordIds = []
-            crudParams.queryParams = {}
-            const crud = newDeleteRecord(crudParams, crudOptions);
-            const res = await crud.deleteRecord()
-            console.log("delete-all-res: ", res)
-            assertEquals(res.code, "removeError", `delete-task permitted by ids or queryParams only: removeError code expected`);
-        }
-    });
 
-    await mcTest({
-        name    : 'should delete record by Id and return success or notFound[delete-record-method]:',
-        testFunc: async () => {
-            crudParams.tableName = DeleteTable
-            crudParams.recordIds = [DeleteAuditById]
-            crudParams.queryParams = {}
-            const crud = newDeleteRecord(crudParams, crudOptions);
-            const res = await crud.deleteRecord()
-            console.log("delete-by-id-res: ", res)
-            const resCode = res.code == "success" || res.code == "notFound"
-            assertEquals(resCode, true, `res-code should be success or notFound:`);
-        }
-    });
+    const results: Array<UnitTestResult> = []
 
-    await mcTest({
-        name    : 'should delete record by Ids and return success or notFound[delete-record-method]:',
-        testFunc: async () => {
-            crudParams.tableName = DeleteTable
-            crudParams.recordIds = DeleteAuditByIds
-            crudParams.queryParams = {}
-            const crud = newDeleteRecord(crudParams, crudOptions);
-            const res = await crud.deleteRecord()
-            console.log("delete-by-ids-res: ", res)
-            const resCode = res.code == "success" || res.code == "notFound"
-            assertEquals(resCode, true, `res-code should be success or notFound:`);
-        }
-    });
+    const test1 = newTest({
+        name: 'should prevent the delete of all table records and return removeError:',
+    })
+    crudParams.tableName = DeleteAllTable
+    crudParams.recordIds = []
+    crudParams.queryParams = {}
+    let crud = newDeleteRecord(crudParams, crudOptions);
+    let res = await crud.deleteRecord()
+    console.log("delete-all-res: ", res)
+    test1.setTestFunction(() => {
+        test1.assertEquals(res.code, "removeError", `delete-task permitted by ids or queryParams only: removeError code expected`);
+    })
+    const test1Result = test1.runTest()
+    results.push(test1Result)
 
-    await mcTest({
-        name    : 'should delete records by query-params and return success or notFound[delete-record-method]:',
-        testFunc: async () => {
-            crudParams.tableName = DeleteTable
-            crudParams.recordIds = []
-            crudParams.queryParams = DeleteAuditByParams
-            const crud = newDeleteRecord(crudParams, crudOptions);
-            const res = await crud.deleteRecord()
-            console.log("delete-by-params-res: ", res)
-            const resCode = res.code == "success" || res.code == "notFound"
-            assertEquals(resCode, true, `res-code should be success or notFound:`);
-        }
-    });
+    const test2 = newTest({
+        name: 'should delete record by Id and return success or notFound[delete-record-method]:',
+    })
+    crudParams.tableName = DeleteTable
+    crudParams.recordIds = [DeleteAuditById]
+    crudParams.queryParams = {}
+    crud = newDeleteRecord(crudParams, crudOptions);
+    res = await crud.deleteRecord()
+    console.log("delete-by-id-res: ", res)
+    let resCode = res.code == "success" || res.code == "notFound"
+    test2.setTestFunction(() => {
+        test2.assertEquals(resCode, true, `res-code should be success or notFound:`);
+    })
+    const test2Result = test2.runTest()
+    results.push(test2Result)
 
-    await postTestResult();
+    const test3 = newTest({
+        name: 'should delete record by Ids and return success or notFound[delete-record-method]:',
+    })
+    crudParams.tableName = DeleteTable
+    crudParams.recordIds = DeleteAuditByIds
+    crudParams.queryParams = {}
+    crud = newDeleteRecord(crudParams, crudOptions);
+    res = await crud.deleteRecord()
+    console.log("delete-by-ids-res: ", res)
+    resCode = res.code == "success" || res.code == "notFound"
+    test3.setTestFunction(() => {
+        test3.assertEquals(resCode, true, `res-code should be success or notFound:`);
+    })
+    const test3Result = test3.runTest()
+    results.push(test3Result)
+
+    const test4 = newTest({
+        name: 'should delete records by query-params and return success or notFound[delete-record-method]:',
+    })
+    crudParams.tableName = DeleteTable
+    crudParams.recordIds = []
+    crudParams.queryParams = DeleteAuditByParams
+    crud = newDeleteRecord(crudParams, crudOptions);
+    res = await crud.deleteRecord()
+    console.log("delete-by-params-res: ", res)
+    resCode = res.code == "success" || res.code == "notFound"
+    test4.setTestFunction(() => {
+        test4.assertEquals(resCode, true, `res-code should be success or notFound:`);
+    })
+    const test4Result = test4.runTest()
+    results.push(test4Result)
+
+    testResult(results);
     await appDbInstance?.closeDb();
     await auditDbInstance?.closeDb();
     process.exit(0)

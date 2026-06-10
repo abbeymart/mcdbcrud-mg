@@ -1,10 +1,10 @@
 // @Description: test-cases data: for get, delete and save record(s)
 
 import {
-    UserInfoType, CrudOptionsType, ActionParamType,
-    TaskTypes, QueryParamsType, ActionParamsType, ModelRelationType, RelationTypes, RelationActionTypes, ModelDescType,
-    BaseModel, DataTypes, ModelCrudOptionsType, newModel, AuditType,
-} from "../src"
+    ActionParamsType, ActionParamType, AuditType, BaseModel, CrudOptionsType, DataTypes, ModelCrudOptionsType,
+    ModelDescType, ModelRelationType, newModel, QueryParamsType, RelationActionTypes, RelationTypes, TaskTypes,
+    UserInfoType,
+} from "../index"
 import { collections } from "./collections";
 
 // Models
@@ -96,7 +96,7 @@ export const categoryRelations: Array<ModelRelationType> = [
         targetTable : collections.CATEGORIES,
         sourceField : "_id",
         targetField : "parentId",
-        sourceModel: categoryModel,
+        sourceModel : categoryModel,
         targetModel : categoryModel,
         relationType: RelationTypes.ONE_TO_MANY,
         foreignField: "parentId",
@@ -268,7 +268,7 @@ export const AuditUpdateActionParams: ActionParamsType = [
 // TODO: update and delete params, by ids / queryParams
 
 export const AuditUpdateRecordById: ActionParamType = {
-    // "_id"              : "638fd565c97d023503c6a0db",
+    // "_id": "638fd565c97d023503c6a0db",
     "tableName"       : "groups",
     "logAt"           : new Date(),
     "logBy"           : UserId,
@@ -278,7 +278,7 @@ export const AuditUpdateRecordById: ActionParamType = {
 }
 
 export const AuditUpdateRecordByParam: ActionParamType = {
-    // "_id"              : "638fd565c97d023503c6a0dc",
+    // "_id": "638fd565c97d023503c6a0dc",
     "tableName"       : "contacts",
     "logAt"           : new Date(),
     "logBy"           : UserId,

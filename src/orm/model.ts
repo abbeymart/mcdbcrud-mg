@@ -1,6 +1,6 @@
 /**
- * @Author: abbeymart | Abi Akindele | @Created: 2020-07-25 | @Updated: 2024-01-07
- * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
+ * @Author: abbeymart | Abi Akindele | @Created: 2020-07-25 | @Updated: 2024-01-07, 2026-05-31
+ * @Company: Copyright 2020 Abi Akindele | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: mongodb mc-orm model specifications and validation
  */
@@ -168,7 +168,7 @@ export class Model {
     /**
      * @deprecated - use the model-description for validation, see @method validateDocValue
      * @see validateDocValue
-     * @method computeRequiredFields computes the non-null fields, i.e. allowNull === false.
+     * @method computeRequiredFields computes the non-null fields, i.e., allowNull === false.
      */
     computeRequiredFields(): Array<string> {
         let requiredFields: Array<string> = [];
@@ -191,7 +191,7 @@ export class Model {
     /**
      * @deprecated - use the model-description for validation, see @method validateDocValue
      * @see validateDocValue
-     * @method validateRequiredFields validates the non-null field-values, i.e. allowNull === false.
+     * @method validateRequiredFields validates the non-null field-values, i.e., allowNull === false.
      * @param actionParam
      */
     validateRequiredFields(actionParam: ActionParamType): ValidateResponseType {
@@ -322,11 +322,11 @@ export class Model {
             const setDocValue = docValue;
             // perform defaultValue task
             // TODO: July-24-2024 - refactor model setDefault-validate-value handle boolean value of true or false
-            const modelFields = Object.keys(this.modelRecordDesc);
+            // const modelFields = Object.keys(this.modelRecordDesc);
             const docFields = Object.keys(docValue);
             for (const [field, documentFieldDesc] of Object.entries(this.modelRecordDesc)) {
                 const val = docFields.includes(field) && docValue[field];
-                const fieldValue = typeof val === "boolean"? val : !!val ? val :  null
+                const fieldValue = typeof val === "boolean" ? val : !!val ? val : null
                 const validValue = fieldValue !== null
                 switch (typeof documentFieldDesc) {
                     case "object":
@@ -334,7 +334,7 @@ export class Model {
                         let defaultValue = docFieldDesc?.defaultValue !== undefined ? docFieldDesc.defaultValue : null;
                         const validDefaultValue = defaultValue !== null
                         // type of defaultValue and docFieldValue must be equivalent (re: validateMethod)
-                        if ( !validValue && validDefaultValue) {
+                        if (!validValue && validDefaultValue) {
                             switch (typeof defaultValue) {
                                 // defaultValue may be of types: FieldValueTypes or DefaultValueType
                                 case "function":
@@ -367,7 +367,7 @@ export class Model {
             }
 
             // for (const [key, val] of Object.entries(docValue)) {
-            //     // defaultValue setting applies to FieldDescType only | otherwise, the value is null (by default, i.e. allowNull=>true)
+            //     // defaultValue setting applies to FieldDescType only | otherwise, the value is null (by default, i.e., allowNull=>true)
             //     let docFieldDesc = this.modelRecordDesc[key];
             //     const fieldValue = typeof val === "boolean"? val : !!val ? val :  null
             //     const validValue = fieldValue !== null
@@ -432,10 +432,10 @@ export class Model {
             const recordDesc = this.modelRecordDesc;
             // combine errors/messages
             // perform model-defined docValue (document-field-values) validation
-            if(this.isValidateFields) {
+            if (this.isValidateFields) {
                 for (const [key, val] of Object.entries(docValue)) {
                     let fieldDesc = recordDesc[key] || null;
-                    const fieldValue = typeof val === "boolean"? val : !!val ? val :  null
+                    const fieldValue = typeof val === "boolean" ? val : !!val ? val : null
                     const validValue = fieldValue !== null
                     // check field description / definition in the model-field-description
                     if (!fieldDesc) {
@@ -444,8 +444,8 @@ export class Model {
                     }
                     switch (typeof fieldDesc) {
                         case "string":
-                            // validate field-value-type
-                            if (validValue && docValueTypes[key] !== fieldDesc) {
+                            // validate field-value-type | 2026-06-09 accept uuid as string
+                            if (validValue && !(docValueTypes[key] === fieldDesc || docValueTypes[key] === DataTypes.UUID)) {
                                 errors[key] = `Invalid type for: ${key}. Expected ${fieldDesc}. Got ${docValueTypes[key]}.`;
                             }
                             break;
@@ -738,7 +738,7 @@ export class Model {
             params.taskType = this.taskType
             // get docValue transformed types (as DataTypes) | one iteration only for actionParams[0]
             const docValueTypes = this.computeDocValueType(params.actionParams[0]);
-            // validate actionParams (docValues), prior to saving, via this.validateDocValue
+            // validate actionParams (docValues) before saving via this.validateDocValue
             let actParams: ActionParamsType = []
             for (const docValue of params.actionParams) {
                 // validate uniqueFields - removed
@@ -758,7 +758,7 @@ export class Model {
                 if (!typesMatchRes.ok || !isEmptyObject(typesMatchRes.errors)) {
                     return getParamsMessage(typesMatchRes.errors);
                 }
-                // update actParams, with the model-transformed document-value
+                // update actParams with the model-transformed document-value
                 actParams.push(modelDocValue)
             }
             // update CRUD params and options
@@ -900,10 +900,10 @@ export class Model {
             params.taskType = this.taskType
             // get docValue transformed types (as DataTypes) | one iteration only for actionParams[0]
             const docValueTypes = this.computeDocValueType(params.actionParams[0]);
-            // validate actionParams (docValues), prior to saving, via this.validateDocValue
+            // validate actionParams (docValues), before saving, via this.validateDocValue
             let actParams: ActionParamsType = []
             for (const docValue of params.actionParams) {
-                // set defaultValues, prior to save
+                // set defaultValues prior to save
                 const modelDocValue = await this.setDefaultValues(docValue);
                 // validate actionParam-item (docValue) field-values
                 const validateRes = await this.validateDocValue(modelDocValue, docValueTypes);
@@ -915,7 +915,7 @@ export class Model {
                 if (!typesMatchRes.ok || !isEmptyObject(typesMatchRes.errors)) {
                     return getParamsMessage(typesMatchRes.errors);
                 }
-                // update actParams, with the model-transformed document-value
+                // update actParams with the model-transformed document-value
                 actParams.push(modelDocValue)
             }
             // update CRUD params and options

@@ -1,4 +1,4 @@
-import { ActionParamsType, ActionParamType, CrudParamsType, ObjectRefType, TaskTypes } from "..";
+import { ActionParamsType, ActionParamType, CrudParamsType, ObjectRefType, TaskTypes } from "../";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 
 

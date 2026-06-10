@@ -1,11 +1,10 @@
 import { CrudParamsType, newDbMongo } from "../../src";
-import { appDbLocal, auditDbLocal, dbOptions } from "../config";
+import { appDbLocal, auditDbLocal, dbOptions } from "../../src/config/secure/config";
 import {
     auditColl, crudParamOptions, DeleteGroupById, DeleteGroupByIds, DeleteGroupByParams, groupCollDelete,
-    groupCollDeleteAll, GroupModel,
-    testUserInfo
-} from "./testData";
-import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
+    groupCollDeleteAll, GroupModel, testUserInfo
+} from "../../src/config/transTestData";
+import { assertEquals, mcTest, testResult, UnitTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -31,6 +30,8 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditDbClient = auditDbLocalClient;
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
+
+    const results: Array<UnitTestResult> = []
 
     await mcTest({
         name    : "should delete record by Id and return success or notFound or subItems [delete-record-method]:",
@@ -85,9 +86,9 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
         }
     });
 
-    await postTestResult();
-    await appDbLocalInstance.closeDb();
-    await auditDbLocalInstance.closeDb();
+    testResult(results);
+    await appDbLocalInstance?.closeDb();
+    await auditDbLocalInstance?.closeDb();
     process.exit(0);
 
 })();

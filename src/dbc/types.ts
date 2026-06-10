@@ -1,11 +1,11 @@
 /**
  * @Author: abbeymart | Abi Akindele | @Created: 2021-06-12
- * @Company: Copyright 2021 Abi Akindele  | mConnect.biz
+ * @Company: Copyright 2021 Abi Akindele | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: module/package description
  */
 
-import {MongoClientOptions} from "mongodb"
+import { MongoClientOptions } from "mongodb"
 
 export interface DbSecureType {
     secureAccess: boolean;
@@ -21,17 +21,18 @@ export interface DbOptionsType extends MongoClientOptions {
     useNewUrlParser?: boolean;
     useUnifiedTopology?: boolean;
     replicaSet?: string;
+    retryWrites?: boolean;
 }
 
 export interface DbParamsType {
     dbType?: string;
-    host?: string;
+    host: string;
     username?: string;
     password?: string;
     database?: string;
     filename?: string;
     location?: string;      // => URI
-    port?: number | string;
+    port: number | string;
     poolSize?: number;
     secureOption?: DbSecureType;
     uri?: string;
@@ -48,20 +49,3 @@ export interface Replica {
 }
 
 export type Replicas = Array<Replica>
-
-
-// default replicas - development / localhost
-export const defaultReplicas: Replicas = [
-    {
-        hostUrl: "localhost:27017",
-        role   : "Primary",
-    },
-    {
-        hostUrl: "localhost:27018",
-        role   : "Secondary",
-    },
-    {
-        hostUrl: "localhost:27019",
-        role   : "Secondary",
-    }
-]

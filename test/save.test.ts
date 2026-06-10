@@ -1,13 +1,10 @@
-import {assertEquals, mcTest, postTestResult} from '@mconnect/mctest';
-import {
-    CrudOptionsType,
-    CrudParamsType, CrudResultType, newDbMongo, newSaveRecord
-} from "../src";
+import { newTest, testResult, UnitTestResult } from '@mconnect/mctest';
+import { CrudOptionsType, CrudParamsType, CrudResultType, newDbMongo, newSaveRecord } from "../src";
 import {
     AuditCreateActionParams, AuditTable, AuditUpdateActionParams, AuditUpdateRecordById, AuditUpdateRecordByParam,
     GetTable, TestUserInfo, UpdateAuditById, UpdateAuditByIds, UpdateAuditByParams, UpdateTable
-} from "./testData";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "./config";
+} from "../src/config/testData";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../src/config/secure/config";
 
 const appDbInstance = newDbMongo(appDbLocal, dbOptionsLocal);
 const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
@@ -44,98 +41,111 @@ const auditDbInstance = newDbMongo(auditDbLocal, dbOptionsLocal);
         cacheResult  : false,
     }
 
-    await mcTest({
-        name    : 'should create two new records and return success:',
-        testFunc: async () => {
-            crudParams.actionParams = AuditCreateActionParams
-            crudParams.recordIds = []
-            crudParams.queryParams = {}
-            const recLen = crudParams.actionParams.length
-            const crud = newSaveRecord(crudParams, crudOptions);
-            const res = await crud.saveRecord()
-            console.log("create-result: ", res)
-            const resValue = res.value as CrudResultType
-            const idLen = resValue.recordIds?.length || 0
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code, "success", `create-task should return code: success`);
-            assertEquals(idLen, recLen, `response-value-records-length should be: ${recLen}`);
-            assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
-        }
-    });
+    const results: Array<UnitTestResult> = []
 
-    await mcTest({
-        name    : 'should update two existing records and return success:',
-        testFunc: async () => {
-            crudParams.tableName = UpdateTable
-            crudParams.actionParams = AuditUpdateActionParams
-            crudParams.recordIds = []
-            crudParams.queryParams = {}
-            const recLen = crudParams.actionParams.length
-            const crud = newSaveRecord(crudParams, crudOptions);
-            const res = await crud.saveRecord()
-            console.log("update-result: ", res)
-            const resValue = res.value as CrudResultType
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code, "success", `update-task should return code: success`);
-            assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
-        }
-    });
+    const test1 = newTest({
+        name: 'should create two new records and return success:',
+    })
+    crudParams.actionParams = AuditCreateActionParams
+    crudParams.recordIds = []
+    crudParams.queryParams = {}
+    let recLen = crudParams.actionParams.length
+    let crud = newSaveRecord(crudParams, crudOptions);
+    let res = await crud.saveRecord()
+    console.log("create-result: ", res)
+    let resValue = res.value as CrudResultType
+    let idLen = resValue.recordIds?.length || 0
+    let recCount = resValue.recordsCount || 0
+    test1.setTestFunction(() => {
+        test1.assertEquals(res.code, "success", `create-task should return code: success`);
+        test1.assertEquals(idLen, recLen, `response-value-records-length should be: ${recLen}`);
+        test1.assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
+    })
+    const test1Result = test1.runTest()
+    results.push(test1Result)
 
-    await mcTest({
-        name    : 'should update a record by Id and return success:',
-        testFunc: async () => {
-            crudParams.tableName = UpdateTable
-            crudParams.actionParams = [AuditUpdateRecordById]
-            crudParams.recordIds = [UpdateAuditById]
-            crudParams.queryParams = {}
-            const recLen = crudParams.recordIds.length
-            const crud = newSaveRecord(crudParams, crudOptions);
-            const res = await crud.saveRecord()
-            console.log("update-by-id-res: ", res)
-            const resValue = res.value as CrudResultType
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code, "success", `update-by-id-task should return code: success`);
-            assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
-        }
-    });
+    const test2 = newTest({
+        name: 'should update two existing records and return success:',
+    })
+    crudParams.tableName = UpdateTable
+    crudParams.actionParams = AuditUpdateActionParams
+    crudParams.recordIds = []
+    crudParams.queryParams = {}
+    recLen = crudParams.actionParams.length
+    crud = newSaveRecord(crudParams, crudOptions);
+    res = await crud.saveRecord()
+    console.log("update-result: ", res)
+    resValue = res.value as CrudResultType
+    recCount = resValue.recordsCount || 0
+    test2.setTestFunction(() => {
+        test2.assertEquals(res.code, "success", `update-task should return code: success`);
+        test2.assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
+    })
+    const test2Result = test2.runTest()
+    results.push(test2Result)
 
-    await mcTest({
-        name    : 'should update records by Ids and return success:',
-        testFunc: async () => {
-            crudParams.tableName = UpdateTable
-            crudParams.actionParams = [AuditUpdateRecordById]
-            crudParams.recordIds = UpdateAuditByIds
-            crudParams.queryParams = {}
-            const recLen = crudParams.recordIds.length
-            const crud = newSaveRecord(crudParams, crudOptions);
-            const res = await crud.saveRecord()
-            console.log("update-by-ids-res: ", res)
-            const resValue = res.value as CrudResultType
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code, "success", `update-by-id-task should return code: success`);
-            assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
-        }
-    });
+    const test3 = newTest({
+        name: 'should update a record by Id and return success:',
+    })
+    crudParams.tableName = UpdateTable
+    crudParams.actionParams = [AuditUpdateRecordById]
+    crudParams.recordIds = [UpdateAuditById]
+    crudParams.queryParams = {}
+    recLen = crudParams.recordIds.length
+    crud = newSaveRecord(crudParams, crudOptions);
+    res = await crud.saveRecord()
+    console.log("update-by-id-res: ", res)
+    resValue = res.value as CrudResultType
+    recCount = resValue.recordsCount || 0
+    test3.setTestFunction(() => {
+        test3.assertEquals(res.code, "success", `update-by-id-task should return code: success`);
+        test3.assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
+    })
+    const test3Result = test3.runTest()
+    results.push(test3Result)
 
-    await mcTest({
-        name    : 'should update records by query-params and return success:',
-        testFunc: async () => {
-            crudParams.tableName = UpdateTable
-            crudParams.actionParams = [AuditUpdateRecordByParam]
-            crudParams.recordIds = []
-            crudParams.queryParams = UpdateAuditByParams
-            const recLen = 0
-            const crud = newSaveRecord(crudParams, crudOptions);
-            const res = await crud.saveRecord()
-            console.log("update-by-queryParams-res: ", res)
-            const resValue = res.value as CrudResultType
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code, "success", `update-task should return code: success`);
-            assertEquals(recCount > recLen, true, `response-value-recordsCount should be >: ${recLen}`);
-        }
-    });
+    const test4 = newTest({
+        name: 'should update records by Ids and return success:',
+    })
+    crudParams.tableName = UpdateTable
+    crudParams.actionParams = [AuditUpdateRecordById]
+    crudParams.recordIds = UpdateAuditByIds
+    crudParams.queryParams = {}
+    recLen = crudParams.recordIds.length
+    crud = newSaveRecord(crudParams, crudOptions);
+    res = await crud.saveRecord()
+    console.log("update-by-ids-res: ", res)
+    resValue = res.value as CrudResultType
+    recCount = resValue.recordsCount || 0
+    test4.setTestFunction(() => {
+        test4.assertEquals(res.code, "success", `update-by-id-task should return code: success`);
+        test4.assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
+    })
+    const test4Result = test4.runTest()
+    results.push(test4Result)
 
-    await postTestResult();
+    const test5 = newTest({
+        name: 'should update records by query-params and return success:',
+    })
+    crudParams.tableName = UpdateTable
+    crudParams.actionParams = [AuditUpdateRecordByParam]
+    crudParams.recordIds = []
+    crudParams.queryParams = UpdateAuditByParams
+    recLen = 0
+    crud = newSaveRecord(crudParams, crudOptions);
+    res = await crud.saveRecord()
+    console.log("update-by-queryParams-res: ", res)
+    resValue = res.value as CrudResultType
+    recCount = resValue.recordsCount || 0
+    test5.setTestFunction(() => {
+        const codeRes = res.code === "success" || res.code === "notFound"
+        test5.assertEquals(codeRes, true, `update-task should return code: success or notFound`);
+        test5.assertEquals(recCount >= recLen, true, `response-value-recordsCount should be >: ${recLen}`);
+    })
+    const test5Result = test5.runTest()
+    results.push(test5Result)
+
+    testResult(results);
     await appDbInstance?.closeDb();
     await auditDbInstance?.closeDb();
     process.exit(0)

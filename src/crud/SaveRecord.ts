@@ -1,6 +1,6 @@
 /**
  * @Author: abbeymart | Abi Akindele | @Created: 2020-07-24, 2023-11-23, 2024-01-06
- * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
+ * @Company: Copyright 2020 Abi Akindele | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: save-record(s) (create/insert and update record(s))
  */
@@ -13,8 +13,8 @@ import { ModelOptionsType, RelationActionTypes } from "../orm";
 import { checkTaskType, isEmptyObject } from "./utils";
 import Crud from "./Crud";
 import {
-    ActionParamsType, ActionParamTaskType, AuditLogParamsType, CrudOptionsType, CrudParamsType,
-    CrudResultType, LogRecordsType, TaskTypes
+    ActionParamsType, ActionParamTaskType, AuditLogParamsType, CrudOptionsType, CrudParamsType, CrudResultType,
+    LogRecordsType, TaskTypes
 } from "./types";
 
 class SaveRecord extends Crud {
@@ -79,7 +79,7 @@ class SaveRecord extends Crud {
         if (this.createItems.length > 0) {
             this.taskType = TaskTypes.CREATE
             try {
-                // check duplicate records, i.e. if similar records exist
+                // check duplicate records, i.e., if similar records exist,
                 // compute existParams for create task
                 this.existParams = this.computeExistParams(this.createItems)
                 if (this.existParams.length > 0 && this.existParams[0].length > 0) {
@@ -97,7 +97,7 @@ class SaveRecord extends Crud {
             }
         }
         /**
-         * compute/set table-constraints settings for update task.
+         * compute/set table-constraints settings for the update task.
          * @param updateCascade - for updating target table reference-field value
          * @param updateSetNull - for updating target table reference-field value to null-value
          * @param updateSetDefault - for updating target table reference-field value to default-value
@@ -111,7 +111,7 @@ class SaveRecord extends Crud {
             try {
                 // compute existParams for update task
                 this.existParams = this.computeExistParams(this.updateItems)
-                // check duplicate records, i.e. if similar records exist
+                // check duplicate records, i.e., if similar records exist
                 if (this.existParams.length > 0 && this.existParams[0].length > 0) {
                     const noDuplication = await this.noRecordDuplication(this.updateItems);
                     if (noDuplication.code !== "success") {
@@ -145,7 +145,7 @@ class SaveRecord extends Crud {
                 if (currentRec.code !== "success") {
                     return currentRec;
                 }
-                // compute updateItems from currentRecords, and include changes from actionParams
+                // compute updateItems from the currentRecords and include changes from actionParams
                 const updateItem = this.actionParams[0]
                 const updateItems: ActionParamsType = []
                 for (const recordItem of this.currentRecs) {
@@ -167,7 +167,7 @@ class SaveRecord extends Crud {
                         message: `Updates of multiple records[${this.currentRecs.length}] with unique constraints[${this.uniqueFields}] not allowed`
                     })
                 }
-                // check duplicate records, i.e. if similar records exist
+                // check duplicate records, i.e., if similar records exist
                 if (this.existParams.length > 0 && this.existParams[0].length > 0) {
                     const noDuplication = await this.noRecordDuplication(this.updateItems);
                     if (noDuplication.code !== "success") {
@@ -193,7 +193,7 @@ class SaveRecord extends Crud {
                 if (currentRec.code !== "success") {
                     return currentRec;
                 }
-                // compute updateItems from currentRecords, and include changes from actionParams
+                // compute updateItems from the currentRecords and include changes from actionParams
                 const updateItem = this.actionParams[0]
                 const updateItems: ActionParamsType = []
                 for (const recordItem of this.currentRecs) {
@@ -215,7 +215,7 @@ class SaveRecord extends Crud {
                         message: `Updates of multiple records[${this.currentRecs.length}] with unique constraints[${this.existParams.length}] not allowed`
                     })
                 }
-                // check duplicate records, i.e. if similar records exist
+                // check duplicate records, i.e., if similar records exist
                 if (this.existParams.length > 0 && this.existParams[0].length > 0) {
                     const noDuplication = await this.noRecordDuplication(this.updateItems);
                     if (noDuplication.code !== "success") {

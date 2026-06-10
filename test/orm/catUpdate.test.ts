@@ -1,11 +1,10 @@
 import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../../src/config/secure/config";
 import {
     auditColl, categoryColl, CategoryModel, CategoryUpdateActionParams, CategoryUpdateActionParamsUniqueConstraint,
-    crudParamOptions, groupColl, GroupModel,
-    GroupUpdateCategoryCascade, testUserInfo,
-} from "./testData";
-import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
+    crudParamOptions, groupColl, GroupModel, GroupUpdateCategoryCascade, testUserInfo,
+} from "../../src/config/ormTestData";
+import { newTest, testResult, UnitTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -33,61 +32,69 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
 
-    await mcTest({
-        name    : "should update two existing records and return success:",
-        testFunc: async () => {
-            crudParams.tableName = categoryColl;
-            crudParams.actionParams = CategoryUpdateActionParams;
-            crudParams.recordIds = []
-            crudParams.queryParams = {}
-            const recLen = crudParams.actionParams?.length || 0
-            const res = await CategoryModel.save(crudParams, crudParamOptions);
-            console.log("update-result: ", res);
-            const resValue = res.value as unknown as CrudResultType;
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code, "success", `update-task should return code: success`);
-            assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
-        }
-    });
+    const results: Array<UnitTestResult> = []
 
-    await mcTest({
-        name    : "should return recordExist for unique-constraint update:",
-        testFunc: async () => {
-            crudParams.tableName = categoryColl;
-            crudParams.actionParams = [CategoryUpdateActionParamsUniqueConstraint]
-            crudParams.recordIds = []
-            crudParams.queryParams = {};
-            const recLen = crudParams.actionParams.length
-            const res = await CategoryModel.save(crudParams, crudParamOptions);
-            console.log("update-result: ", res);
-            const resValue = res.value as unknown as CrudResultType;
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code === "exists" || res.code === "saveError", true, `create-task should return recordExist`);
-            assertEquals(res.code !== "success", true, `create-task should return existError or updateError`);
-            assertEquals(recCount < recLen, true, `response-value-recordsCount < ${recLen} should be true`);
-        }
-    });
+    const test1 = newTest({
+        name: "should update two existing records and return success:",
+    })
+    crudParams.tableName = categoryColl;
+    crudParams.actionParams = CategoryUpdateActionParams;
+    crudParams.recordIds = []
+    crudParams.queryParams = {}
+    let recLen = crudParams.actionParams?.length || 0
+    let res = await CategoryModel.save(crudParams, crudParamOptions);
+    console.log("update-result: ", res);
+    let resValue = res.value as unknown as CrudResultType;
+    let recCount = resValue.recordsCount || 0
+    test1.setTestFunction(() => {
+        test1.assertEquals(res.code, "success", `update-task should return code: success`);
+        test1.assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
+    })
+    const test1Result = test1.runTest()
+    results.push(test1Result)
 
-    await mcTest({
-        name    : "should update group and return success:",
-        testFunc: async () => {
-            crudParams.tableName = groupColl;
-            crudParams.actionParams = [GroupUpdateCategoryCascade];
-            crudParams.recordIds = []
-            crudParams.queryParams = {}
-            const recLen = crudParams.actionParams.length
-            const res = await GroupModel.save(crudParams, crudParamOptions);
-            console.log("update-result: ", res);
-            const resValue = res.value as unknown as CrudResultType;
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code, "success", `update-task should return code: success`);
-            assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
-        }
-    });
+    const test2 = newTest({
+        name: "should return recordExist for unique-constraint update:",
+    })
+    crudParams.tableName = categoryColl;
+    crudParams.actionParams = [CategoryUpdateActionParamsUniqueConstraint]
+    crudParams.recordIds = []
+    crudParams.queryParams = {};
+    recLen = crudParams.actionParams.length
+    res = await CategoryModel.save(crudParams, crudParamOptions);
+    console.log("update-result: ", res);
+    resValue = res.value as unknown as CrudResultType;
+    recCount = resValue.recordsCount || 0
+    test2.setTestFunction(() => {
+        test2.assertEquals(res.code === "exists" || res.code === "saveError", true, `update-task should return recordExist`);
+        test2.assertEquals(res.code !== "success", true, `update-task should return existError or updateError`);
+        test2.assertEquals(recCount < recLen, true, `response-value-recordsCount < ${recLen} should be true`);
+    })
+    const test2Result = test2.runTest()
+    results.push(test2Result)
 
-    await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    const test3 = newTest({
+        name: "should update group and return success:"
+    })
+    crudParams.tableName = groupColl;
+    crudParams.actionParams = [GroupUpdateCategoryCascade];
+    crudParams.recordIds = []
+    crudParams.queryParams = {}
+    recLen = crudParams.actionParams.length
+    res = await GroupModel.save(crudParams, crudParamOptions);
+    console.log("update-result: ", res);
+    resValue = res.value as unknown as CrudResultType;
+    recCount = resValue.recordsCount || 0
+    test3.setTestFunction(() => {
+        test3.assertEquals(res.code, "success", `update-task should return code: success`);
+        test3.assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
+    })
+    const test3Result = test3.runTest();
+    results.push(test3Result);
+
+    testResult(results);
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
     process.exit(0);
 
 })();

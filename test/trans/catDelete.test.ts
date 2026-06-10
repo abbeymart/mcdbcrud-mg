@@ -1,9 +1,9 @@
-import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
+import { assertEquals, mcTest, testResult, UnitTestResult } from "@mconnect/mctest";
 import {
     auditColl, categoryColl, CategoryModel, crudParamOptions, DeleteCategoryWithSubItemById,
     DeleteGroupWithCategoriesById, groupColl, GroupModel, testUserInfo
-} from "./testData";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
+} from "../../src/config/transTestData";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../../src/config/secure/config";
 import { CrudParamsType, newDbMongo } from "../../src";
 
 (async () => {
@@ -30,6 +30,8 @@ import { CrudParamsType, newDbMongo } from "../../src";
     crudParamOptions.auditDbClient = auditDbClient;
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
+
+    const results: Array<UnitTestResult> = []
 
     await mcTest({
         name    : "should return subItems for record/document with sub-items (different table/collection, i.e. foreignKey):",
@@ -58,9 +60,9 @@ import { CrudParamsType, newDbMongo } from "../../src";
     });
 
 
-    await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    testResult(results);
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
     process.exit(0);
 
 })();

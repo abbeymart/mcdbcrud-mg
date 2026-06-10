@@ -1,10 +1,9 @@
 import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../../src/config/secure/config";
 import {
-    auditColl, crudParamOptions, groupColl, GroupCreateNonUniqueDocuments,
-    GroupModel, testUserInfo
-} from "./testData";
-import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
+    auditColl, crudParamOptions, groupColl, GroupCreateNonUniqueDocuments, GroupModel, testUserInfo
+} from "../../src/config/ormTestData";
+import { newTest, testResult, UnitTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -31,26 +30,32 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
 
-    await mcTest({
-        name    : "should return record-exists or saveError for creating duplicate documents:",
-        testFunc: async () => {
-            crudParams.actionParams = GroupCreateNonUniqueDocuments;
-            crudParams.recordIds = [];
-            crudParams.queryParams = {};
-            const recLen = crudParams.actionParams?.length || 0;
-            const res = await GroupModel.save(crudParams, crudParamOptions);
-            console.log("create-result: ", res);
-            const resValue = res.value as unknown as CrudResultType;
-            const recCount = resValue.recordsCount || 0;
-            assertEquals(res.code === "exists" || res.code === "recordExist" || res.code === "saveError", true, `create-task should return record-exists or saveError`);
-            assertEquals(res.code !== "success", true, `create-task should return record-exists or saveError`);
-            assertEquals(recCount < recLen, true, `response-value-recordsCount < ${recLen} should be true`);
-        }
-    });
+    const results: Array<UnitTestResult> = []
 
-    await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    const test1 = newTest({
+        name: "should return record-exists or saveError for creating duplicate documents:",
+    })
+    crudParams.actionParams = GroupCreateNonUniqueDocuments;
+    crudParams.recordIds = [];
+    crudParams.queryParams = {};
+    const recLen = crudParams.actionParams?.length || 0;
+    const res = await GroupModel.save(crudParams, crudParamOptions);
+    console.log("create-result: ", res);
+    const resValue = res.value as unknown as CrudResultType;
+    const recCount = resValue.recordsCount || 0;
+
+    test1.setTestFunction(() => {
+        test1.assertEquals(res.code === "exists" || res.code === "recordExist" || res.code === "saveError", true, `create-task should return record-exists or saveError`);
+        test1.assertEquals(res.code !== "success", true, `create-task should return record-exists or saveError`);
+        test1.assertEquals(recCount < recLen, true, `response-value-recordsCount < ${recLen} should be true`);
+    });
+    const test1Result = test1.runTest();
+    results.push(test1Result);
+
+
+    testResult(results);
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
     process.exit(0);
 
 })();

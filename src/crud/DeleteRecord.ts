@@ -12,8 +12,8 @@ import { isEmptyObject } from "./utils";
 import { deleteHashCache, QueryHashCacheParamsType, } from "@mconnect/mccache";
 import Crud from "./Crud";
 import {
-    ActionParamType, AuditLogParamsType, CrudOptionsType, CrudParamsType,
-    CrudResultType, LogRecordsType, QueryParamsType, SubItemsType,
+    ActionParamType, AuditLogParamsType, CrudOptionsType, CrudParamsType, CrudResultType, LogRecordsType,
+    QueryParamsType, SubItemsType,
 } from "./types";
 import { RelationActionTypes } from "../orm";
 
@@ -51,7 +51,7 @@ class DeleteRecord extends Crud {
         //     this.queryParams = otherParams;
         // }
         /**
-         * compute/set table-constraints settings for delete task.
+         * compute/set table-constraints settings for the delete task.
          * @param deleteRestrict - for same-table referential integrity checking
          * @param tableRestrict - for cross-table referential integrity checking
          * @param deleteSetDefault - for set-target-value to default-value, not currently used
@@ -180,7 +180,7 @@ class DeleteRecord extends Crud {
             });
         }
         if (this.recordIds.length > 0) {
-            // prevent item delete, if child/target-table-items reference parent/source-table itemId
+            // prevent item delete if child/target-table-items reference parent/source-table itemId
             let subItems: Array<SubItemsType> = []
             // compute unique values of the child/target-tables
             const cTablesSet = new Set<string>()

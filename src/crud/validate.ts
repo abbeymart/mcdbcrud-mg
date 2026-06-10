@@ -205,7 +205,7 @@ export const isSafeInteger = (n: number): boolean => {
 // crudParams validation helper functions
 
 export function validateSaveParams(crudParams: CrudParamsType) {
-    // Initialise error object and patterns matching:
+    // Initialize error object and patterns matching:
     let errors: MessageObject = {};
     try {
         if (crudParams.tableName) {
@@ -227,7 +227,7 @@ export function validateSaveParams(crudParams: CrudParamsType) {
         }
 
         if (crudParams.actionParams) {
-            // Check input formats/patterns:  array
+            // Check input formats/patterns: array
             const testObject = isArrayType(crudParams.actionParams);
             if (!testObject) {
                 errors.actionParams = "format-error, should be an array";
@@ -282,7 +282,7 @@ export function validateSaveParams(crudParams: CrudParamsType) {
 }
 
 export function validateDeleteParams(crudParams: CrudParamsType) {
-    // Initialise error object and patterns matching:
+    // Initialize error object and patterns matching:
     let errors: MessageObject = {};
 
     try {
@@ -349,7 +349,7 @@ export function validateDeleteParams(crudParams: CrudParamsType) {
 }
 
 export function validateGetParams(crudParams: CrudParamsType) {
-    // Initialise error object and patterns matching:
+    // Initialize error object and patterns matching:
     let errors: MessageObject = {};
 
     try {
@@ -424,7 +424,7 @@ export function validateGetParams(crudParams: CrudParamsType) {
 }
 
 export function validateLoadParams(crudParams: CrudParamsType) {
-    // Initialise error object and patterns matching:
+    // Initialize error object and patterns matching:
     let errors: MessageObject = {};
 
     try {

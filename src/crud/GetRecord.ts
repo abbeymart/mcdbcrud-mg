@@ -8,7 +8,7 @@
 import { ObjectId } from "mongodb";
 import { getHashCache, HashCacheParamsType, QueryHashCacheParamsType, setHashCache } from "@mconnect/mccache";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
-import {isEmptyObject} from "./utils";
+import { isEmptyObject } from "./utils";
 import Crud from "./Crud";
 import {
     AuditLogParamsType, CrudOptionsType, CrudParamsType, GetRecordStats, GetResultType, LogRecordsType
@@ -21,7 +21,7 @@ class GetRecord extends Crud {
     }
 
     /**
-     * @function getRecord - gets records/documents by recordIds, queryParams or all records
+     * @method getRecord - gets records/documents by recordIds, queryParams, or all records
      */
     async getRecord(): Promise<ResponseMessage> {
         // Check/validate the attributes / parameters
@@ -51,7 +51,7 @@ class GetRecord extends Crud {
         //     this.queryParams = otherParams;
         // }
 
-        // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
+        // check the audit-log settings - to perform audit-log (read/search info - params, keywords, etc.)
         let logRes = getResMessage("noLog");
         if (this.logCrud || this.logRead) {
             const logRecs: LogRecordsType = {

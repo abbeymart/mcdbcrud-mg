@@ -1,10 +1,10 @@
 import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../../src/config/secure/config";
 import {
-    auditColl, crudParamOptions, groupColl, GroupCreateActionParams, GroupCreateRec1,
-    GroupCreateRecNameConstraint, GroupModel, testUserInfo,
-} from "./testData";
-import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
+    auditColl, crudParamOptions, groupColl, GroupCreateActionParams, GroupCreateRec1, GroupCreateRecNameConstraint,
+    GroupModel, testUserInfo,
+} from "../../src/config/transTestData";
+import { newTest, testResult, UnitTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -31,53 +31,62 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
 
-    await mcTest({
-        name    : "should create ten new records and return success[transactional]:",
-        testFunc: async () => {
-            crudParams.actionParams = GroupCreateActionParams;
-            crudParams.recordIds = [];
-            crudParams.queryParams = {};
-            const recLen = crudParams.actionParams?.length || 0;
-            const res = await GroupModel.saveTrans(crudParams, crudParamOptions);
-            console.log("create-result: ", res);
-            const resValue = res.value as unknown as CrudResultType;
-            const idLen = resValue.recordIds?.length || 0;
-            const recCount = resValue.recordsCount || 0;
-            assertEquals(res.code, "success", `create-task should return code: success`);
-            assertEquals(idLen, recLen, `response-value-records-length should be: ${recLen}`);
-            assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
-        }
+    const results: Array<UnitTestResult> = []
+
+    const test1 = newTest({
+        name: "should create ten new records and return success[transactional]:",
+    })
+    crudParams.actionParams = GroupCreateActionParams;
+    crudParams.recordIds = [];
+    crudParams.queryParams = {};
+    let recLen = crudParams.actionParams?.length || 0;
+    let res = await GroupModel.saveTrans(crudParams, crudParamOptions);
+    console.log("create-result: ", res);
+    let resValue = res.value as unknown as CrudResultType;
+    let idLen = resValue.recordIds?.length || 0;
+    let recCount = resValue.recordsCount || 0;
+    test1.setTestFunction(async () => {
+        test1.assertEquals(res.code, "success", `create-task should return code: success`);
+        test1.assertEquals(idLen, recLen, `response-value-records-length should be: ${recLen}`);
+        test1.assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
+    })
+    const test1Result = test1.runTest()
+    results.push(test1Result)
+
+    const test2 = newTest({
+        name: "should return error creating a non-unique/existing record/document[transactional]:"
+    })
+    crudParams.actionParams = [GroupCreateRec1];
+    crudParams.recordIds = [];
+    crudParams.queryParams = {};
+    res = await GroupModel.saveTrans(crudParams, crudParamOptions);
+    console.log("create-result: ", res);
+    test2.setTestFunction(async () => {
+        test2.assertEquals(res.code === "exists" || res.code === "recordExist", true, `create-task should return recordExist`);
+        test2.assertEquals(res.code !== "success", true, `create-task should return existError`);
+    })
+    const test2Result = test2.runTest()
+    results.push(test2Result)
+
+    const test3 = newTest({
+        name: "should return error creating a record/document due to name-length constraint error[transactional]:"
+    })
+    crudParams.actionParams = [GroupCreateRecNameConstraint];
+    crudParams.recordIds = [];
+    crudParams.queryParams = {};
+    res = await GroupModel.saveTrans(crudParams, crudParamOptions);
+    console.log("create-result: ", res);
+    test3.setTestFunction(() => {
+        test3.assertEquals(res.code === "paramsError", true, `create-task should return paramsError`);
+        test3.assertEquals(res.code !== "success", true, `create-task should return paramsError`);
     });
 
-    await mcTest({
-        name    : "should return error creating a non-unique/existing record/document[transactional]:",
-        testFunc: async () => {
-            crudParams.actionParams = [GroupCreateRec1];
-            crudParams.recordIds = [];
-            crudParams.queryParams = {};
-            const res = await GroupModel.saveTrans(crudParams, crudParamOptions);
-            console.log("create-result: ", res);
-            assertEquals(res.code === "exists" || res.code === "recordExist", true, `create-task should return recordExist`);
-            assertEquals(res.code !== "success", true, `create-task should return existError`);
-        }
-    });
+    const test3Result = test3.runTest()
+    results.push(test3Result);
 
-    await mcTest({
-        name    : "should return error creating a record/document due to name-length constraint error[transactional]:",
-        testFunc: async () => {
-            crudParams.actionParams = [GroupCreateRecNameConstraint];
-            crudParams.recordIds = [];
-            crudParams.queryParams = {};
-            const res = await GroupModel.saveTrans(crudParams, crudParamOptions);
-            console.log("create-result: ", res);
-            assertEquals(res.code === "paramsError", true, `create-task should return paramsError`);
-            assertEquals(res.code !== "success", true, `create-task should return paramsError`);
-        }
-    });
-
-    await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    testResult(results);
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
     process.exit(0);
 
 })();

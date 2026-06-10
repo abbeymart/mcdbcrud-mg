@@ -1,15 +1,10 @@
 // @Description: test-cases data: for get, delete and save record(s)
 
 import {
-    ActionParamType, QueryParamsType, ModelRelationType, RelationTypes, RelationActionTypes,
-    ModelDescType, BaseModel, DataTypes, ModelCrudOptionsType, newModel,
-    BaseModelType, UserInfoType, CrudOptionsType, ValidateResponseType, isEmptyObject
-} from "../../src"
-import { collections } from "../collections";
-import { MessageObject } from "@mconnect/mcresponse";
-import { mcMessages } from "../../src/messages";
-import { ObjectType } from "@mconnect/mccache";
-import { GroupTable } from "../testData";
+    ActionParamType, BaseModel, BaseModelType, CrudOptionsType, DataTypes, ModelCrudOptionsType, ModelDescType,
+    ModelRelationType, newModel, QueryParamsType, RelationActionTypes, RelationTypes, UserInfoType
+} from "../index"
+import { collections } from "./collections";
 
 // Models
 
@@ -59,68 +54,9 @@ export interface CategoryType extends BaseModelType {
     path?: string;
 }
 
-export function validateGroup(params: ObjectType): ValidateResponseType {
-    const record: GroupType = params as GroupType
-    console.log("rec-object: ", record)
-
-    // Initialise error object:
-
-    const errors: MessageObject = {};
-
-    if (!record.name) {
-        errors.name = "Group name is required";
-    }
-
-    // if (!record.description) {
-    //     errors.description = "Group name is required";
-    // }
-
-    if (!isEmptyObject(errors)) {
-        return {
-            ok: false,
-            errors,
-        }
-    }
-    return {
-        ok: true,
-        errors,
-    }
-}
-
-export function validateCategory(params: ObjectType): ValidateResponseType {
-    const record: CategoryType = params as CategoryType
-    // Initialise error object:
-
-    const errors: MessageObject = {};
-
-    if (!record.name) {
-        errors.name = "Category name is required";
-    }
-
-    if (!record.groupName) {
-        errors.groupName = "Group name is required";
-    }
-
-    // if (!record.description) {
-    //     errors.description = "Group name is required";
-    // }
-
-    if (!isEmptyObject(errors)) {
-        return {
-            ok: false,
-            errors,
-        }
-    }
-    return {
-        ok: true,
-        errors,
-    }
-}
-
-
 export const groupModel: ModelDescType = {
-    tableName     : collections.GROUPS,
-    recordDesc    : {
+    tableName  : collections.GROUPS,
+    recordDesc : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -129,15 +65,14 @@ export const groupModel: ModelDescType = {
         },
         iconStyle: DataTypes.STRING,
     },
-    validateMethod: validateGroup,
-    timeStamp     : true,
-    activeStamp   : true,
-    actorStamp    : true,
+    timeStamp  : true,
+    activeStamp: true,
+    actorStamp : true,
 }
 
 export const categoryModel: ModelDescType = {
-    tableName     : collections.CATEGORIES,
-    recordDesc    : {
+    tableName  : collections.CATEGORIES,
+    recordDesc : {
         ...BaseModel,
         name     : {
             fieldType  : DataTypes.STRING,
@@ -166,10 +101,9 @@ export const categoryModel: ModelDescType = {
         path     : DataTypes.STRING,
 
     },
-    validateMethod: validateCategory,
-    timeStamp     : true,
-    activeStamp   : true,
-    actorStamp    : true,
+    timeStamp  : true,
+    activeStamp: true,
+    actorStamp : true,
 }
 
 export const groupRelations: Array<ModelRelationType> = [
@@ -220,19 +154,15 @@ export const centralRelations: Array<ModelRelationType> = [
 ];
 
 const groupOptions: ModelCrudOptionsType = {
-    relations       : centralRelations,
-    isValidateMethod: true,
-    isValidateFields: true,
-    uniqueFields    : [
+    relations   : centralRelations,
+    uniqueFields: [
         ["name"],
     ],
 };
 
 const categoryOptions: ModelCrudOptionsType = {
-    relations       : centralRelations,
-    isValidateMethod: true,
-    isValidateFields: true,
-    uniqueFields    : [
+    relations   : centralRelations,
+    uniqueFields: [
         ["name", "parentId",],
         ["name", "groupName",],
     ]
@@ -351,7 +281,7 @@ export const GroupUpdateActionParams: Array<GroupType> = [
 
 // change Project to Projects
 export const GroupUpdateRecordById: GroupType = {
-    // "_id" : "6393ef7f9a2eeb643b67e7d4",
+    // "_id": "6393ef7f9a2eeb643b67e7d4",
     "name": "Users",
 }
 
@@ -496,7 +426,7 @@ export const CategoryUpdateActionParams: Array<CategoryType> = [
 // TODO: update and delete params, by ids / queryParams | test update-cascade
 
 export const CategoryUpdateRecordById: ActionParamType = {
-    // "_id" : "638fd873a02862d754fa0247",
+    // "_id": "638fd873a02862d754fa0247",
     "name": "mcpa",
 }
 export const CategoryUpdateRecordByParam: ActionParamType = {
@@ -513,9 +443,9 @@ export const UpdateCategoryByParams: QueryParamsType = {
     "groupName": "Project",
 }
 
-export const GetCategoryById = "63992eb9c97fa04b78e8f047"
-export const GetCategoryByIds = ["63992eb9c97fa04b78e8f047",
-    "63992eb9c97fa04b78e8f046"] as Array<string>
+export const GetCategoryById = "6640dc7ebc50ed45ef8022a1"
+export const GetCategoryByIds = ["6640dc7ebc50ed45ef8022a1",
+    "6640dc7ebc50ed45ef8022a2"] as Array<string>
 export const GetCategoryByParams: QueryParamsType = {
     "groupName": "Project",
 }

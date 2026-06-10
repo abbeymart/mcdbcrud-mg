@@ -5,7 +5,7 @@
  * @Description: mc-orm examples
  */
 
-import { DataTypes, ModelDescType, BaseModel } from "../src";
+import { DataTypes, ModelDescType, BaseModel } from "../index";
 
 const UserProfileModel: ModelDescType = {
     tableName: "userProfiles",

@@ -70,7 +70,7 @@ export enum RelationActionTypes {
 
 // ModelValue will be validated based on the Model definition
 export interface ValueParamsType {
-    [key: string]: FieldValueTypes; // fieldName: fieldValue, must match fieldType (re: validate) in model definition
+    [key: string]: FieldValueTypes; // fieldName: fieldValue must match fieldType (re: validate) in model definition
 }
 
 export interface DocValueType {
@@ -182,18 +182,18 @@ export const BaseModel: RecordDescType = {
 export interface ModelDescType {
     tableName: string;
     recordDesc: RecordDescType;
-    timeStamp?: boolean;    // auto-add: createdAt and updatedAt | default: true
-    actorStamp?: boolean;   // auto-add: createdBy and updatedBy | default: true
+    timeStamp?: boolean;    // auto-add, createdAt and updatedAt | default: true
+    actorStamp?: boolean;   // auto-add, createdBy and updatedBy | default: true
     activeStamp?: boolean;  // record active status, isActive (true | false) | default: true
     computedMethods?: ComputedMethodsType;  // model-level functions, e.g fullName(a, b: T): T
     validateMethod?: ValidateMethodResponseType;
-    alterSyncTable?: boolean;    // create / alter table / collection and sync existing data, if there was a change to the Coll structure | default: true
+    alterSyncTable?: boolean;    // create / alter table / collection and sync existing data if there was a change to the Coll structure | default: true
     // if alterSyncColl: false; it will create/re-create the Coll, with no data sync
 }
 
 export interface ModelOptionsType {
-    timeStamp?: boolean;        // auto-add: createdAt and updatedAt | default: true
-    actorStamp?: boolean;       // auto-add: createdBy and updatedBy | default: true
+    timeStamp?: boolean;        // auto-add, createdAt and updatedAt | default: true
+    actorStamp?: boolean;       // auto-add, createdBy and updatedBy | default: true
     activeStamp?: boolean;      // auto-add isActive, if not already set | default: true
     docValueDesc?: RecordDescType;
     docValue?: ValueParamsType;

@@ -1,13 +1,13 @@
 /**
  * @Author: abbeymart | Abi Akindele | @Created: 2020-07-23
- * @Company: Copyright 2020 Abi Akindele  | mConnect.biz
+ * @Company: Copyright 2020 Abi Akindele | mConnect.biz
  * @License: All Rights Reserved | LICENSE.md
  * @Description: CRUD types
  */
 
 import { Db, MongoClient, SortDirection } from "mongodb";
 import {
-    ModelRelationType, ModelOptionsType, ValidateMethodResponseType, RecordDescType, UniqueFieldsType
+    ModelOptionsType, ModelRelationType, RecordDescType, UniqueFieldsType, ValidateMethodResponseType
 } from "../orm";
 import { ResponseMessage } from "@mconnect/mcresponse";
 
@@ -18,7 +18,7 @@ export interface ObjectRefType {
 
 // ModelValue will be validated based on the Model definition
 export interface ActionParamType {
-    [key: string]: any;         // fieldName: fieldValue, must match fieldType (re: validate) in model definition
+    [key: string]: any;         // fieldName: fieldValue must match fieldType (re: validate) in model definition
 }
 
 export type ActionParamsType = Array<ActionParamType>;  // documents for create or update task/operation

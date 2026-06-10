@@ -1,5 +1,11 @@
 # Historical logs
 
+## Version 0.7.0
+
+- Release date: June-10-2026
+- updated-mctest_v0.6.2-mccache_v0.9.0-mcresponse_v0.9.0-rewrite-testcases-v0.7.0
+- Excluding transaction-related methods (to be revisited)
+
 ## Version 0.6.0
 
 - Release date: Sep-11-2024
@@ -54,7 +60,7 @@
 
 - Release date: Jan-12-2024
 - Refactor-db-types-crud-and-transaction-methods-v0.3.0
-- Transaction-methods not tested, required a replica set member or mongos - TBD
+- Transaction-methods were not tested, required a replica set member or mongos, TBD
 
 ## Version 0.2.0
 

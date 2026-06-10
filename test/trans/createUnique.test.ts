@@ -1,10 +1,9 @@
 import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../../src/config/secure/config";
 import {
-    auditColl, crudParamOptions, groupColl, GroupCreateNonUniqueDocuments,
-    GroupModel, testUserInfo
-} from "./testData";
-import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
+    auditColl, crudParamOptions, groupColl, GroupCreateNonUniqueDocuments, GroupModel, testUserInfo
+} from "../../src/config/transTestData";
+import { assertEquals, mcTest, testResult, UnitTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -31,6 +30,8 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
 
+    const results: Array<UnitTestResult> = []
+
     await mcTest({
         name    : "should return record-exists or saveError for creating duplicate documents:",
         testFunc: async () => {
@@ -48,9 +49,9 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
         }
     });
 
-    await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    testResult(results);
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
     process.exit(0);
 
 })();

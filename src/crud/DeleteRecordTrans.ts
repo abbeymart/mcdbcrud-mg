@@ -1,11 +1,11 @@
 // 2024-01-07 | requires mongodb-replicas
-import { ObjectId, DeleteResult, } from "mongodb";
+import { DeleteResult, ObjectId, } from "mongodb";
 import { getResMessage, ResponseMessage } from "@mconnect/mcresponse";
 import { isEmptyObject } from "./utils";
 import { deleteHashCache, QueryHashCacheParamsType, } from "@mconnect/mccache";
 import {
-    ActionParamType, AuditLogParamsType, CrudOptionsType, CrudParamsType,
-    CrudResultType, LogRecordsType, QueryParamsType,
+    ActionParamType, AuditLogParamsType, CrudOptionsType, CrudParamsType, CrudResultType, LogRecordsType,
+    QueryParamsType,
 } from "./types";
 import { FieldDescType, RelationActionTypes, } from "../orm";
 import { DeleteRecord } from "./DeleteRecord";
@@ -50,7 +50,7 @@ class DeleteRecordTrans extends DeleteRecord {
                 if (!removed.acknowledged || removed.deletedCount !== recordIds.length) {
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${recordIds.length} set to be removed]. Transaction aborted.`)
                 }
-                // optional, update child-table-records(collection-documents) for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
+                // optional, update child-table-records(collection-documents) for setDefault and setNull/initialize-value?', i.e., if this.deleteSetDefault or this.deleteSetNull
                 if (this.deleteSetDefault) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                     // update child/target-tables for each of the currentRecords
@@ -189,7 +189,7 @@ class DeleteRecordTrans extends DeleteRecord {
                 if (!removed.acknowledged || removed.deletedCount !== this.currentRecs.length) {
                     throw new Error(`Unable to delete all specified records [${removed.deletedCount} of ${this.currentRecs.length} set to be removed]. Transaction aborted.`)
                 }
-                // optional, update child-table-records(collection-documents) for setDefault and setNull/initialize-value?', i.e. if this.deleteSetDefault or this.deleteSetNull
+                // optional, update child-table-records(collection-documents) for setDefault and setNull/initialize-value?', i.e., if this.deleteSetDefault or this.deleteSetNull
                 if (this.deleteSetDefault) {
                     const childRelations = this.childRelations.filter(item => item.onDelete === RelationActionTypes.SET_DEFAULT);
                     // update child/target-tables for each of the currentRecords

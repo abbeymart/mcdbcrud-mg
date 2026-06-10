@@ -45,7 +45,7 @@ class GetRecordStream extends Crud {
         //     this.queryParams = otherParams;
         // }
 
-        // check the audit-log settings - to perform audit-log (read/search info - params, keywords etc.)
+        // check the audit-log settings - to perform audit-log (read/search info - params, keywords, etc.)
         if (this.logRead || this.logCrud) {
             const logRecs: LogRecordsType = {
                 queryParam: this.queryParams,

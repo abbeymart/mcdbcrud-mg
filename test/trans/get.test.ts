@@ -1,10 +1,9 @@
 import { CrudParamsType, GetResultType, newDbMongo } from "../../src";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../../src/config/secure/config";
 import {
-    auditColl, crudParamOptions, GetGroupById, GetGroupByIds, GetGroupByParams,
-    groupColl, GroupModel, testUserInfo
-} from "./testData";
-import { assertEquals, assertNotEquals, mcTest, postTestResult } from "@mconnect/mctest";
+    auditColl, crudParamOptions, GetGroupById, GetGroupByIds, GetGroupByParams, groupColl, GroupModel, testUserInfo
+} from "../../src/config/transTestData";
+import { newTest, testResult, UnitTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -31,95 +30,110 @@ import { assertEquals, assertNotEquals, mcTest, postTestResult } from "@mconnect
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
 
-    await mcTest({
-        name    : "should get records by Id and return success:",
-        testFunc: async () => {
-            crudParams.recordIds = [GetGroupById]
-            crudParams.queryParams = {}
-            const res = await GroupModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType
-            const recLen = resValue.records?.length || 0
-            const recCount = resValue.stats?.recordsCount || 0
-            assertEquals(res.code, "success", `response-code should be: success`);
-            assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
-            assertEquals(recLen, 1, `response-value-records-length should be: 1`);
-            assertEquals(recCount, 1, `response-value-stats-recordsCount should be: 1`);
-        }
-    });
+    const results: Array<UnitTestResult> = []
 
-    await mcTest({
-        name    : "should get records by Ids and return success:",
-        testFunc: async () => {
-            crudParams.recordIds = GetGroupByIds;
-            crudParams.queryParams = {};
-            const res = await GroupModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType
-            const recLen = resValue.records?.length || 0
-            const recCount = resValue.stats?.recordsCount || 0
-            assertEquals(res.code, "success", `response-code should be: success`);
-            assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
-            assertEquals(recLen, 2, `response-value-records-length should be: 2`);
-            assertEquals(recCount, 2, `response-value-stats-recordsCount should be: 2`);
-        }
-    });
+    const test1 = newTest({
+        name: "should get records by Id and return success:",
+    })
+    crudParams.recordIds = [GetGroupById]
+    crudParams.queryParams = {}
+    let res = await GroupModel.get(crudParams, crudParamOptions);
+    let resValue = res.value as unknown as GetResultType
+    let recLen = resValue.records?.length || 0
+    let recCount = resValue.stats?.recordsCount || 0
+    test1.setTestFunction(() => {
+        test1.assertEquals(res.code, "success", `response-code should be: success`);
+        test1.assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
+        test1.assertEquals(recLen, 1, `response-value-records-length should be: 1`);
+        test1.assertEquals(recCount, 1, `response-value-stats-recordsCount should be: 1`);
+    })
+    const test1Result = test1.runTest()
+    results.push(test1Result)
 
-    await mcTest({
-        name    : "should get records by query-params and return success:",
-        testFunc: async () => {
-            crudParams.recordIds = [];
-            crudParams.queryParams = GetGroupByParams;
-            const res = await GroupModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType;
-            const recLen = resValue.records?.length || 0;
-            const recCount = resValue.stats?.recordsCount || 0;
-            assertEquals(res.code, "success", `response-code should be: success`);
-            assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
-            assertEquals(recLen > 0, true, `response-value-records-length should be: > 0`);
-            assertEquals(recCount > 0, true, `response-value-stats-recordsCount should be:  > 0`);
-        }
-    });
+    const test2 = newTest({
+        name: "should get records by Ids and return success:",
+    })
+    crudParams.recordIds = GetGroupByIds;
+    crudParams.queryParams = {};
+    res = await GroupModel.get(crudParams, crudParamOptions);
+    resValue = res.value as unknown as GetResultType
+    recLen = resValue.records?.length || 0
+    recCount = resValue.stats?.recordsCount || 0
+    test2.setTestFunction(() => {
+        test2.assertEquals(res.code, "success", `response-code should be: success`);
+        test2.assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
+        test2.assertEquals(recLen, 2, `response-value-records-length should be: 2`);
+        test2.assertEquals(recCount, 2, `response-value-stats-recordsCount should be: 2`);
+    })
+    const test2Result = test2.runTest()
+    results.push(test2Result)
 
-    await mcTest({
-        name    : "should get all records and return success:",
-        testFunc: async () => {
-            crudParams.tableName = groupColl
-            crudParams.recordIds = []
-            crudParams.queryParams = {}
-            crudParamOptions.getAllRecords = true
-            crudParamOptions.checkAccess = false;
-            const res = await GroupModel.lookupGet(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType
-            const recLen = resValue.records?.length || 0
-            const recCount = resValue.stats?.recordsCount || 0
-            assertEquals(res.code, "success", `response-code should be: success`);
-            assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
-            assertEquals(recLen > 5, true, `response-value-records-length should be: > 5`);
-            assertEquals(recCount > 5, true, `response-value-stats-recordsCount should be:  > 5`);
-        }
-    });
+    const test3 = newTest({
+        name: "should get records by query-params and return success:",
+    })
+    crudParams.recordIds = [];
+    crudParams.queryParams = GetGroupByParams;
+    res = await GroupModel.get(crudParams, crudParamOptions);
+    resValue = res.value as unknown as GetResultType;
+    recLen = resValue.records?.length || 0;
+    recCount = resValue.stats?.recordsCount || 0;
+    test3.setTestFunction(() => {
+        test3.assertEquals(res.code, "success", `response-code should be: success`);
+        test3.assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
+        test3.assertEquals(recLen > 0, true, `response-value-records-length should be: > 0`);
+        test3.assertEquals(recCount > 0, true, `response-value-stats-recordsCount should be:  > 0`);
+    })
+    const test3Result = test3.runTest()
+    results.push(test3Result)
 
-    await mcTest({
-        name    : "should get all records by limit/skip(offset) and return success:",
-        testFunc: async () => {
-            crudParams.tableName = groupColl
-            crudParams.recordIds = []
-            crudParams.queryParams = {}
-            crudParams.skip = 0
-            crudParams.limit = 5
-            crudParamOptions.getAllRecords = true
-            const res = await GroupModel.get(crudParams, crudParamOptions);
-            const resValue = res.value as unknown as GetResultType
-            const recLen = resValue.records?.length || 0
-            const recCount = resValue.stats?.recordsCount || 0
-            assertEquals(res.code, "success", `response-code should be: success`);
-            assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
-            assertEquals(recLen, 5, `response-value-records-length should be: 5`);
-            assertEquals(recCount, 5, `response-value-stats-recordsCount should be: 5`);
-        }
-    });
+    const test4 = newTest({
+        name: "should get all records and return success:",
+    })
+    crudParams.tableName = groupColl
+    crudParams.recordIds = []
+    crudParams.queryParams = {}
+    crudParamOptions.getAllRecords = true
+    crudParamOptions.checkAccess = false;
+    res = await GroupModel.lookupGet(crudParams, crudParamOptions);
+    resValue = res.value as unknown as GetResultType
+    recLen = resValue.records?.length || 0
+    recCount = resValue.stats?.recordsCount || 0
+    test4.setTestFunction(() => {
+        test4.assertEquals(res.code, "success", `response-code should be: success`);
+        test4.assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
+        test4.assertEquals(recLen > 5, true, `response-value-records-length should be: > 5`);
+        test4.assertEquals(recCount > 5, true, `response-value-stats-recordsCount should be:  > 5`);
+    })
 
-    await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    const test4Result = test4.runTest()
+    results.push(test4Result)
+
+    const test5 = newTest({
+        name: "should get all records by limit/skip(offset) and return success:",
+    })
+    crudParams.tableName = groupColl
+    crudParams.recordIds = []
+    crudParams.queryParams = {}
+    crudParams.skip = 0
+    crudParams.limit = 5
+    crudParamOptions.getAllRecords = true
+    res = await GroupModel.get(crudParams, crudParamOptions);
+    resValue = res.value as unknown as GetResultType
+    recLen = resValue.records?.length || 0
+    recCount = resValue.stats?.recordsCount || 0
+    test5.setTestFunction(async () => {
+        test5.assertEquals(res.code, "success", `response-code should be: success`);
+        test5.assertNotEquals(res.code, "unAuthorized", `response-code should be: success not unAuthorized`);
+        test5.assertEquals(recLen, 5, `response-value-records-length should be: 5`);
+        test5.assertEquals(recCount, 5, `response-value-stats-recordsCount should be: 5`);
+    })
+
+    const test5Result = test5.runTest()
+    results.push(test5Result)
+
+
+    testResult(results);
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
     process.exit(0);
 })();

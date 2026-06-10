@@ -7,7 +7,7 @@
 // Import required module/function(s)
 import { Db } from "mongodb";
 import { getParamsMessage, getResMessage, MessageCodes, ResponseMessage } from "@mconnect/mcresponse";
-import {isEmptyObject} from "./utils";
+import { isEmptyObject } from "./utils";
 import { validateLoadParams } from "./";
 import { checkDb } from "../dbc";
 import { ActionParamsType, CrudOptionsType, CrudParamsType, } from "./types";
@@ -36,7 +36,7 @@ class LoadRecord {
         try {
             // use / activate database-collection
             const appDbColl = this.appDb.collection(this.tableName);
-            // clear the current collection documents/records, for refresh
+            // clear the current collection's documents/records for refresh
             const deleteRes = await appDbColl.deleteMany({});
             if (deleteRes.acknowledged) {
                 return getResMessage("success", {

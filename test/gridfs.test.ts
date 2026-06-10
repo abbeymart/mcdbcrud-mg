@@ -1,5 +1,5 @@
-import {ObjectId, GridFSBucket,} from "mongodb";
-import {appDbLocal, dbOptionsLocal} from "./config";
+import { GridFSBucket, ObjectId, } from "mongodb";
+import { appDbLocal, dbOptionsLocal } from "../src/config/secure/config";
 import { newDbMongo } from "../src";
 import * as fs from "fs";
 
@@ -14,7 +14,7 @@ import * as fs from "fs";
     // console.log("bucket: ", bucket)
 
     const upstream = bucket.openUploadStream("test2.txt", {
-        metadata: { field: 'testFile', value: 'test2.txt' }
+        metadata: {field: 'testFile', value: 'test2.txt'}
     });
 
     // fs.createReadStream('./test.txt').
@@ -41,7 +41,7 @@ import * as fs from "fs";
     // The upload date and time
     // A metadata document in which you can store any other information ([key: string]: any;)
 
-    // download file, by filename
+    // download the file by filename
     // bucket.openDownloadStreamByName('test.txt').
     // pipe(fs.createWriteStream('./testOut.txt'));
     // or via _id of the file (preferred)
@@ -49,7 +49,7 @@ import * as fs from "fs";
         bucket.openDownloadStream(docId).pipe(fs.createWriteStream('./outputFile'));
     }
 
-    // rename file
+    // rename the file
     // await bucket.rename(new ObjectId("60edece5e06275bf0463aaf3"), "newFileName");
 
     // delete file

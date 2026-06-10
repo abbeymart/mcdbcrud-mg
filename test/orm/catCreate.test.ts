@@ -1,9 +1,9 @@
 import { CrudParamsType, CrudResultType, newDbMongo } from "../../src";
-import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../config";
+import { appDbLocal, auditDbLocal, dbOptionsLocal } from "../../src/config/secure/config";
 import {
     auditColl, categoryColl, CategoryCreateActionParams, CategoryModel, crudParamOptions, testUserInfo
-} from "./testData";
-import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
+} from "../../src/config/ormTestData";
+import { newTest, testResult, UnitTestResult } from "@mconnect/mctest";
 
 (async () => {
     // DB clients/handles
@@ -30,26 +30,30 @@ import { assertEquals, mcTest, postTestResult } from "@mconnect/mctest";
     crudParamOptions.auditDbName = appDbLocal.database;
     crudParamOptions.auditTable = auditColl;
 
-    await mcTest({
-        name    : "should create ten new category documents and return success:",
-        testFunc: async () => {
-            crudParams.actionParams = CategoryCreateActionParams;
-            crudParams.recordIds = []
-            crudParams.queryParams = {}
-            const recLen = crudParams.actionParams?.length || 0
-            const res = await CategoryModel.save(crudParams, crudParamOptions);
-            console.log("create-result: ", res);
-            const resValue = res.value as unknown as CrudResultType
-            const idLen = resValue.recordIds?.length || 0
-            const recCount = resValue.recordsCount || 0
-            assertEquals(res.code, "success", `create-task should return code: success`);
-            assertEquals(idLen, recLen, `response-value-records-length should be: ${recLen}`);
-            assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
-        }
-    });
+    const results: Array<UnitTestResult> = []
 
-    await postTestResult();
-    await appDbInstance.closeDb();
-    await auditDbInstance.closeDb();
+    const test1 = newTest({
+        name: "should create ten new category documents and return success:",
+    })
+    crudParams.actionParams = CategoryCreateActionParams;
+    crudParams.recordIds = []
+    crudParams.queryParams = {}
+    let recLen = crudParams.actionParams?.length || 0
+    let res = await CategoryModel.save(crudParams, crudParamOptions);
+    console.log("create-result: ", res);
+    let resValue = res.value as unknown as CrudResultType
+    let idLen = resValue.recordIds?.length || 0
+    let recCount = resValue.recordsCount || 0
+    test1.setTestFunction(() => {
+        test1.assertEquals(res.code, "success", `create-task should return code: success`);
+        test1.assertEquals(idLen, recLen, `response-value-records-length should be: ${recLen}`);
+        test1.assertEquals(recCount, recLen, `response-value-recordsCount should be: ${recLen}`);
+    })
+    const test1Result = test1.runTest()
+    results.push(test1Result)
+
+    testResult(results);
+    await appDbInstance?.closeDb();
+    await auditDbInstance?.closeDb();
     process.exit(0);
 })();
